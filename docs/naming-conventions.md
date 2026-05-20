@@ -21,20 +21,21 @@ A single, enforceable set of rules for files, modules, routes, components, store
 
 ## Backend modules
 
-Backend domains live under `backend/src/modules/<domain>/`. A complete domain module has the following files (omit any that have nothing to do yet):
+Backend domains live under `backend/src/modules/<domain>/`. A complete domain module has the following files (omit any that have nothing to do yet) and uses the `<domain>.<file>.js` naming pattern so files are easy to identify when many are open at once:
 
 ```
 backend/src/modules/<domain>/
-  routes.js          # Express router; binds HTTP verbs to controller methods
-  controller.js      # Thin HTTP-layer functions; no business logic
-  service.js         # Business logic and orchestration
-  repository.js      # Data-access functions; only place that touches Mongoose
-  model.js           # Mongoose schema and model
-  validation.js      # Request schemas (zod/joi/etc.) and reusable validators
-  __tests__/         # Module-scoped unit and integration tests
+  <domain>.routes.js       # Express router; binds HTTP verbs to controller methods
+  <domain>.controller.js   # Thin HTTP-layer functions; no business logic
+  <domain>.service.js      # Business logic and orchestration
+  <domain>.repository.js   # Data-access functions; only place that touches Mongoose
+  <domain>.model.js        # Mongoose schema and model
+  <domain>.validation.js   # Request schemas (zod) and reusable validators
+  __tests__/               # Module-scoped unit and integration tests (optional;
+                           # may live in `backend/src/tests/` for integration suites)
 ```
 
-Cross-cutting helpers (logger, error classes, response envelope, auth middleware) live under `backend/src/shared/` or `backend/src/middleware/`, never duplicated inside modules.
+Cross-cutting helpers (logger, error classes, response envelope, request middleware, constants) live under `backend/src/common/`, never duplicated inside modules. The `common/` tree itself is organized by concern (`errors/`, `middlewares/`, `responses/`, `utils/`, `constants/`).
 
 ## REST routes
 
@@ -103,8 +104,8 @@ Example: `frontend/src/features/auth/stores/use-auth-store.js` exports `useAuthS
 
 ## Tests
 
-- Test file names mirror the file under test: `survey-service.spec.js` for `survey-service.js`.
-- Tests for a backend module live in `backend/src/modules/<domain>/__tests__/`.
+- Test file names mirror the file under test: `survey.service.spec.js` for `survey.service.js`.
+- Backend module unit tests may live in `backend/src/modules/<domain>/__tests__/`. Cross-module integration suites (e.g. the health and error-handler tests) live in `backend/src/tests/`.
 - Tests for a frontend feature live alongside the file under test as `<file>.spec.js` (Vitest) or in a sibling `__tests__/` directory.
 
 ## Database identifiers
@@ -115,7 +116,7 @@ Example: `frontend/src/features/auth/stores/use-auth-store.js` exports `useAuthS
 
 ## Imports and aliases
 
-- Backend uses relative paths within a module and `#shared/...`-style imports (or path aliases configured in `package.json`/`tsconfig.json`) for cross-cutting helpers, once introduced in Phase 01.
+- Backend uses ES modules with relative paths between sibling files. Cross-cutting helpers live under `backend/src/common/` and are imported by relative path (`../common/responses/index.js`). Path aliases (e.g. `#common/...` via `imports` in `package.json`) may be introduced later if relative paths become unwieldy, but Phase 01 deliberately keeps imports relative for clarity.
 - Frontend uses the `@/` alias for `frontend/src/`, configured in `vite.config.js`.
 
 ## Documentation and copy

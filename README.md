@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 00 — repository foundation. The `backend/` and `frontend/` application packages will be initialized in later phases. See [Phase workflow](#phase-workflow) below.
+Phase 01 — backend foundation. The Express + Mongoose API is wired with security middleware, a consistent response envelope, centralized errors, request logging, environment validation, and a working `GET /api/v1/health` endpoint. The `frontend/` application package will be initialized in Phase 03. See [Phase workflow](#phase-workflow) below.
 
 ## Stack
 
@@ -41,7 +41,7 @@ Default ports used by the project:
 ## Local setup
 
 ```bash
-# 1. Install root dev dependencies and any workspace packages that exist.
+# 1. Install root dev dependencies and all workspace packages.
 pnpm install
 
 # 2. Copy environment templates (do this for each workspace package once it exists).
@@ -51,7 +51,9 @@ cp frontend/.env.example frontend/.env
 # 3. Start local MongoDB in the background.
 pnpm db:up
 
-# 4. (Later phases) Start the apps.
+# 4. Start the backend (Phase 01+). Frontend is added in Phase 03.
+pnpm dev:backend
+# or, once the frontend exists, run both in parallel:
 pnpm dev
 ```
 
@@ -62,6 +64,14 @@ MongoDB connection string for local development:
 ```
 mongodb://localhost:27017/cupcake
 ```
+
+Verify the backend by hitting the health endpoint:
+
+```bash
+curl http://localhost:4000/api/v1/health
+```
+
+It returns the shared success envelope with the app name, environment, uptime, and the live database connection state. See [backend/README.md](backend/README.md) for the full backend reference, scripts, and project layout.
 
 ## Root scripts
 
@@ -98,8 +108,10 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
   package.json                      # Root workspace scripts and devDependencies
   pnpm-workspace.yaml               # pnpm workspace definition
   README.md                         # This file
-  backend/                          # Backend package (initialized in Phase 01)
+  backend/                          # Express + Mongoose API (Phase 01+)
     .env.example                    # Required backend environment variables
+    README.md                       # Backend-specific reference
+    src/                            # app.js, server.js, config/, common/, modules/, routes/, tests/
   frontend/                         # Frontend package (initialized in Phase 03)
     .env.example                    # Required frontend environment variables
   docs/
@@ -127,7 +139,7 @@ See [prompts/00-shared-context.md](prompts/00-shared-context.md) for the full li
 The full reference lives in [docs/naming-conventions.md](docs/naming-conventions.md). Summary:
 
 - **Files**: `kebab-case` for general files (`survey-service.js`), `PascalCase` for Vue components (`SurveyBuilder.vue`), `kebab-case.spec.js` or `*.test.js` for tests.
-- **Backend modules**: one directory per domain under `backend/src/modules/<domain>/` containing `routes.js`, `controller.js`, `service.js`, `repository.js`, `model.js`, `validation.js`, and `__tests__/`.
+- **Backend modules**: one directory per domain under `backend/src/modules/<domain>/` containing `<domain>.routes.js`, `<domain>.controller.js`, `<domain>.service.js`, `<domain>.repository.js`, `<domain>.model.js`, `<domain>.validation.js`. Cross-cutting helpers live under `backend/src/common/` (errors, middlewares, responses, utils, constants).
 - **Backend routes**: REST under `/api/v1/<resource>` with kebab-case segments (`/api/v1/contact-groups`).
 - **Frontend features**: directories under `frontend/src/features/<feature>/` with `views/`, `components/`, `stores/`, `services/`, and `composables/` subfolders as needed.
 - **Vue components**: PascalCase, multi-word (`SurveyCard.vue`, not `Card.vue`).
