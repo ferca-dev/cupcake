@@ -1,0 +1,36 @@
+{
+  "name": "cupcake",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-tenant SaaS platform for creating, sending, answering, and analyzing surveys and forms.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "install:all": "pnpm install",
+    "dev": "pnpm -r --parallel --if-present run dev",
+    "dev:backend": "pnpm --filter ./backend --if-present run dev",
+    "dev:frontend": "pnpm --filter ./frontend --if-present run dev",
+    "build": "pnpm -r --if-present run build",
+    "build:backend": "pnpm --filter ./backend --if-present run build",
+    "build:frontend": "pnpm --filter ./frontend --if-present run build",
+    "lint": "pnpm -r --if-present run lint",
+    "lint:backend": "pnpm --filter ./backend --if-present run lint",
+    "lint:frontend": "pnpm --filter ./frontend --if-present run lint",
+    "format": "prettier --write \"**/*.{js,ts,vue,json,md,yml,yaml,css,html}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,vue,json,md,yml,yaml,css,html}\"",
+    "test": "pnpm -r --if-present run test",
+    "test:backend": "pnpm --filter ./backend --if-present run test",
+    "test:frontend": "pnpm --filter ./frontend --if-present run test",
+    "db:up": "docker compose up -d mongodb",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f mongodb",
+    "db:reset": "docker compose down -v && docker compose up -d mongodb"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}

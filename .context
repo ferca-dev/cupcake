@@ -1,0 +1,97 @@
+# Cupcake Project Context
+
+This file is a compact reference for tools and contributors. It mirrors the canonical rules in `prompts/00-shared-context.md`. When the two disagree, the shared context file wins.
+
+## Product
+
+Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and analyzing surveys and online forms. Customers build surveys with a visual drag-and-drop editor, deliver them through email, SMS, and WhatsApp, collect public responses through unique slugs, and analyze results in dashboards. The product is a realistic commercial foundation, not a disposable prototype.
+
+## Language Rules
+
+- All source code, code comments, README files, API documentation, seed documentation, developer docs, and inline technical docs MUST be in English.
+- User-facing strings must be centralized or otherwise prepared for future internationalization.
+- Spanish may be used only in external planning conversations, never in committed code or project docs.
+
+## Stack
+
+- Frontend: Vue 3 (Composition API) + Vite, Pinia, Vue Router.
+- Frontend styling: shared global CSS files `theme.css`, `global.css`, `layout.css`, `utilities.css`.
+- Backend: Node.js (current Active LTS, Node 24 at project start) + Express.
+- Database: MongoDB via Mongoose.
+- API: REST under `/api/v1`.
+- Local infrastructure: Docker Compose for MongoDB.
+- Package manager: pnpm workspaces, pinned in the root `package.json`.
+
+## Application Name
+
+The product name is configurable. Use `APP_NAME` on the backend and `VITE_APP_NAME` on the frontend. Do not hardcode "Cupcake" where the runtime name is meant.
+
+## Architecture Rules
+
+- Modular by domain.
+- Business logic lives in services/repositories, not in controllers or route files.
+- Backend modules separate routes, controllers, services, repositories, models, validation, and tests.
+- Frontend features separate views, stores, services, reusable components, and feature-specific components.
+- Prefer small, cohesive Vue components.
+- Avoid duplicated CSS and duplicated API request logic.
+- Use structured validation rather than ad hoc checks.
+- Use consistent API response envelopes.
+- Modules must be tenant-safe by default.
+
+## Security Rules
+
+- Hash passwords with bcrypt or argon2.
+- Short-lived access tokens, secure refresh tokens; store refresh tokens server-side as hashes or revocable records.
+- Rate-limit authentication and public form endpoints.
+- Enable Helmet/security headers on Express.
+- Sanitize and validate inputs; validate MongoDB ObjectId before querying.
+- CORS configured via environment variables.
+- Never expose stack traces in production; never log secrets, passwords, JWTs, refresh tokens, or full Authorization headers.
+
+## Multi-Tenancy Rules
+
+- Every business entity carries `tenantId` unless explicitly global.
+- Super admins may have `tenantId: null`.
+- Tenant isolation is enforced in backend services and repositories, not only in frontend filters.
+- Public form routes resolve survey and tenant via published slug/version data.
+
+## Roles
+
+- `super_admin`, `client_admin`, `client_member`.
+- Authorization is enforced in the backend.
+
+## Survey Lifecycle
+
+- Statuses: `draft`, `published`, `paused`, `archived`.
+- Only `published` surveys accept responses.
+- Publishing creates an immutable `survey_versions` record.
+- Responses reference the exact `surveyVersionId` used at submission.
+- Editing a published survey must not mutate historical published schemas.
+- Duplicating a survey creates a new `draft`.
+
+## API Response Envelope
+
+Success:
+
+```json
+{ "success": true, "data": {}, "message": "Operation completed successfully" }
+```
+
+Error:
+
+```json
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "Invalid payload", "details": [] } }
+```
+
+## Default Ports
+
+- Backend: `4000`
+- Frontend: `5173`
+- MongoDB: `27017`
+
+## Execution Rules
+
+- Run phases in numeric order from `prompts/`.
+- Before each phase, load `prompts/00-shared-context.md` and the relevant phase file.
+- Do not start the next phase until the current phase Definition of Done is satisfied.
+- If a later phase reveals a missing foundation from an earlier phase, fix the foundation in the same branch instead of working around it.
