@@ -87,6 +87,8 @@ backend/
       audit/              # audit-log.model.js, audit.service.js (stub)
       auth/               # auth.routes/controller/service/validation, refresh-token.model
       health/             # health.routes.js, health.controller.js
+      surveys/            # survey.model, survey-version.model, survey.routes/controller/service/repository/validation,
+                          # form-schema.validator.js
       tenants/            # tenant.model/routes/controller
       users/              # user.model.js
     routes/
@@ -187,14 +189,80 @@ sessions.
 ### Seeders
 
 `pnpm seed` (or `pnpm --filter ./backend run seed`) executes
-`src/seeders/index.js`. Phase 02 seeds:
+`src/seeders/index.js`. Current seeders:
 
 - Super admin user (`SUPER_ADMIN_*` env vars).
 - Demo tenant (`DEMO_TENANT_NAME`).
 - Demo client admin (`DEMO_CLIENT_*` env vars), assigned as tenant owner.
+- One demo draft survey and one demo published survey (with `survey_versions`
+  record `versionNumber: 1`) belonging to the demo tenant.
 
 The seeder is idempotent — running it twice updates the matched records in
 place without creating duplicates.
+
+## Endpoints implemented in Phase 04
+
+All survey endpoints live under `/api/v1/surveys`. They require an
+authenticated bearer token and apply the tenant filter from `req.tenantContext`
+(set by `authenticate` + `requireTenantContext`). Super admins must use the
+`X-Impersonate-Tenant` header to scope mutations to a specific tenant.
+
+| Method | Path                                | Permission                                | Description                                                  |
+| ------ | ----------------------------------- | ----------------------------------------- | ------------------------------------------------------------ |
+| GET    | `/api/v1/surveys`                   | `surveys.view`                            | Paginated list of surveys for the caller's tenant.           |
+| POST   | `/api/v1/surveys`                   | `surveys.create`                          | Create a new draft survey.                                   |
+| GET    | `/api/v1/surveys/:id`               | `surveys.view`                            | Return one survey (404 if not in tenant).                    |
+| PUT    | `/api/v1/surveys/:id`               | `surveys.update`                          | Update title, description, slug, settings, draft schema.     |
+| DELETE | `/api/v1/surveys/:id`               | `surveys.delete`                          | Permanently remove a survey.                                 |
+| POST   | `/api/v1/surveys/:id/publish`       | `surveys.publish`                         | Validate the draft, snapshot it as an immutable version, set `status=published`. |
+| POST   | `/api/v1/surveys/:id/pause`         | `surveys.publish`                         | Transition `published → paused`. Public URL still resolves but later phases will reject submissions. |
+| POST   | `/api/v1/surveys/:id/archive`       | `surveys.publish` _or_ `surveys.delete`   | Lock the survey read-only and stamp `archivedAt`.            |
+| POST   | `/api/v1/surveys/:id/duplicate`     | `surveys.create`                          | Create a new `draft` with the same schema and a unique slug. |
+| GET    | `/api/v1/surveys/:id/versions`      | `surveys.view`                            | Return published versions (descending `versionNumber`).      |
+| GET    | `/api/v1/surveys/:id/stats`         | `surveys.view`                            | Placeholder counters; will be hydrated in Phase 05+.         |
+
+### Survey lifecycle
+
+| Status      | Public?        | Mutable schema?    | Notes                                                      |
+| ----------- | -------------- | ------------------ | ---------------------------------------------------------- |
+| `draft`     | No             | Yes (`currentDraftSchema`) | Newly created or duplicated surveys start here.   |
+| `published` | Yes            | Draft only         | Publishing copies the draft into a new `survey_versions` record; the version is immutable. |
+| `paused`    | URL resolves   | Draft only         | Public submissions will be rejected in later phases.       |
+| `archived`  | No             | No                 | Stamped with `archivedAt`. Update and lifecycle endpoints return `409 CONFLICT`. |
+
+Republishing a survey creates a new `survey_versions` record with an
+incremented `versionNumber`; existing versions are never mutated. Responses
+captured in later phases must reference the `surveyVersionId` that was active
+at submission time.
+
+### Slug rules
+
+- Globally unique across the database (Mongo unique index on `surveys.slug`).
+- Lowercase letters, numbers, and hyphens; `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
+- When the caller omits `slug`, the service slugifies the title and appends a
+  short random suffix until a free value is found.
+- Supplying a slug that is already taken returns `409 CONFLICT`.
+
+### Form schema
+
+The draft schema sent in `POST` / `PUT` is validated by
+`modules/surveys/form-schema.validator.js`. It is the source of truth for
+field types (`FIELD_TYPES`), logic operators (`LOGIC_OPERATORS`), and
+duplicate-detection rules (field ids, field keys, option keys, section ids,
+logic rule ids). Validation errors come back as `422 VALIDATION_ERROR` with
+issue paths, so the builder UI can render inline messages later.
+
+### Audit events
+
+`survey.service.js` records the following actions (entity type `survey`):
+
+- `survey.created`
+- `survey.updated`
+- `survey.deleted`
+- `survey.published`
+- `survey.paused`
+- `survey.archived`
+- `survey.duplicated`
 
 ## Security middleware
 

@@ -2,6 +2,7 @@ import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import { logger } from '../common/utils/logger.js';
 import { loadEnv } from '../config/env.js';
 import { seedAuth } from './seed-auth.js';
+import { seedSurveys } from './seed-surveys.js';
 
 /**
  * Runs all available seeders in dependency order. Idempotent — running the
@@ -14,6 +15,7 @@ const runSeeders = async () => {
 
   try {
     await seedAuth();
+    await seedSurveys();
     logger.info('All seeders completed successfully');
   } catch (err) {
     logger.fatal({ err }, 'Seeder failed');
