@@ -30,6 +30,7 @@ The development server reloads on file changes (`node --watch`). It listens on `
 | `pnpm lint:fix`   | ESLint with autofix.                                |
 | `pnpm test`       | Run Vitest test suite once.                         |
 | `pnpm test:watch` | Run Vitest in watch mode.                           |
+| `pnpm seed`       | Run all seeders (idempotent).                       |
 
 Run any script via the workspace from the repo root with `pnpm --filter ./backend run <script>` or use the root aliases (`pnpm dev:backend`, `pnpm lint:backend`, `pnpm test:backend`).
 
@@ -75,16 +76,23 @@ backend/
       database.js         # Mongoose connect/disconnect, connection state
       security.js         # Helmet + CORS configuration
     common/
+      auth/               # Roles, permissions, password + JWT helpers
       constants/          # Error codes, HTTP statuses, API prefix
       errors/             # AppError + typed subclasses
-      middlewares/        # Request logger, error handler, sanitizer, rate limiters
+      middlewares/        # Request logger, error handler, sanitizer, rate limiters,
+                          # authenticate, authorize (role/permission/tenant)
       responses/          # Success/error envelope helpers
-      utils/              # Logger, async-handler
+      utils/              # Logger, async-handler, slug
     modules/
+      audit/              # audit-log.model.js, audit.service.js (stub)
+      auth/               # auth.routes/controller/service/validation, refresh-token.model
       health/             # health.routes.js, health.controller.js
+      tenants/            # tenant.model/routes/controller
+      users/              # user.model.js
     routes/
       api-v1.js           # /api/v1 router, mounts modules
-    tests/                # Vitest suites + test setup
+    seeders/              # index.js + seed-auth.js (idempotent)
+    tests/                # Vitest suites + helpers + setup
 ```
 
 Each future domain module follows the `<domain>.<file>.js` pattern (`<domain>.routes.js`, `<domain>.controller.js`, `<domain>.service.js`, `<domain>.repository.js`, `<domain>.model.js`, `<domain>.validation.js`).
@@ -120,6 +128,73 @@ The error envelope is produced by `common/responses/api-response.js`. The global
 | GET    | `/api/v1/health` | Liveness check + database dependency state. |
 
 The health response includes `status`, `app.name`, `app.env`, `app.version`, `uptimeSeconds`, `dependencies.database`, and `timestamp`. It never includes connection strings, secrets, or environment variable values.
+
+## Endpoints implemented in Phase 02
+
+All authentication endpoints live under `/api/v1/auth`. Tokens are exchanged as
+bearer tokens — the access token belongs in the `Authorization: Bearer <token>`
+header, the refresh token can be sent in the request body or via the
+`X-Refresh-Token` header. Refresh tokens are persisted as SHA-256 hashes and
+are revocable; logging out revokes the current token, and re-using a revoked
+token invalidates every active session for that user (replay-detection).
+
+| Method | Path                            | Auth      | Description                                                  |
+| ------ | ------------------------------- | --------- | ------------------------------------------------------------ |
+| POST   | `/api/v1/auth/register`         | public    | Create a tenant + `client_admin` user and issue tokens.      |
+| POST   | `/api/v1/auth/login`            | public    | Exchange email/password for access + refresh tokens.         |
+| POST   | `/api/v1/auth/refresh`          | refresh   | Rotate the refresh token, issue a new access token.          |
+| POST   | `/api/v1/auth/logout`           | public    | Revoke the supplied refresh token (idempotent).              |
+| GET    | `/api/v1/auth/me`               | bearer    | Return the current user, tenant, permissions, super-admin.   |
+| POST   | `/api/v1/auth/forgot-password`  | public    | Always responds 200 (placeholder until email is wired).      |
+| POST   | `/api/v1/auth/reset-password`   | public    | Reserved; currently rejects until tokens are implemented.    |
+| GET    | `/api/v1/tenants/me`            | bearer    | The caller's tenant (super admin returns `null` by default). |
+| GET    | `/api/v1/tenants/:id`           | bearer    | Returns the tenant if the caller is super admin or owner.    |
+
+### Roles and permissions
+
+Roles ship with a fixed default permission set (`common/auth/roles.js`):
+
+- `super_admin` — every permission, including `admin.dashboard.view`.
+- `client_admin` — full management of their tenant's surveys, contacts,
+  campaigns, billing view, templates, and dashboards.
+- `client_member` — survey authoring, contacts/groups, response viewing,
+  dashboard access.
+
+`requireRole(...roles)` and `requirePermission(...permissions)` (plus
+`requireAnyPermission` and `requireTenantContext`) live in
+`common/middlewares/authorize.js`. They expect `authenticate` to have run
+first, which populates `req.user` and `req.tenantContext`.
+
+### Tenant context
+
+- `authenticate` populates `req.user.tenantId` and a `req.tenantContext` of
+  `{ tenantId }`.
+- **Super admins** never inherit a tenant filter implicitly. `req.tenantContext`
+  is `null` until they explicitly opt in by sending an `X-Impersonate-Tenant`
+  header. This prevents an accidental query from a super-admin session
+  leaking another tenant's data.
+- `requireTenantContext({ allowSuperAdminGlobal: false })` forces super admins
+  to pick a tenant for endpoints that have no global semantics.
+
+### Refresh tokens
+
+`modules/auth/refresh-token.model.js` stores `{ userId, tenantId, tokenHash,
+expiresAt, revokedAt, replacedByTokenHash, ip, userAgent }`. A TTL index on
+`expiresAt` lets Mongo purge expired records. Only the SHA-256 hash of the
+opaque token value is stored, so a database leak does not expose live
+sessions.
+
+### Seeders
+
+`pnpm seed` (or `pnpm --filter ./backend run seed`) executes
+`src/seeders/index.js`. Phase 02 seeds:
+
+- Super admin user (`SUPER_ADMIN_*` env vars).
+- Demo tenant (`DEMO_TENANT_NAME`).
+- Demo client admin (`DEMO_CLIENT_*` env vars), assigned as tenant owner.
+
+The seeder is idempotent — running it twice updates the matched records in
+place without creating duplicates.
 
 ## Security middleware
 

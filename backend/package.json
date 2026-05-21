@@ -15,14 +15,17 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed": "node --env-file=.env src/seeders/index.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
     "express": "^5.0.1",
     "express-rate-limit": "^7.4.1",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.8.0",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
@@ -35,6 +38,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-n": "^17.13.2",
     "globals": "^15.12.0",
+    "mongodb-memory-server": "^11.1.0",
     "supertest": "^7.0.0",
     "vitest": "^2.1.5"
   }

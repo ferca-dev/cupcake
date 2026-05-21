@@ -7,3 +7,10 @@ export {
   createAuthRateLimiter,
   createPublicFormRateLimiter,
 } from './rate-limiters.js';
+export { authenticate } from './authenticate.js';
+export {
+  requireRole,
+  requirePermission,
+  requireAnyPermission,
+  requireTenantContext,
+} from './authorize.js';

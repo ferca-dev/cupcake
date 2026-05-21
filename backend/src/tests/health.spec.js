@@ -46,7 +46,12 @@ describe('GET /api/v1', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data).toMatchObject({
       apiVersion: 'v1',
-      endpoints: expect.arrayContaining(['/api/v1/health']),
+      endpoints: expect.arrayContaining([
+        '/api/v1/health',
+        '/api/v1/auth/login',
+        '/api/v1/auth/me',
+        '/api/v1/tenants/me',
+      ]),
     });
   });
 });
