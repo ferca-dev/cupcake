@@ -18,6 +18,7 @@ import ContactListView from '../views/contacts/ContactListView.vue';
 import ContactGroupListView from '../views/contacts/ContactGroupListView.vue';
 import CampaignListView from '../views/campaigns/CampaignListView.vue';
 import CampaignDetailView from '../views/campaigns/CampaignDetailView.vue';
+import TemplateListView from '../views/templates/TemplateListView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormView from '../views/public/PublicFormView.vue';
@@ -125,6 +126,16 @@ export const routes = [
           title: 'Campaigns',
           requiresAuth: true,
           permissions: ['campaigns.send'],
+        },
+      },
+      {
+        path: 'templates',
+        name: 'templates.list',
+        component: TemplateListView,
+        meta: {
+          title: 'Templates',
+          requiresAuth: true,
+          permissions: ['surveys.view'],
         },
       },
       {

@@ -65,6 +65,13 @@ const handleLogout = async () => {
           {{ t('surveys.list.title') }}
         </RouterLink>
         <RouterLink
+          v-if="auth.hasPermission('surveys.view')"
+          :to="{ name: 'templates.list' }"
+          class="dashboard-layout__nav-link"
+        >
+          {{ t('templates.list.title') }}
+        </RouterLink>
+        <RouterLink
           v-if="auth.hasPermission('contacts.manage')"
           :to="{ name: 'contacts.list' }"
           class="dashboard-layout__nav-link"

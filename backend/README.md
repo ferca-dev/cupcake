@@ -502,6 +502,29 @@ relies on existing indexes (`tenantId+createdAt`, `tenantId+surveyId+createdAt`,
 [`docs/dashboard-analytics.md`](../docs/dashboard-analytics.md) for the full
 shape of each response and the testing strategy.
 
+## Endpoints implemented in Phase 11
+
+Template endpoints power the survey-from-template flow. All routes
+require an authenticated bearer token. Tenant-bound users see active
+system templates plus their own; super admins see everything (or an
+impersonated tenant's templates via `X-Impersonate-Tenant`).
+
+| Method | Path                                       | Permission                                | Description                                                       |
+| ------ | ------------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------- |
+| GET    | `/api/v1/templates`                        | `surveys.view` _or_ `templates.manage`    | List visible templates with optional `category` / `scope` filters. |
+| POST   | `/api/v1/templates`                        | `templates.manage`                        | Create a template. `isSystemTemplate: true` requires `super_admin`. |
+| GET    | `/api/v1/templates/:id`                    | `surveys.view` _or_ `templates.manage`    | Fetch a single template the caller can see.                       |
+| PUT    | `/api/v1/templates/:id`                    | `templates.manage`                        | Update title/description/category/status/schema (system templates require super admin). |
+| DELETE | `/api/v1/templates/:id`                    | `templates.manage`                        | Delete a template (system templates require super admin).         |
+| POST   | `/api/v1/templates/:id/create-survey`      | `surveys.create`                          | Create a draft survey from the template, with a deep-cloned schema. |
+
+The full data model, visibility rules, permissions matrix, audit events,
+and duplication semantics are documented in
+[`docs/templates.md`](../docs/templates.md). The same form-schema
+validator (`form-schema.validator.js`) is used for templates and
+surveys, so a template can never store a schema that would fail to
+publish later.
+
 ## Security middleware
 
 Mounted in `src/app.js` in this order:

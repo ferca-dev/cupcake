@@ -196,6 +196,75 @@ export default {
       },
     },
   },
+  templates: {
+    list: {
+      title: 'Templates',
+      subtitle: 'Start a new survey from a system template or one your team has saved.',
+      newTemplate: 'New template',
+      empty: 'No templates match the current filters.',
+    },
+    badges: {
+      system: 'System',
+      tenant: 'Workspace',
+      inactive: 'Inactive',
+    },
+    card: {
+      category: 'Category',
+      fields: 'Fields',
+      use: 'Use template',
+    },
+    status: {
+      active: 'Active',
+      inactive: 'Inactive',
+    },
+    filters: {
+      searchPlaceholder: 'Search templates',
+      category: 'Category',
+      scope: 'Origin',
+      allCategories: 'All categories',
+      scopeAll: 'All templates',
+      scopeSystem: 'System only',
+      scopeTenant: 'Workspace only',
+    },
+    categories: {
+      customer_satisfaction: 'Customer satisfaction',
+      employee_feedback: 'Employee feedback',
+      event_registration: 'Event registration',
+      product_feedback: 'Product feedback',
+      nps: 'NPS',
+      contact_info: 'Contact information',
+      post_service: 'Post-service feedback',
+      lead_capture: 'Lead capture',
+      other: 'Other',
+    },
+    useModal: {
+      title: 'Create a survey from this template',
+      subtitle:
+        'A new draft survey will be created. The template will not be modified by future edits.',
+      titleField: 'Survey title',
+      titleHint: 'Leave blank to reuse the template title.',
+      slugField: 'Public slug (optional)',
+      slugHint: 'Lowercase letters, numbers, and hyphens. Auto-generated if blank.',
+      submit: 'Create draft',
+    },
+    editModal: {
+      createTitle: 'New workspace template',
+      editTitle: 'Edit template',
+      titleField: 'Title',
+      descriptionField: 'Description',
+      categoryField: 'Category',
+      statusField: 'Status',
+      afterCreateHint:
+        'The template starts with a single block. Open it from a survey draft to add fields.',
+      submit: 'Save template',
+    },
+    confirmDelete: 'Delete the template "{title}"?',
+    errors: {
+      titleRequired: 'Please provide a title.',
+      saveFailed: 'We could not save the template.',
+      createSurveyFailed: 'We could not start a survey from this template.',
+    },
+  },
   contacts: {
     list: {
       title: 'Contacts',

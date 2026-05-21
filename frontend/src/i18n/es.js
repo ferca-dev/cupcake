@@ -196,6 +196,76 @@ export default {
       },
     },
   },
+  templates: {
+    list: {
+      title: 'Plantillas',
+      subtitle:
+        'Comienza una nueva encuesta desde una plantilla del sistema o una guardada por tu equipo.',
+      newTemplate: 'Nueva plantilla',
+      empty: 'Ninguna plantilla coincide con los filtros actuales.',
+    },
+    badges: {
+      system: 'Sistema',
+      tenant: 'Espacio',
+      inactive: 'Inactiva',
+    },
+    card: {
+      category: 'Categoría',
+      fields: 'Campos',
+      use: 'Usar plantilla',
+    },
+    status: {
+      active: 'Activa',
+      inactive: 'Inactiva',
+    },
+    filters: {
+      searchPlaceholder: 'Buscar plantillas',
+      category: 'Categoría',
+      scope: 'Origen',
+      allCategories: 'Todas las categorías',
+      scopeAll: 'Todas las plantillas',
+      scopeSystem: 'Solo del sistema',
+      scopeTenant: 'Solo del espacio',
+    },
+    categories: {
+      customer_satisfaction: 'Satisfacción de clientes',
+      employee_feedback: 'Retroalimentación de empleados',
+      event_registration: 'Registro a evento',
+      product_feedback: 'Retroalimentación de producto',
+      nps: 'NPS',
+      contact_info: 'Información de contacto',
+      post_service: 'Posterior al servicio',
+      lead_capture: 'Captura de prospectos',
+      other: 'Otro',
+    },
+    useModal: {
+      title: 'Crear una encuesta a partir de esta plantilla',
+      subtitle:
+        'Se creará una nueva encuesta en borrador. La plantilla no se verá afectada por ediciones futuras.',
+      titleField: 'Título de la encuesta',
+      titleHint: 'Déjalo en blanco para reutilizar el título de la plantilla.',
+      slugField: 'Slug público (opcional)',
+      slugHint: 'Letras minúsculas, números y guiones. Se genera si lo dejas vacío.',
+      submit: 'Crear borrador',
+    },
+    editModal: {
+      createTitle: 'Nueva plantilla del espacio',
+      editTitle: 'Editar plantilla',
+      titleField: 'Título',
+      descriptionField: 'Descripción',
+      categoryField: 'Categoría',
+      statusField: 'Estado',
+      afterCreateHint:
+        'La plantilla inicia con un bloque vacío. Ábrela desde una encuesta para añadir campos.',
+      submit: 'Guardar plantilla',
+    },
+    confirmDelete: '¿Eliminar la plantilla "{title}"?',
+    errors: {
+      titleRequired: 'Indica un título.',
+      saveFailed: 'No pudimos guardar la plantilla.',
+      createSurveyFailed: 'No pudimos crear una encuesta a partir de esta plantilla.',
+    },
+  },
   contacts: {
     list: {
       title: 'Contactos',
