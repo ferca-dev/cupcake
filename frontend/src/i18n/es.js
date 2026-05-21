@@ -397,6 +397,51 @@ export default {
       noContacts: 'No hay contactos para asignar todavía.',
     },
   },
+  billing: {
+    nav: 'Facturación',
+    transactions: {
+      title: 'Historial de facturación',
+      subtitle: 'Facturas, reembolsos y créditos previos de tu espacio.',
+      adminScope: 'Vista de super administrador',
+      history: 'Historial de transacciones',
+      empty: 'Aún no hay transacciones para mostrar.',
+      total: '{count} transacciones',
+      created: 'Creada {date}',
+      noDescription: 'Transacción sin descripción',
+      plan: 'Plan: {plan}',
+      reference: 'Referencia: {reference}',
+      filters: {
+        status: 'Estado',
+        type: 'Tipo',
+        allStatuses: 'Todos los estados',
+        allTypes: 'Todos los tipos',
+      },
+      columns: {
+        date: 'Fecha',
+        description: 'Descripción',
+        type: 'Tipo',
+        amount: 'Monto',
+        status: 'Estado',
+        provider: 'Proveedor',
+      },
+      statuses: {
+        pending: 'Pendiente',
+        paid: 'Pagada',
+        failed: 'Fallida',
+        refunded: 'Reembolsada',
+        cancelled: 'Cancelada',
+      },
+      types: {
+        payment: 'Pago',
+        refund: 'Reembolso',
+        credit: 'Crédito',
+        adjustment: 'Ajuste',
+      },
+      providers: {
+        internal: 'Interno',
+      },
+    },
+  },
   campaigns: {
     list: {
       title: 'Campañas',

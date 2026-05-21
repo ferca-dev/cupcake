@@ -396,6 +396,51 @@ export default {
       noContacts: 'No contacts to assign yet.',
     },
   },
+  billing: {
+    nav: 'Billing',
+    transactions: {
+      title: 'Billing history',
+      subtitle: 'Past invoices, refunds, and account credits for your workspace.',
+      adminScope: 'Super admin view',
+      history: 'Transaction history',
+      empty: 'No transactions to show yet.',
+      total: '{count} transactions',
+      created: 'Created {date}',
+      noDescription: 'Untitled transaction',
+      plan: 'Plan: {plan}',
+      reference: 'Reference: {reference}',
+      filters: {
+        status: 'Status',
+        type: 'Type',
+        allStatuses: 'All statuses',
+        allTypes: 'All types',
+      },
+      columns: {
+        date: 'Date',
+        description: 'Description',
+        type: 'Type',
+        amount: 'Amount',
+        status: 'Status',
+        provider: 'Provider',
+      },
+      statuses: {
+        pending: 'Pending',
+        paid: 'Paid',
+        failed: 'Failed',
+        refunded: 'Refunded',
+        cancelled: 'Cancelled',
+      },
+      types: {
+        payment: 'Payment',
+        refund: 'Refund',
+        credit: 'Credit',
+        adjustment: 'Adjustment',
+      },
+      providers: {
+        internal: 'Internal',
+      },
+    },
+  },
   campaigns: {
     list: {
       title: 'Campaigns',

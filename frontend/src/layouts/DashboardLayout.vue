@@ -92,6 +92,13 @@ const handleLogout = async () => {
         >
           {{ t('campaigns.list.title') }}
         </RouterLink>
+        <RouterLink
+          v-if="auth.hasPermission('billing.view')"
+          :to="{ name: 'billing.transactions' }"
+          class="dashboard-layout__nav-link"
+        >
+          {{ t('billing.nav') }}
+        </RouterLink>
       </nav>
       <div v-if="tenantName" class="dashboard-layout__tenant">
         <small>{{ tenantName }}</small>

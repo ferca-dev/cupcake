@@ -8,6 +8,7 @@ import { campaignsRouter } from '../modules/campaigns/campaign.routes.js';
 import { publicFormsRouter } from '../modules/public-forms/public-form.routes.js';
 import { dashboardRouter, adminMetricsRouter } from '../modules/dashboard/dashboard.routes.js';
 import { templatesRouter } from '../modules/templates/template.routes.js';
+import { transactionsRouter } from '../modules/transactions/transaction.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -64,6 +65,8 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/templates',
         '/api/v1/templates/:id',
         '/api/v1/templates/:id/create-survey',
+        '/api/v1/transactions',
+        '/api/v1/transactions/:id',
       ],
     },
     message: 'API metadata',
@@ -81,3 +84,4 @@ apiV1Router.use('/public', publicFormsRouter);
 apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminMetricsRouter);
 apiV1Router.use('/templates', templatesRouter);
+apiV1Router.use('/transactions', transactionsRouter);

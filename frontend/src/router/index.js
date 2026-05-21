@@ -19,6 +19,7 @@ import ContactGroupListView from '../views/contacts/ContactGroupListView.vue';
 import CampaignListView from '../views/campaigns/CampaignListView.vue';
 import CampaignDetailView from '../views/campaigns/CampaignDetailView.vue';
 import TemplateListView from '../views/templates/TemplateListView.vue';
+import TransactionHistoryView from '../views/billing/TransactionHistoryView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormView from '../views/public/PublicFormView.vue';
@@ -146,6 +147,16 @@ export const routes = [
           title: 'Campaign',
           requiresAuth: true,
           permissions: ['campaigns.send'],
+        },
+      },
+      {
+        path: 'billing/transactions',
+        name: 'billing.transactions',
+        component: TransactionHistoryView,
+        meta: {
+          title: 'Billing history',
+          requiresAuth: true,
+          permissions: ['billing.view'],
         },
       },
     ],

@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 09 — campaigns and sending adapters. Campaigns can be created for any published survey, dispatched to selected contacts and groups across email, SMS, and WhatsApp through a provider abstraction (mock implementations only), and inspected through a recipient-level report. The phase ships Mongoose models for `campaigns` and `campaign_recipients`, a pluggable provider factory driven by `EMAIL_PROVIDER`/`SMS_PROVIDER`/`WHATSAPP_PROVIDER`, deduplicated recipient generation with skip/failure reasons, per-recipient submission tokens and public URLs, and a frontend list + detail flow with a send-now action. See [docs/provider-architecture.md](docs/provider-architecture.md) for the adapter contract.
+Phase 12 — transactions and billing history. Tenants now have a tenant-scoped transaction history (payments, refunds, credits, adjustments) backed by a Mongoose `Transaction` model that stores amounts as integer minor units alongside an ISO 4217 currency, an audited super-admin read path, demo seed data, a filterable `TransactionHistoryView`, and a Pinia store. No real payment provider is integrated; the boundary a future Stripe/MercadoPago adapter must respect lives in [docs/billing-architecture.md](docs/billing-architecture.md). The campaign sending architecture introduced in phase 09 still applies; see [docs/provider-architecture.md](docs/provider-architecture.md) for that adapter contract.
 
 ## Stack
 

@@ -6,6 +6,7 @@ import { seedSurveys } from './seed-surveys.js';
 import { seedContacts } from './seed-contacts.js';
 import { seedCampaigns } from './seed-campaigns.js';
 import { seedTemplates } from './seed-templates.js';
+import { seedTransactions } from './seed-transactions.js';
 
 /**
  * Runs all available seeders in dependency order. Idempotent — running the
@@ -22,6 +23,7 @@ const runSeeders = async () => {
     await seedSurveys();
     await seedContacts();
     await seedCampaigns();
+    await seedTransactions();
     logger.info('All seeders completed successfully');
   } catch (err) {
     logger.fatal({ err }, 'Seeder failed');
