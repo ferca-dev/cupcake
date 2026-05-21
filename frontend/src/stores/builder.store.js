@@ -20,7 +20,9 @@ import {
   buildDefaultField,
   buildEmptySchema,
   cloneFieldWithNewIds,
+  defaultVisibility,
   generateOptionId,
+  generateRuleId,
   normalizeSchemaForApi,
   slugifyFieldKey,
   validateFormSchema,
@@ -222,9 +224,11 @@ export const useBuilderStore = defineStore('builder', {
       if ('visibility' in sanitized && sanitized.visibility && typeof sanitized.visibility === 'object') {
         updated.visibility = {
           mode: sanitized.visibility.mode ?? updated.visibility.mode ?? 'always',
-          rules: Array.isArray(sanitized.visibility.rules)
-            ? sanitized.visibility.rules
-            : updated.visibility.rules,
+          conditionMode:
+            sanitized.visibility.conditionMode ?? updated.visibility.conditionMode ?? 'all',
+          conditions: Array.isArray(sanitized.visibility.conditions)
+            ? sanitized.visibility.conditions
+            : updated.visibility.conditions,
         };
       }
       if ('settings' in sanitized && sanitized.settings && typeof sanitized.settings === 'object') {
@@ -322,6 +326,70 @@ export const useBuilderStore = defineStore('builder', {
 
     setPreviewMode(mode) {
       if (PREVIEW_MODES.includes(mode)) this.previewMode = mode;
+    },
+
+    // ------------------------------------------------------------------
+    // Per-field visibility shortcuts
+    // ------------------------------------------------------------------
+
+    setFieldVisibility(fieldId, visibility) {
+      const index = this.schema.fields.findIndex((field) => field.id === fieldId);
+      if (index < 0) return;
+      const current = this.schema.fields[index];
+      const baseline = current.visibility ?? defaultVisibility();
+      const merged = {
+        mode: visibility?.mode ?? baseline.mode ?? 'always',
+        conditionMode: visibility?.conditionMode ?? baseline.conditionMode ?? 'all',
+        conditions: Array.isArray(visibility?.conditions)
+          ? visibility.conditions
+          : baseline.conditions ?? [],
+      };
+      const nextFields = this.schema.fields.slice();
+      nextFields[index] = { ...current, visibility: merged };
+      this.schema.fields = nextFields;
+      this._markDirty();
+    },
+
+    // ------------------------------------------------------------------
+    // Top-level logic rules
+    // ------------------------------------------------------------------
+
+    addLogicRule(rule = {}) {
+      const created = {
+        id: rule.id ?? generateRuleId(),
+        name: rule.name ?? '',
+        type: rule.type ?? 'visibility',
+        targetFieldId: rule.targetFieldId ?? null,
+        targetSectionId: rule.targetSectionId ?? null,
+        conditions: Array.isArray(rule.conditions) ? rule.conditions : [],
+        conditionMode: rule.conditionMode ?? 'all',
+        action: rule.action ?? { type: 'show', target: null },
+      };
+      this.schema.logicRules = [...this.schema.logicRules, created];
+      this._markDirty();
+      return created;
+    },
+
+    updateLogicRule(ruleId, patch) {
+      const index = this.schema.logicRules.findIndex((rule) => rule.id === ruleId);
+      if (index < 0) return;
+      const current = this.schema.logicRules[index];
+      const next = { ...current, ...patch };
+      if (patch?.action) {
+        next.action = { ...current.action, ...patch.action };
+      }
+      if (Array.isArray(patch?.conditions)) {
+        next.conditions = patch.conditions;
+      }
+      const nextRules = this.schema.logicRules.slice();
+      nextRules[index] = next;
+      this.schema.logicRules = nextRules;
+      this._markDirty();
+    },
+
+    removeLogicRule(ruleId) {
+      this.schema.logicRules = this.schema.logicRules.filter((rule) => rule.id !== ruleId);
+      this._markDirty();
     },
 
     setLayoutMode(mode) {
@@ -530,7 +598,10 @@ export const useBuilderStore = defineStore('builder', {
         },
         visibility: {
           mode: field.visibility?.mode ?? 'always',
-          rules: Array.isArray(field.visibility?.rules) ? field.visibility.rules : [],
+          conditionMode: field.visibility?.conditionMode ?? 'all',
+          conditions: Array.isArray(field.visibility?.conditions)
+            ? field.visibility.conditions
+            : [],
         },
         settings: {
           width: FIELD_WIDTHS.includes(field.settings?.width) ? field.settings.width : 'full',

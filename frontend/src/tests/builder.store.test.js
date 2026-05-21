@@ -147,7 +147,7 @@ describe('builder store', () => {
               order: 1,
               options: [],
               validation: {},
-              visibility: { mode: 'always', rules: [] },
+              visibility: { mode: 'always', conditionMode: 'all', conditions: [] },
               settings: { width: 'full', imageUrl: null },
             },
           ],

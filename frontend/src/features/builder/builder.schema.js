@@ -1,7 +1,7 @@
 // Client-side form-schema utilities used by the builder.
 //
 // Goals:
-//   - Generate stable, backend-safe field/option ids and keys.
+//   - Generate stable, backend-safe field/option/rule ids and keys.
 //   - Build a default field for any supported type.
 //   - Run a fast pre-flight validation that mirrors the backend Zod schema in
 //     `backend/src/modules/surveys/form-schema.validator.js`. The backend is
@@ -37,7 +37,13 @@ const LOGIC_OPERATORS = Object.freeze([
   'is_not_empty',
 ]);
 const VISIBILITY_MODES = Object.freeze(['always', 'show_when', 'hide_when']);
+const CONDITION_MODES = Object.freeze(['all', 'any']);
 const LAYOUT_MODES = Object.freeze(['single_page', 'paginated']);
+const LOGIC_RULE_TYPES = Object.freeze(['visibility', 'navigation', 'end']);
+const VISIBILITY_ACTIONS = Object.freeze(['show', 'hide']);
+const NAVIGATION_ACTIONS = Object.freeze(['jump_to_field', 'jump_to_section', 'jump_to_page']);
+const END_ACTIONS = Object.freeze(['end_survey']);
+const NO_VALUE_OPERATORS = new Set(['is_empty', 'is_not_empty']);
 
 // Counter used to disambiguate ids when several are generated in the same
 // millisecond — guarantees uniqueness even on fast clicks.
@@ -61,6 +67,8 @@ export const generateFieldId = () => `field_${Date.now().toString(36)}${nextCoun
 export const generateOptionId = () => `opt_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
 
 export const generateSectionId = () => `section_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+
+export const generateRuleId = () => `rule_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
 
 /**
  * Build a backend-safe field key from a candidate label. Falls back to a
@@ -106,7 +114,11 @@ const defaultValidation = () => ({
   regex: null,
 });
 
-const defaultVisibility = () => ({ mode: 'always', rules: [] });
+export const defaultVisibility = () => ({
+  mode: 'always',
+  conditionMode: 'all',
+  conditions: [],
+});
 
 const defaultSettings = () => ({ width: 'full', imageUrl: null });
 
@@ -154,6 +166,12 @@ export const buildEmptySchema = () => ({
   layout: { mode: 'single_page', showProgress: true },
 });
 
+const normalizeCondition = (cond) => ({
+  fieldId: typeof cond?.fieldId === 'string' ? cond.fieldId : '',
+  operator: LOGIC_OPERATORS.includes(cond?.operator) ? cond.operator : 'equals',
+  value: NO_VALUE_OPERATORS.has(cond?.operator) ? undefined : cond?.value ?? '',
+});
+
 const cloneField = (field, overrides = {}) => ({
   ...field,
   options: Array.isArray(field.options)
@@ -161,9 +179,12 @@ const cloneField = (field, overrides = {}) => ({
     : [],
   validation: { ...defaultValidation(), ...(field.validation ?? {}) },
   visibility: {
-    mode: field.visibility?.mode ?? 'always',
-    rules: Array.isArray(field.visibility?.rules)
-      ? field.visibility.rules.map((rule) => ({ ...rule }))
+    mode: VISIBILITY_MODES.includes(field.visibility?.mode) ? field.visibility.mode : 'always',
+    conditionMode: CONDITION_MODES.includes(field.visibility?.conditionMode)
+      ? field.visibility.conditionMode
+      : 'all',
+    conditions: Array.isArray(field.visibility?.conditions)
+      ? field.visibility.conditions.map(normalizeCondition)
       : [],
   },
   settings: { ...defaultSettings(), ...(field.settings ?? {}) },
@@ -189,6 +210,61 @@ const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(v
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const normalizeVisibility = (visibility) => {
+  const safe = isPlainObject(visibility) ? visibility : {};
+  return {
+    mode: VISIBILITY_MODES.includes(safe.mode) ? safe.mode : 'always',
+    conditionMode: CONDITION_MODES.includes(safe.conditionMode) ? safe.conditionMode : 'all',
+    conditions: Array.isArray(safe.conditions) ? safe.conditions.map(normalizeCondition) : [],
+  };
+};
+
+const DEFAULT_ACTION_BY_TYPE = {
+  visibility: 'show',
+  navigation: 'jump_to_field',
+  end: 'end_survey',
+};
+
+const ALLOWED_ACTIONS_BY_TYPE = {
+  visibility: VISIBILITY_ACTIONS,
+  navigation: NAVIGATION_ACTIONS,
+  end: END_ACTIONS,
+};
+
+const resolveActionType = (ruleType, candidateType) => {
+  const allowed = ALLOWED_ACTIONS_BY_TYPE[ruleType] ?? [];
+  if (allowed.includes(candidateType)) return candidateType;
+  return DEFAULT_ACTION_BY_TYPE[ruleType] ?? 'show';
+};
+
+const normalizeLogicRule = (rule) => {
+  if (!isPlainObject(rule)) return null;
+  const type = LOGIC_RULE_TYPES.includes(rule.type) ? rule.type : 'visibility';
+  const conditionMode = CONDITION_MODES.includes(rule.conditionMode) ? rule.conditionMode : 'all';
+  const conditions = Array.isArray(rule.conditions) ? rule.conditions.map(normalizeCondition) : [];
+  const action = {
+    type: resolveActionType(type, rule.action?.type),
+    target:
+      typeof rule.action?.target === 'string' && rule.action.target.length > 0
+        ? rule.action.target
+        : null,
+  };
+  return {
+    id: typeof rule.id === 'string' && rule.id ? rule.id : generateRuleId(),
+    name: typeof rule.name === 'string' ? rule.name : '',
+    type,
+    targetFieldId:
+      typeof rule.targetFieldId === 'string' && rule.targetFieldId ? rule.targetFieldId : null,
+    targetSectionId:
+      typeof rule.targetSectionId === 'string' && rule.targetSectionId
+        ? rule.targetSectionId
+        : null,
+    conditions,
+    conditionMode,
+    action,
+  };
+};
+
 /**
  * Normalises the draft schema into the exact shape the backend expects.
  * Hydrates defaults, strips presentational keys/options, and reassigns the
@@ -206,7 +282,6 @@ export const normalizeSchemaForApi = (schema) => {
       const isOptioned = OPTIONED_FIELD_TYPES.has(field?.type);
       const settings = isPlainObject(field?.settings) ? field.settings : {};
       const validation = isPlainObject(field?.validation) ? field.validation : {};
-      const visibility = isPlainObject(field?.visibility) ? field.visibility : {};
 
       const normalised = {
         id: field.id,
@@ -233,10 +308,7 @@ export const normalizeSchemaForApi = (schema) => {
               ? validation.regex
               : null,
         },
-        visibility: {
-          mode: VISIBILITY_MODES.includes(visibility.mode) ? visibility.mode : 'always',
-          rules: Array.isArray(visibility.rules) ? visibility.rules : [],
-        },
+        visibility: normalizeVisibility(field.visibility),
         settings: {
           width: FIELD_WIDTHS.includes(settings.width) ? settings.width : 'full',
           imageUrl:
@@ -261,7 +333,9 @@ export const normalizeSchemaForApi = (schema) => {
           order: index + 1,
         }))
       : [],
-    logicRules: Array.isArray(safe.logicRules) ? safe.logicRules : [],
+    logicRules: Array.isArray(safe.logicRules)
+      ? safe.logicRules.map(normalizeLogicRule).filter(Boolean)
+      : [],
     layout: {
       mode: LAYOUT_MODES.includes(layout.mode) ? layout.mode : 'single_page',
       showProgress: layout.showProgress !== false,
@@ -270,6 +344,73 @@ export const normalizeSchemaForApi = (schema) => {
 };
 
 const issue = (path, message) => ({ path, message });
+
+/**
+ * Returns the operators that make sense for the given field type. Mirrors
+ * the backend `operatorsForField` so the UI only offers compatible options.
+ */
+export const operatorsForFieldType = (type) => {
+  switch (type) {
+    case 'number':
+    case 'rating':
+    case 'nps':
+    case 'date':
+    case 'time':
+      return [...LOGIC_OPERATORS];
+    case 'checkbox':
+    case 'yes_no':
+      return ['equals', 'not_equals', 'is_empty', 'is_not_empty'];
+    case 'checkbox_group':
+      return ['contains', 'not_contains', 'is_empty', 'is_not_empty'];
+    case 'select':
+    case 'radio_group':
+    case 'short_text':
+    case 'long_text':
+    case 'email':
+    case 'phone':
+    case 'hidden':
+      return ['equals', 'not_equals', 'contains', 'not_contains', 'is_empty', 'is_not_empty'];
+    default:
+      return [];
+  }
+};
+
+const validateConditionList = ({
+  conditions,
+  basePath,
+  fieldsById,
+  ownerFieldId = null,
+  issues,
+}) => {
+  if (!Array.isArray(conditions)) return;
+  conditions.forEach((cond, condIdx) => {
+    const sourcePath = [...basePath, condIdx];
+    const source = fieldsById.get(cond?.fieldId);
+    if (!source) {
+      issues.push(issue([...sourcePath, 'fieldId'], 'Pick a field for this condition.'));
+      return;
+    }
+    if (ownerFieldId && source.id === ownerFieldId) {
+      issues.push(issue([...sourcePath, 'fieldId'], 'A field cannot reference itself.'));
+    }
+    const operators = operatorsForFieldType(source.type);
+    if (!operators.includes(cond.operator)) {
+      issues.push(
+        issue(
+          [...sourcePath, 'operator'],
+          `Operator "${cond.operator}" is not supported for "${source.type}".`,
+        ),
+      );
+      return;
+    }
+    if (
+      !NO_VALUE_OPERATORS.has(cond.operator) &&
+      (cond.value === undefined || cond.value === null || cond.value === '')
+    ) {
+      issues.push(issue([...sourcePath, 'value'], 'Provide a value for this condition.'));
+    }
+  });
+};
 
 /**
  * Validates the in-memory schema and returns a list of issues. The empty
@@ -284,7 +425,9 @@ export const validateFormSchema = (schema) => {
 
   const fields = Array.isArray(schema.fields) ? schema.fields : [];
   const sections = Array.isArray(schema.sections) ? schema.sections : [];
+  const logicRules = Array.isArray(schema.logicRules) ? schema.logicRules : [];
   const fieldIds = new Set();
+  const fieldsById = new Map();
   const fieldKeys = new Set();
   const sectionIds = new Set(sections.map((section) => section?.id).filter(Boolean));
 
@@ -304,6 +447,7 @@ export const validateFormSchema = (schema) => {
       issues.push(issue([...path, 'id'], `Duplicate field id "${field.id}".`));
     } else {
       fieldIds.add(field.id);
+      fieldsById.set(field.id, field);
     }
 
     if (!FIELD_TYPES.includes(field.type)) {
@@ -370,18 +514,90 @@ export const validateFormSchema = (schema) => {
         issue([...path, 'sectionId'], `Field references unknown section "${field.sectionId}".`),
       );
     }
+  });
 
-    if (field.visibility && Array.isArray(field.visibility.rules)) {
-      field.visibility.rules.forEach((rule, ruleIdx) => {
-        if (!LOGIC_OPERATORS.includes(rule?.operator)) {
-          issues.push(
-            issue(
-              [...path, 'visibility', 'rules', ruleIdx, 'operator'],
-              'Unsupported visibility operator.',
-            ),
-          );
-        }
+  fields.forEach((field, index) => {
+    const visibility = field?.visibility;
+    if (!visibility || visibility.mode === 'always') return;
+    const conditions = Array.isArray(visibility.conditions) ? visibility.conditions : [];
+    if (conditions.length === 0) {
+      issues.push(
+        issue(
+          ['fields', index, 'visibility', 'conditions'],
+          'Visibility rules need at least one condition.',
+        ),
+      );
+    }
+    validateConditionList({
+      conditions,
+      basePath: ['fields', index, 'visibility', 'conditions'],
+      fieldsById,
+      ownerFieldId: field.id,
+      issues,
+    });
+  });
+
+  const ruleIds = new Set();
+  logicRules.forEach((rule, index) => {
+    const path = ['logicRules', index];
+    if (!isPlainObject(rule)) {
+      issues.push(issue(path, 'Logic rule is malformed.'));
+      return;
+    }
+    if (!rule.id) {
+      issues.push(issue([...path, 'id'], 'Logic rule id is required.'));
+    } else if (ruleIds.has(rule.id)) {
+      issues.push(issue([...path, 'id'], `Duplicate logic rule id "${rule.id}".`));
+    } else {
+      ruleIds.add(rule.id);
+    }
+    if (!LOGIC_RULE_TYPES.includes(rule.type)) {
+      issues.push(issue([...path, 'type'], 'Unsupported logic rule type.'));
+      return;
+    }
+    if (!Array.isArray(rule.conditions) || rule.conditions.length === 0) {
+      issues.push(issue([...path, 'conditions'], 'Add at least one condition.'));
+    } else {
+      validateConditionList({
+        conditions: rule.conditions,
+        basePath: [...path, 'conditions'],
+        fieldsById,
+        issues,
       });
+    }
+
+    if (rule.type === 'visibility') {
+      if (!rule.targetFieldId || !fieldsById.has(rule.targetFieldId)) {
+        issues.push(issue([...path, 'targetFieldId'], 'Pick a target field to show or hide.'));
+      }
+      if (!VISIBILITY_ACTIONS.includes(rule.action?.type)) {
+        issues.push(issue([...path, 'action', 'type'], 'Visibility rules must show or hide a field.'));
+      }
+    } else if (rule.type === 'navigation') {
+      if (!NAVIGATION_ACTIONS.includes(rule.action?.type)) {
+        issues.push(
+          issue([...path, 'action', 'type'], 'Navigation rules must jump to a field, section, or page.'),
+        );
+      }
+      const target = rule.action?.target;
+      if (!target) {
+        issues.push(issue([...path, 'action', 'target'], 'Pick where to jump to.'));
+      } else if (rule.action.type === 'jump_to_field' && !fieldsById.has(target)) {
+        issues.push(
+          issue([...path, 'action', 'target'], `Unknown jump target "${target}".`),
+        );
+      } else if (rule.action.type === 'jump_to_section' && !sectionIds.has(target)) {
+        issues.push(
+          issue([...path, 'action', 'target'], `Unknown section "${target}".`),
+        );
+      } else if (rule.action.type === 'jump_to_page') {
+        const num = Number(target);
+        if (!Number.isInteger(num) || num < 1) {
+          issues.push(issue([...path, 'action', 'target'], 'Page must be a positive integer.'));
+        }
+      }
+    } else if (rule.type === 'end' && !END_ACTIONS.includes(rule.action?.type)) {
+      issues.push(issue([...path, 'action', 'type'], 'End rules must use end_survey.'));
     }
   });
 
@@ -392,3 +608,8 @@ export const isValidFormSchema = (schema) => validateFormSchema(schema).length =
 
 export const FIELD_KEY_PATTERN = FIELD_KEY_REGEX;
 export const SUPPORTED_LOGIC_OPERATORS = LOGIC_OPERATORS;
+export const SUPPORTED_VISIBILITY_MODES = VISIBILITY_MODES;
+export const SUPPORTED_CONDITION_MODES = CONDITION_MODES;
+export const SUPPORTED_LOGIC_RULE_TYPES = LOGIC_RULE_TYPES;
+export const SUPPORTED_VISIBILITY_ACTIONS = VISIBILITY_ACTIONS;
+export const SUPPORTED_NAVIGATION_ACTIONS = NAVIGATION_ACTIONS;

@@ -252,6 +252,81 @@ duplicate-detection rules (field ids, field keys, option keys, section ids,
 logic rule ids). Validation errors come back as `422 VALIDATION_ERROR` with
 issue paths, so the builder UI can render inline messages later.
 
+The schema shape is:
+
+```jsonc
+{
+  "fields": [
+    {
+      "id": "field_satisfaction",
+      "type": "select",
+      "key": "satisfaction",
+      "label": "How satisfied are you?",
+      "required": true,
+      "options": [
+        { "key": "high", "label": "High" },
+        { "key": "low",  "label": "Low" }
+      ],
+      "validation": { "minLength": null, "maxLength": null, "min": null, "max": null, "regex": null },
+      "visibility": {
+        "mode": "always",            // "always" | "show_when" | "hide_when"
+        "conditionMode": "all",      // "all" | "any" when mode != "always"
+        "conditions": []
+      },
+      "settings": { "width": "full", "imageUrl": null }
+    }
+  ],
+  "sections": [],
+  "logicRules": [
+    {
+      "id": "rule_show_comments",
+      "name": "Ask for comments when satisfaction is low",
+      "type": "visibility",          // "visibility" | "navigation" | "end"
+      "targetFieldId": "field_comments",
+      "conditions": [
+        { "fieldId": "field_satisfaction", "operator": "equals", "value": "low" }
+      ],
+      "conditionMode": "all",
+      "action": { "type": "show", "target": null }
+    }
+  ],
+  "layout": { "mode": "single_page", "showProgress": true }
+}
+```
+
+### Conditional logic
+
+Conditional logic is evaluated by `modules/surveys/logic-engine.service.js`
+(pure functions, no I/O). The same semantics are mirrored in the frontend
+at `frontend/src/features/logic/logic-engine.js`; backend remains
+authoritative on submit.
+
+- A field is **visible** when:
+  - its `visibility.mode === 'always'`, or
+  - its `visibility.mode === 'show_when'` and the condition group is satisfied, or
+  - its `visibility.mode === 'hide_when'` and the condition group is **not** satisfied;
+  - AND no matching top-level `logicRules` of `type: 'visibility'` overrides it.
+- Top-level visibility rules override the per-field shortcut; the last
+  matching rule wins.
+- Navigation rules (`type: 'navigation'`, action `jump_to_field` /
+  `jump_to_section` / `jump_to_page`) are advisory in single-page layouts
+  and authoritative once paginated layouts are wired through.
+- End rules (`type: 'end'`, action `end_survey`) short-circuit the
+  remainder of the survey.
+
+The schema validator prevents stored rules from:
+
+- Referencing deleted/unknown field ids (in either conditions or targets).
+- Using operators incompatible with the source field type (for example
+  `greater_than` on a checkbox group).
+- Letting a field reference itself in its own visibility conditions.
+- Forming a navigation cycle (`A → B → A`).
+
+The public-form answer validator evaluates visibility against the incoming
+answer snapshot and **drops** any answer for a hidden field. Hidden
+required fields therefore never block submission, and a malicious client
+cannot smuggle an answer for a field that is not actually visible.
+
 ## Endpoints implemented in Phase 06
 
 Public form routes live under `/api/v1/public/forms/*` and **do not require

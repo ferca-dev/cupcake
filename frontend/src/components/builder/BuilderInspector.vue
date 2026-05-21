@@ -19,6 +19,9 @@ import {
   PRESENTATION_FIELD_TYPES,
   getFieldCatalogEntry,
 } from '../../features/builder/builder.constants.js';
+import { SUPPORTED_VISIBILITY_MODES } from '../../features/builder/builder.schema.js';
+import ConditionBuilder from './ConditionBuilder.vue';
+import LogicRuleEditor from './LogicRuleEditor.vue';
 
 const props = defineProps({
   field: { type: Object, default: null },
@@ -29,6 +32,10 @@ const props = defineProps({
   surveyDescription: { type: String, default: '' },
   surveySlug: { type: String, default: '' },
   isSavingMetadata: { type: Boolean, default: false },
+  fields: { type: Array, default: () => [] },
+  sections: { type: Array, default: () => [] },
+  logicRules: { type: Array, default: () => [] },
+  schemaIssues: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits([
@@ -38,6 +45,10 @@ const emit = defineEmits([
   'remove-option',
   'update-layout',
   'update-metadata',
+  'update-visibility',
+  'add-logic-rule',
+  'update-logic-rule',
+  'remove-logic-rule',
 ]);
 
 const { t } = useI18n();
@@ -47,6 +58,39 @@ const layoutModeOptions = [
   { value: 'single_page', label: t('builder.inspector.layout.singlePage') },
   { value: 'paginated', label: t('builder.inspector.layout.paginated') },
 ];
+
+const visibilityModeOptions = computed(() =>
+  SUPPORTED_VISIBILITY_MODES.map((mode) => ({
+    value: mode,
+    label: t(`builder.inspector.visibility.modes.${mode}`),
+  })),
+);
+
+// Source fields for the selected field's visibility shortcut: every input
+// field except the field itself and presentation/file-upload fields.
+const sourceFieldsForSelected = computed(() => {
+  if (!props.field) return [];
+  return props.fields.filter(
+    (field) =>
+      field?.id &&
+      field.id !== props.field.id &&
+      !PRESENTATION_FIELD_TYPES.has(field.type) &&
+      field.type !== 'file_upload',
+  );
+});
+
+const visibilityIssues = computed(() => {
+  if (!props.field) return [];
+  return props.fieldIssues
+    .filter((issue) => issue.path?.[2] === 'visibility')
+    .map((issue) => ({ ...issue, path: issue.path.slice(3) }));
+});
+
+const conditionsIssues = computed(() =>
+  visibilityIssues.value
+    .filter((issue) => issue.path?.[0] === 'conditions')
+    .map((issue) => ({ ...issue, path: issue.path.slice(1) })),
+);
 
 const isOptioned = computed(() => OPTIONED_FIELD_TYPES.has(props.field?.type));
 const isPresentational = computed(() => PRESENTATION_FIELD_TYPES.has(props.field?.type));
@@ -258,6 +302,30 @@ const submitMetadata = () => {
             />
           </section>
         </template>
+
+        <template v-if="!isPresentational">
+          <section
+            class="builder-inspector__visibility"
+            :aria-label="t('builder.inspector.visibility.title')"
+          >
+            <h4>{{ t('builder.inspector.visibility.title') }}</h4>
+            <AppSelect
+              :model-value="field.visibility?.mode ?? 'always'"
+              :label="t('builder.inspector.visibility.mode')"
+              :options="visibilityModeOptions"
+              @update:model-value="(mode) => $emit('update-visibility', { mode })"
+            />
+            <ConditionBuilder
+              v-if="(field.visibility?.mode ?? 'always') !== 'always'"
+              :conditions="field.visibility?.conditions ?? []"
+              :condition-mode="field.visibility?.conditionMode ?? 'all'"
+              :source-fields="sourceFieldsForSelected"
+              :issues="conditionsIssues"
+              @update:conditions="(conditions) => $emit('update-visibility', { conditions })"
+              @update:condition-mode="(conditionMode) => $emit('update-visibility', { conditionMode })"
+            />
+          </section>
+        </template>
       </template>
 
       <template v-else>
@@ -300,6 +368,16 @@ const submitMetadata = () => {
             <span>{{ t('builder.inspector.layout.showProgress') }}</span>
           </label>
         </section>
+
+        <LogicRuleEditor
+          :rules="logicRules"
+          :fields="fields"
+          :sections="sections"
+          :issues="schemaIssues"
+          @add="$emit('add-logic-rule')"
+          @update="(payload) => $emit('update-logic-rule', payload)"
+          @remove="(ruleId) => $emit('remove-logic-rule', ruleId)"
+        />
       </template>
     </div>
   </aside>
@@ -387,7 +465,8 @@ const submitMetadata = () => {
 
 .builder-inspector__validation,
 .builder-inspector__meta,
-.builder-inspector__layout {
+.builder-inspector__layout,
+.builder-inspector__visibility {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -397,7 +476,8 @@ const submitMetadata = () => {
 
 .builder-inspector__validation h4,
 .builder-inspector__meta h4,
-.builder-inspector__layout h4 {
+.builder-inspector__layout h4,
+.builder-inspector__visibility h4 {
   margin: 0;
   font-size: var(--font-size-sm);
   text-transform: uppercase;

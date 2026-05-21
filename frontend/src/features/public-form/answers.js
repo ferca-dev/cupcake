@@ -9,6 +9,7 @@
 // alongside the local issues.
 
 import { t as defaultT } from '../../i18n/index.js';
+import { computeFieldVisibility } from '../logic/logic-engine.js';
 
 const PRESENTATION_TYPES = new Set([
   'image_block',
@@ -61,9 +62,11 @@ const isEmpty = (value) => {
 export const validateAnswers = (schema, state, translator = defaultT) => {
   const errors = {};
   const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+  const visibility = computeFieldVisibility(schema, state);
 
   for (const field of fields) {
     if (!isInputField(field)) continue;
+    if (visibility.get(field.id) === false) continue;
     const value = state[field.id];
     const required = Boolean(field.required);
     const validation = field.validation ?? {};
@@ -164,9 +167,11 @@ export const validateAnswers = (schema, state, translator = defaultT) => {
 
 export const serializeAnswers = (schema, state) => {
   const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+  const visibility = computeFieldVisibility(schema, state);
   const answers = [];
   for (const field of fields) {
     if (!isInputField(field)) continue;
+    if (visibility.get(field.id) === false) continue;
     const raw = state[field.id];
     if (isEmpty(raw) && !field.required) continue;
 

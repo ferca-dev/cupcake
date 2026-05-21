@@ -16,6 +16,7 @@ import {
   serializeAnswers,
   validateAnswers,
 } from '../../features/public-form/answers.js';
+import { computeFieldVisibility } from '../../features/logic/logic-engine.js';
 import PublicFieldRenderer from '../../components/public-form/PublicFieldRenderer.vue';
 import PublicThankYouView from './PublicThankYouView.vue';
 import { AppAlert, AppButton } from '../../components/ui/index.js';
@@ -43,6 +44,18 @@ const fieldErrors = reactive({});
 const startedAt = ref(null);
 
 const hasFieldErrors = computed(() => Object.keys(fieldErrors).length > 0);
+
+const visibilityMap = computed(() => {
+  if (!schema.value) return new Map();
+  return computeFieldVisibility(schema.value, answerState);
+});
+
+const isFieldVisible = (fieldId) => visibilityMap.value.get(fieldId) !== false;
+
+const visibleFields = computed(() => {
+  if (!schema.value) return [];
+  return schema.value.fields.filter((field) => isFieldVisible(field.id));
+});
 
 const resetAnswerState = (next) => {
   for (const key of Object.keys(answerState)) delete answerState[key];
@@ -184,7 +197,7 @@ watch(slug, (next, prev) => {
 
       <form class="public-form__form" novalidate @submit.prevent="onSubmit">
         <PublicFieldRenderer
-          v-for="field in schema.fields"
+          v-for="field in visibleFields"
           :key="field.id"
           :field="field"
           :model-value="answerState[field.id]"

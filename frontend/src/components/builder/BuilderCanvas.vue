@@ -19,6 +19,7 @@ const props = defineProps({
   selectedFieldId: { type: String, default: null },
   fieldIssueIds: { type: Set, default: () => new Set() },
   previewMode: { type: String, default: 'desktop' },
+  hiddenFieldIds: { type: Set, default: () => new Set() },
 });
 
 const emit = defineEmits([
@@ -153,6 +154,7 @@ const onBlankClick = () => emit('clear-selection');
           :has-issues="fieldIssueIds.has(field.id)"
           :is-dragging="dragFieldId === field.id"
           :is-drop-target="dragOverIndex === index"
+          :is-hidden-by-logic="hiddenFieldIds.has(field.id)"
           @select="onSelect"
           @duplicate="onDuplicate"
           @remove="onRemove"

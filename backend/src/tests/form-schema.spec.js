@@ -10,6 +10,16 @@ const baseField = (overrides = {}) => ({
   ...overrides,
 });
 
+const visibilityRule = (overrides = {}) => ({
+  id: 'rule_1',
+  type: 'visibility',
+  targetFieldId: 'field_b',
+  conditions: [{ fieldId: 'field_a', operator: 'equals', value: 'yes' }],
+  conditionMode: 'all',
+  action: { type: 'show' },
+  ...overrides,
+});
+
 describe('form schema validator', () => {
   it('accepts and normalises an empty schema input', () => {
     const result = parseFormSchema(undefined);
@@ -92,17 +102,11 @@ describe('form schema validator', () => {
   it('rejects logic rules with unsupported operators', () => {
     expect(() =>
       parseFormSchema({
-        fields: [baseField()],
+        fields: [baseField(), baseField({ id: 'field_b', key: 'b' })],
         logicRules: [
-          {
-            id: 'r1',
-            when: {
-              all: [
-                { fieldId: 'field_a', operator: 'magic', value: 'x' },
-              ],
-            },
-            actions: [{ type: 'show', target: 'field_a' }],
-          },
+          visibilityRule({
+            conditions: [{ fieldId: 'field_a', operator: 'magic', value: 'x' }],
+          }),
         ],
       }),
     ).toThrow();
@@ -111,18 +115,98 @@ describe('form schema validator', () => {
   it('rejects logic rules pointing to unknown field ids', () => {
     expect(() =>
       parseFormSchema({
-        fields: [baseField()],
+        fields: [baseField(), baseField({ id: 'field_b', key: 'b' })],
         logicRules: [
-          {
-            id: 'r1',
-            when: {
-              all: [{ fieldId: 'ghost', operator: 'equals', value: 'x' }],
-            },
-            actions: [{ type: 'show', target: 'field_a' }],
-          },
+          visibilityRule({
+            conditions: [{ fieldId: 'ghost', operator: 'equals', value: 'x' }],
+          }),
         ],
       }),
     ).toThrow(/unknown field/);
+  });
+
+  it('rejects visibility rules targeting a deleted field', () => {
+    expect(() =>
+      parseFormSchema({
+        fields: [baseField()],
+        logicRules: [visibilityRule({ targetFieldId: 'field_gone' })],
+      }),
+    ).toThrow(/unknown field/);
+  });
+
+  it('rejects numeric operators against non-numeric fields with a non-numeric value', () => {
+    expect(() =>
+      parseFormSchema({
+        fields: [
+          baseField({ id: 'field_score', type: 'number', key: 'score' }),
+          baseField({ id: 'field_b', key: 'b' }),
+        ],
+        logicRules: [
+          visibilityRule({
+            conditions: [{ fieldId: 'field_score', operator: 'greater_than', value: 'oops' }],
+          }),
+        ],
+      }),
+    ).toThrow(/numeric/i);
+  });
+
+  it('rejects per-field visibility conditions that reference themselves', () => {
+    expect(() =>
+      parseFormSchema({
+        fields: [
+          baseField({
+            visibility: {
+              mode: 'show_when',
+              conditionMode: 'all',
+              conditions: [{ fieldId: 'field_a', operator: 'equals', value: 'self' }],
+            },
+          }),
+        ],
+      }),
+    ).toThrow(/itself/);
+  });
+
+  it('rejects visibility rule mode without conditions', () => {
+    expect(() =>
+      parseFormSchema({
+        fields: [
+          baseField({
+            visibility: {
+              mode: 'show_when',
+              conditionMode: 'all',
+              conditions: [],
+            },
+          }),
+        ],
+      }),
+    ).toThrow(/at least one condition/i);
+  });
+
+  it('detects circular navigation rules', () => {
+    expect(() =>
+      parseFormSchema({
+        fields: [
+          baseField(),
+          baseField({ id: 'field_b', key: 'b' }),
+        ],
+        logicRules: [
+          {
+            id: 'r1',
+            type: 'navigation',
+            conditions: [{ fieldId: 'field_a', operator: 'equals', value: 'go' }],
+            conditionMode: 'all',
+            action: { type: 'jump_to_field', target: 'field_b' },
+          },
+          {
+            id: 'r2',
+            type: 'navigation',
+            conditions: [{ fieldId: 'field_b', operator: 'equals', value: 'back' }],
+            conditionMode: 'all',
+            action: { type: 'jump_to_field', target: 'field_a' },
+          },
+        ],
+      }),
+    ).toThrow(/cycle/i);
   });
 
   it('allows presentation fields without a key', () => {
@@ -149,5 +233,17 @@ describe('form schema validator', () => {
         ],
       }),
     ).toThrow(/Field key is required/);
+  });
+
+  it('accepts a fully-formed visibility rule', () => {
+    expect(() =>
+      parseFormSchema({
+        fields: [
+          baseField(),
+          baseField({ id: 'field_b', key: 'b' }),
+        ],
+        logicRules: [visibilityRule()],
+      }),
+    ).not.toThrow();
   });
 });

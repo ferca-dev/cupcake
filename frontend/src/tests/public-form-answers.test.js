@@ -110,6 +110,64 @@ describe('validateAnswers', () => {
   });
 });
 
+describe('validateAnswers with visibility', () => {
+  it('skips required validation for fields hidden by a show_when rule', () => {
+    const fields = [
+      field({
+        id: 'driver',
+        key: 'driver',
+        type: 'select',
+        required: true,
+        options: [
+          { key: 'no', label: 'No' },
+          { key: 'yes', label: 'Yes' },
+        ],
+      }),
+      field({
+        id: 'follow_up',
+        key: 'follow_up',
+        type: 'long_text',
+        required: true,
+        visibility: {
+          mode: 'show_when',
+          conditionMode: 'all',
+          conditions: [{ fieldId: 'driver', operator: 'equals', value: 'yes' }],
+        },
+      }),
+    ];
+    const errors = validateAnswers(schema(fields), { driver: 'no', follow_up: '' }, translator);
+    expect(errors.follow_up).toBeUndefined();
+  });
+
+  it('still requires hidden fields once they become visible', () => {
+    const fields = [
+      field({
+        id: 'driver',
+        key: 'driver',
+        type: 'select',
+        required: true,
+        options: [
+          { key: 'no', label: 'No' },
+          { key: 'yes', label: 'Yes' },
+        ],
+      }),
+      field({
+        id: 'follow_up',
+        key: 'follow_up',
+        type: 'long_text',
+        required: true,
+        visibility: {
+          mode: 'show_when',
+          conditionMode: 'all',
+          conditions: [{ fieldId: 'driver', operator: 'equals', value: 'yes' }],
+        },
+      }),
+    ];
+    const errors = validateAnswers(schema(fields), { driver: 'yes', follow_up: '' }, translator);
+    expect(errors.follow_up).toBe('publicForm.fieldErrors.required');
+  });
+});
+
 describe('serializeAnswers', () => {
   it('coerces text/number values and skips empty optional fields', () => {
     const result = serializeAnswers(

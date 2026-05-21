@@ -27,7 +27,7 @@ const sampleField = (overrides = {}) => ({
   sectionId: null,
   options: [],
   validation: { minLength: null, maxLength: null, min: null, max: null, regex: null },
-  visibility: { mode: 'always', rules: [] },
+  visibility: { mode: 'always', conditionMode: 'all', conditions: [] },
   settings: { width: 'full', imageUrl: null },
   ...overrides,
 });
@@ -330,5 +330,131 @@ describe('POST /api/v1/public/forms/:slug/responses', () => {
       .post('/api/v1/public/forms/no-anon/responses')
       .send({ answers: [{ fieldId: 'field_name', value: 'Pat' }] });
     expect(submit.status).toBe(409);
+  });
+
+  it('accepts submissions when a required field is hidden by a visibility rule', async () => {
+    const { tenant, user } = await createTenantAndAdmin();
+    await publishSurvey({
+      tenant,
+      user,
+      slug: 'hidden-required',
+      schemaFields: [
+        sampleField({
+          id: 'field_satisfaction',
+          key: 'satisfaction',
+          type: 'select',
+          required: true,
+          options: [
+            { key: 'high', label: 'High' },
+            { key: 'low', label: 'Low' },
+          ],
+        }),
+        sampleField({
+          id: 'field_comments',
+          key: 'comments',
+          type: 'long_text',
+          required: true,
+          visibility: {
+            mode: 'show_when',
+            conditionMode: 'all',
+            conditions: [
+              { fieldId: 'field_satisfaction', operator: 'equals', value: 'low' },
+            ],
+          },
+        }),
+      ],
+    });
+
+    const submit = await request(app)
+      .post('/api/v1/public/forms/hidden-required/responses')
+      .send({ answers: [{ fieldId: 'field_satisfaction', value: 'high' }] });
+    expect(submit.status).toBe(201);
+    expect(submit.body.data.response.surveyId).toBeDefined();
+
+    const stored = await Response.findOne({});
+    expect(stored.answers).toHaveLength(1);
+    expect(stored.answers[0].fieldId).toBe('field_satisfaction');
+  });
+
+  it('still requires a hidden field when the condition exposes it', async () => {
+    const { tenant, user } = await createTenantAndAdmin();
+    await publishSurvey({
+      tenant,
+      user,
+      slug: 'visible-required',
+      schemaFields: [
+        sampleField({
+          id: 'field_satisfaction',
+          key: 'satisfaction',
+          type: 'select',
+          required: true,
+          options: [
+            { key: 'high', label: 'High' },
+            { key: 'low', label: 'Low' },
+          ],
+        }),
+        sampleField({
+          id: 'field_comments',
+          key: 'comments',
+          type: 'long_text',
+          required: true,
+          visibility: {
+            mode: 'show_when',
+            conditionMode: 'all',
+            conditions: [
+              { fieldId: 'field_satisfaction', operator: 'equals', value: 'low' },
+            ],
+          },
+        }),
+      ],
+    });
+
+    const submit = await request(app)
+      .post('/api/v1/public/forms/visible-required/responses')
+      .send({ answers: [{ fieldId: 'field_satisfaction', value: 'low' }] });
+    expect(submit.status).toBe(422);
+    expect(submit.body.error.details[0].path).toEqual(['answers', 'field_comments']);
+  });
+
+  it('drops answer values for fields hidden by visibility rules', async () => {
+    const { tenant, user } = await createTenantAndAdmin();
+    await publishSurvey({
+      tenant,
+      user,
+      slug: 'drop-hidden',
+      schemaFields: [
+        sampleField({
+          id: 'field_toggle',
+          key: 'toggle',
+          type: 'yes_no',
+          required: true,
+        }),
+        sampleField({
+          id: 'field_detail',
+          key: 'detail',
+          type: 'short_text',
+          required: false,
+          visibility: {
+            mode: 'show_when',
+            conditionMode: 'all',
+            conditions: [{ fieldId: 'field_toggle', operator: 'equals', value: true }],
+          },
+        }),
+      ],
+    });
+
+    const submit = await request(app)
+      .post('/api/v1/public/forms/drop-hidden/responses')
+      .send({
+        answers: [
+          { fieldId: 'field_toggle', value: false },
+          { fieldId: 'field_detail', value: 'sneaky' },
+        ],
+      });
+    expect(submit.status).toBe(201);
+
+    const stored = await Response.findOne({});
+    const stripped = stored.answers.find((a) => a.fieldId === 'field_detail');
+    expect(stripped).toBeUndefined();
   });
 });

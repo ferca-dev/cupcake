@@ -4,13 +4,14 @@
  * `responses.answers` field, or throws `ValidationError` with structured
  * `details` describing every failed field.
  *
- * Phase 06 supports the core input field types end-to-end. Visibility rules
- * are accepted in the schema but not yet evaluated server-side — a hidden
- * required field would still block submission today, which Phase 07 will
- * relax. The shape stays compatible so the upgrade is additive.
+ * Phase 07 honours conditional visibility: a field hidden by the active
+ * rules is treated as if it were not present, so a hidden required field
+ * never blocks submission and its incoming answer is dropped from the
+ * stored response.
  */
 
 import { ValidationError } from '../../common/errors/index.js';
+import { computeFieldVisibility } from '../surveys/logic-engine.service.js';
 
 const PRESENTATION_TYPES = new Set([
   'image_block',
@@ -269,14 +270,34 @@ const validateField = (field, raw, errors) => {
  * @returns {Array<object>} normalised answers ready for storage.
  * @throws {ValidationError} when any field fails validation.
  */
+const buildAnswerSnapshot = (fields, incoming) => {
+  const snapshot = {};
+  for (const field of fields) {
+    if (!field || PRESENTATION_TYPES.has(field.type)) continue;
+    const raw = incoming.get(field.id);
+    snapshot[field.id] = raw ? raw.value : null;
+  }
+  return snapshot;
+};
+
 export const validateAnswersAgainstSchema = (schema, answers) => {
   const errors = [];
   const fields = Array.isArray(schema?.fields) ? schema.fields : [];
   const incoming = indexAnswers(answers);
   const normalised = [];
 
+  // Compute visibility from the raw answer snapshot. We don't iterate to a
+  // fixed point: stored visibility rules can only reference fields that
+  // exist in the same schema (the validator forbids self-references), and
+  // a malicious client cannot smuggle a "visible" field by setting another
+  // value, because the engine reads the same snapshot we use to validate.
+  const snapshot = buildAnswerSnapshot(fields, incoming);
+  const visibility = computeFieldVisibility(schema, snapshot);
+  const isVisible = (fieldId) => visibility.get(fieldId) !== false;
+
   for (const field of fields) {
     if (!field || PRESENTATION_TYPES.has(field.type)) continue;
+
     if (HIDDEN_TYPES.has(field.type)) {
       const raw = incoming.get(field.id);
       if (raw && !isEmpty(raw.value)) {
@@ -285,6 +306,14 @@ export const validateAnswersAgainstSchema = (schema, answers) => {
       }
       continue;
     }
+
+    if (!isVisible(field.id)) {
+      // Hidden by a conditional rule: skip required-checks and drop any
+      // value the client may have included. Treat them as if the field
+      // were never rendered.
+      continue;
+    }
+
     const raw = incoming.get(field.id) ?? { value: null };
     const result = validateField(field, raw, errors);
     if (result) normalised.push(result);

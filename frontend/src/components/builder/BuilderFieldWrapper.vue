@@ -14,6 +14,7 @@ const props = defineProps({
   hasIssues: { type: Boolean, default: false },
   isDragging: { type: Boolean, default: false },
   isDropTarget: { type: Boolean, default: false },
+  isHiddenByLogic: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['select', 'duplicate', 'remove', 'dragstart', 'dragend']);
@@ -53,6 +54,7 @@ const onDragEnd = (event) => {
         'has-issues': hasIssues,
         'is-dragging': isDragging,
         'is-drop-target': isDropTarget,
+        'is-hidden-by-logic': isHiddenByLogic,
       },
     ]"
     role="button"
@@ -143,6 +145,18 @@ const onDragEnd = (event) => {
 .builder-field-wrapper.is-drop-target {
   border-style: dashed;
   border-color: var(--color-primary-600);
+}
+
+.builder-field-wrapper.is-hidden-by-logic {
+  opacity: 0.55;
+  background: var(--color-surface-muted);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    rgba(0, 0, 0, 0.04) 6px,
+    rgba(0, 0, 0, 0.04) 12px
+  );
 }
 
 .builder-field-wrapper--full {

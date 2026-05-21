@@ -15,6 +15,7 @@ import { AppAlert, AppBadge, AppButton } from '../../components/ui/index.js';
 import BuilderSidebar from '../../components/builder/BuilderSidebar.vue';
 import BuilderCanvas from '../../components/builder/BuilderCanvas.vue';
 import BuilderInspector from '../../components/builder/BuilderInspector.vue';
+import { computeFieldVisibility } from '../../features/logic/logic-engine.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -67,6 +68,23 @@ const headerIssue = computed(() => {
     return validationIssues.value[0].message;
   }
   return t('builder.header.issues', { count: validationIssues.value.length });
+});
+
+// Empty answer snapshot used by the canvas preview. Hidden-by-logic styling
+// reflects what the form will look like before the respondent has answered
+// anything, which is the most useful default while editing.
+const previewAnswers = computed(() => ({}));
+
+const previewVisibility = computed(() =>
+  computeFieldVisibility(schema.value, previewAnswers.value),
+);
+
+const hiddenFieldIds = computed(() => {
+  const set = new Set();
+  for (const [fieldId, visible] of previewVisibility.value.entries()) {
+    if (!visible) set.add(fieldId);
+  }
+  return set;
 });
 
 const statusBadgeVariant = computed(() => {
@@ -180,6 +198,15 @@ const onUpdateLayout = (patch) => {
   if ('showProgress' in patch) builder.setShowProgress(patch.showProgress);
 };
 
+const onUpdateVisibility = (visibility) => {
+  if (!selectedField.value) return;
+  builder.setFieldVisibility(selectedField.value.id, visibility);
+};
+
+const onAddLogicRule = () => builder.addLogicRule();
+const onUpdateLogicRule = ({ ruleId, patch }) => builder.updateLogicRule(ruleId, patch);
+const onRemoveLogicRule = (ruleId) => builder.removeLogicRule(ruleId);
+
 const onUpdateMetadata = async (payload) => {
   try {
     generalError.value = null;
@@ -292,6 +319,7 @@ watch(lastError, (value) => {
         :selected-field-id="selectedFieldId"
         :field-issue-ids="fieldIssueIds"
         :preview-mode="previewMode"
+        :hidden-field-ids="hiddenFieldIds"
         @select-field="onSelectField"
         @duplicate-field="onDuplicateField"
         @remove-field="onRemoveField"
@@ -308,12 +336,20 @@ watch(lastError, (value) => {
         :survey-description="survey?.description ?? ''"
         :survey-slug="survey?.slug ?? ''"
         :is-saving-metadata="isSaving"
+        :fields="schema.fields"
+        :sections="schema.sections"
+        :logic-rules="schema.logicRules"
+        :schema-issues="validationIssues"
         @update-field="onUpdateField"
         @add-option="onAddOption"
         @update-option="onUpdateOption"
         @remove-option="onRemoveOption"
         @update-layout="onUpdateLayout"
         @update-metadata="onUpdateMetadata"
+        @update-visibility="onUpdateVisibility"
+        @add-logic-rule="onAddLogicRule"
+        @update-logic-rule="onUpdateLogicRule"
+        @remove-logic-rule="onRemoveLogicRule"
       />
     </div>
   </section>
