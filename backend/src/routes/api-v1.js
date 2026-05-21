@@ -6,6 +6,7 @@ import { surveysRouter } from '../modules/surveys/survey.routes.js';
 import { contactsRouter, contactGroupsRouter } from '../modules/contacts/contact.routes.js';
 import { campaignsRouter } from '../modules/campaigns/campaign.routes.js';
 import { publicFormsRouter } from '../modules/public-forms/public-form.routes.js';
+import { dashboardRouter, adminMetricsRouter } from '../modules/dashboard/dashboard.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -54,6 +55,11 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/public/forms/:slug',
         '/api/v1/public/forms/:slug/token/:submissionToken',
         '/api/v1/public/forms/:slug/responses',
+        '/api/v1/dashboard/summary',
+        '/api/v1/dashboard/surveys/:id',
+        '/api/v1/dashboard/channels',
+        '/api/v1/dashboard/recent-activity',
+        '/api/v1/admin/metrics',
       ],
     },
     message: 'API metadata',
@@ -68,3 +74,5 @@ apiV1Router.use('/contacts', contactsRouter);
 apiV1Router.use('/contact-groups', contactGroupsRouter);
 apiV1Router.use('/campaigns', campaignsRouter);
 apiV1Router.use('/public', publicFormsRouter);
+apiV1Router.use('/dashboard', dashboardRouter);
+apiV1Router.use('/admin', adminMetricsRouter);

@@ -10,6 +10,7 @@ import {
   AuthorizationError,
 } from '../../common/errors/index.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
+import { getSurveyDashboardStats } from '../dashboard/dashboard.service.js';
 
 export const SURVEY_AUDIT_ACTIONS = Object.freeze({
   CREATED: 'survey.created',
@@ -352,20 +353,16 @@ export const listVersions = async ({ id, tenantId }) => {
 };
 
 /**
- * Phase 04 stats placeholder. Phase 05+ will hydrate this with real response
- * counts; until then we return zeroed counters with a stable shape so the
- * frontend can integrate against it now.
+ * Returns survey-level analytics powered by the dashboard aggregation layer.
+ * The survey is loaded under the caller's tenant scope first so the dashboard
+ * query cannot accidentally read across tenants.
  */
 export const getSurveyStats = async ({ id, tenantId }) => {
   const survey = await requireSurvey({ id, tenantId });
-  return {
+  return getSurveyDashboardStats({
+    tenantId: survey.tenantId.toString(),
     surveyId: survey._id.toString(),
-    status: survey.status,
-    totalResponses: 0,
-    completedResponses: 0,
-    lastResponseAt: null,
-    placeholder: true,
-  };
+  });
 };
 
 export const __testing = { toPublicSurvey, toPublicVersion };

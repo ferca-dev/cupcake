@@ -223,7 +223,7 @@ authenticated bearer token and apply the tenant filter from `req.tenantContext`
 | POST   | `/api/v1/surveys/:id/archive`       | `surveys.publish` _or_ `surveys.delete`   | Lock the survey read-only and stamp `archivedAt`.            |
 | POST   | `/api/v1/surveys/:id/duplicate`     | `surveys.create`                          | Create a new `draft` with the same schema and a unique slug. |
 | GET    | `/api/v1/surveys/:id/versions`      | `surveys.view`                            | Return published versions (descending `versionNumber`).      |
-| GET    | `/api/v1/surveys/:id/stats`         | `surveys.view`                            | Placeholder counters; will be hydrated in Phase 05+.         |
+| GET    | `/api/v1/surveys/:id/stats`         | `surveys.view`                            | Survey-level analytics powered by the dashboard module (Phase 10). |
 
 ### Survey lifecycle
 
@@ -478,6 +478,29 @@ explain why a contact is incomplete for a given delivery method.
   `contact.import.requested`
 - `contact_group.created`, `contact_group.updated`, `contact_group.deleted`
 - `contact_group.contact_added`, `contact_group.contact_removed`
+
+## Endpoints implemented in Phase 10
+
+Dashboard endpoints aggregate existing operational data (surveys, responses,
+campaigns, recipients, audit logs) into tenant-safe analytics. All routes
+require an authenticated bearer token and the `dashboard.view` permission
+(super admins also receive these implicitly via `admin.dashboard.view`).
+
+| Method | Path                                  | Permission             | Description                                                                                                              |
+| ------ | ------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/v1/dashboard/summary`           | `dashboard.view`       | Tenant overview (surveys, responses, campaigns, channels, recent activity). Returns global metrics when a super admin omits `X-Impersonate-Tenant`. |
+| GET    | `/api/v1/dashboard/surveys/:id`       | `dashboard.view`       | Per-survey response totals, channel breakdown, daily trend, and latest responses.                                        |
+| GET    | `/api/v1/dashboard/channels`          | `dashboard.view`       | Per-channel send/failure/skip aggregations with skipped reasons and provider counts.                                     |
+| GET    | `/api/v1/dashboard/recent-activity`   | `dashboard.view`       | Latest audit-log entries scoped to the tenant.                                                                           |
+| GET    | `/api/v1/admin/metrics`               | `admin.dashboard.view` | Global tenants/users/surveys/responses/campaigns/channels and recent activity. Refused (`403`) for tenant-bound clients. |
+
+Implementation lives in `modules/dashboard`. The service runs aggregation
+pipelines in parallel with `Promise.all`, uses `mongoose.trusted({ $in: ... })`
+for `find()` filters that need operators past the global `sanitizeFilter`, and
+relies on existing indexes (`tenantId+createdAt`, `tenantId+surveyId+createdAt`,
+`tenantId+status`) to keep queries cheap. See
+[`docs/dashboard-analytics.md`](../docs/dashboard-analytics.md) for the full
+shape of each response and the testing strategy.
 
 ## Security middleware
 

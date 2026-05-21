@@ -13,6 +13,7 @@ import ForgotPasswordView from '../views/auth/ForgotPasswordView.vue';
 import DashboardView from '../views/dashboard/DashboardView.vue';
 import SurveyListView from '../views/surveys/SurveyListView.vue';
 import SurveyBuilderView from '../views/surveys/SurveyBuilderView.vue';
+import SurveyStatsView from '../features/dashboard/SurveyStatsView.vue';
 import ContactListView from '../views/contacts/ContactListView.vue';
 import ContactGroupListView from '../views/contacts/ContactGroupListView.vue';
 import CampaignListView from '../views/campaigns/CampaignListView.vue';
@@ -84,6 +85,16 @@ export const routes = [
           title: 'Edit survey',
           requiresAuth: true,
           permissions: ['surveys.update'],
+        },
+      },
+      {
+        path: 'surveys/:id/stats',
+        name: 'surveys.stats',
+        component: SurveyStatsView,
+        meta: {
+          title: 'Survey stats',
+          requiresAuth: true,
+          permissions: ['dashboard.view'],
         },
       },
       {

@@ -455,7 +455,7 @@ describe('Lifecycle actions', () => {
     expect(versions.body.data.versions[1].versionNumber).toBe(1);
   });
 
-  it('returns the stats placeholder', async () => {
+  it('returns stable survey stats with zeros for a new draft', async () => {
     await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
     const token = await login('acme@test.local');
     const created = await request(app)
@@ -466,8 +466,10 @@ describe('Lifecycle actions', () => {
       .get(`/api/v1/surveys/${created.body.data.survey.id}/stats`)
       .set('Authorization', `Bearer ${token}`);
     expect(stats.status).toBe(200);
-    expect(stats.body.data.stats.placeholder).toBe(true);
     expect(stats.body.data.stats.totalResponses).toBe(0);
+    expect(stats.body.data.stats.completedResponses).toBe(0);
+    expect(stats.body.data.stats.totalSent).toBe(0);
+    expect(stats.body.data.stats.surveyId).toBe(created.body.data.survey.id);
   });
 });
 
