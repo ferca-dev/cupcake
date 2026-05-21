@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 08 — contacts and groups. The tenant-scoped contact directory ships with Mongoose models for `contacts` and `contact_groups`, a normalised create/update/list/archive/delete API, channel-eligibility metadata for downstream campaign sending, and a frontend with filters, create/edit modal, group membership management, and i18n-ready strings (English + Spanish). Earlier phases provide the backend foundation (`/api/v1/health`, `/api/v1/auth/*`, `/api/v1/tenants/*`, `/api/v1/surveys/*`, public form routes) plus the survey builder and conditional-logic engine on the frontend. See [Phase workflow](#phase-workflow) below.
+Phase 09 — campaigns and sending adapters. Campaigns can be created for any published survey, dispatched to selected contacts and groups across email, SMS, and WhatsApp through a provider abstraction (mock implementations only), and inspected through a recipient-level report. The phase ships Mongoose models for `campaigns` and `campaign_recipients`, a pluggable provider factory driven by `EMAIL_PROVIDER`/`SMS_PROVIDER`/`WHATSAPP_PROVIDER`, deduplicated recipient generation with skip/failure reasons, per-recipient submission tokens and public URLs, and a frontend list + detail flow with a send-now action. See [docs/provider-architecture.md](docs/provider-architecture.md) for the adapter contract.
 
 ## Stack
 
@@ -123,6 +123,7 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
   docs/
     architecture-decisions.md       # ADRs for stack and tooling choices
     naming-conventions.md           # File, module, route, component, store, env naming
+    provider-architecture.md        # Campaign messaging provider contract
   prompts/                          # Phase prompts and shared context
   .github/workflows/                # CI workflows
 ```

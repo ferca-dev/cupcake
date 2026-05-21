@@ -15,6 +15,8 @@ import SurveyListView from '../views/surveys/SurveyListView.vue';
 import SurveyBuilderView from '../views/surveys/SurveyBuilderView.vue';
 import ContactListView from '../views/contacts/ContactListView.vue';
 import ContactGroupListView from '../views/contacts/ContactGroupListView.vue';
+import CampaignListView from '../views/campaigns/CampaignListView.vue';
+import CampaignDetailView from '../views/campaigns/CampaignDetailView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormView from '../views/public/PublicFormView.vue';
@@ -102,6 +104,26 @@ export const routes = [
           title: 'Contact groups',
           requiresAuth: true,
           permissions: ['groups.manage'],
+        },
+      },
+      {
+        path: 'campaigns',
+        name: 'campaigns.list',
+        component: CampaignListView,
+        meta: {
+          title: 'Campaigns',
+          requiresAuth: true,
+          permissions: ['campaigns.send'],
+        },
+      },
+      {
+        path: 'campaigns/:id',
+        name: 'campaigns.detail',
+        component: CampaignDetailView,
+        meta: {
+          title: 'Campaign',
+          requiresAuth: true,
+          permissions: ['campaigns.send'],
         },
       },
     ],

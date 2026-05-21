@@ -1,0 +1,108 @@
+# Messaging Provider Architecture
+
+Phase 09 introduces campaign sending across three channels — email, SMS, and
+WhatsApp — through a thin provider abstraction. The campaign domain code stays
+provider-agnostic so production adapters can be added later without changing
+business logic.
+
+## Goals
+
+- Keep `campaign.service.js` free of provider-specific branching.
+- Let environment variables (`EMAIL_PROVIDER`, `SMS_PROVIDER`,
+  `WHATSAPP_PROVIDER`) pick the active implementation.
+- Make recipient validation a provider concern, so a future adapter can apply
+  channel-specific rules (e.g. WhatsApp-business templates, SES suppression
+  lists) without leaking out of the module.
+- Surface skip and failure reasons in a stable shape so reports stay accurate
+  across providers.
+
+## The Provider Interface
+
+Every provider exposes the same three methods:
+
+```js
+{
+  getProviderName(): string,
+  validateRecipient(contact): { ready, reason, recipient },
+  send(messagePayload): Promise<{ success, provider, providerMessageId, reason }>,
+}
+```
+
+- **`getProviderName`** is recorded on each recipient document so the report
+  can attribute messages to a specific adapter.
+- **`validateRecipient`** receives a Mongoose `Contact` (or a plain object with
+  the same shape) and returns a normalised recipient address plus an
+  optional skip reason from the canonical list (`missing_email`,
+  `invalid_phone`, `contact_blocked`, etc.). Returning `{ ready: false }` lets
+  the campaign service mark the recipient as `skipped` without calling the
+  provider, which keeps the send loop tolerant of incomplete contacts.
+- **`send`** receives a `MessagePayload` (channel, recipient, submission
+  token, public URL, contact/campaign/survey metadata) and resolves with a
+  result envelope. A failed result is mapped to a `failed` recipient record
+  with the provided `reason`; thrown errors are also caught and downgraded to
+  a `failed` status so a single broken contact never aborts the bulk send.
+
+## The Factory
+
+`provider.factory.js` exposes `resolveProviders({ env })`, which returns one
+provider per channel based on the env values. Today only `mock` is registered;
+a real Twilio/SES/WhatsApp adapter is added by:
+
+1. Implementing the three-method interface in `providers/<vendor>.provider.js`.
+2. Registering its factory in the relevant map (`EMAIL_PROVIDERS`,
+   `SMS_PROVIDERS`, `WHATSAPP_PROVIDERS`) keyed by the env value.
+3. Setting the corresponding env variable (e.g. `EMAIL_PROVIDER=ses`).
+
+No changes to `campaign.service.js` are required.
+
+## Mock Providers
+
+Mock implementations exist for every channel:
+
+- `mock-email`: validates `contact.email` and fails any address whose local
+  part contains the substring `fail`, which lets tests assert the failure
+  branch without a real network call.
+- `mock-sms`: validates `contact.phone` and fails any phone ending in `0000`.
+- `mock-whatsapp`: validates `contact.whatsappPhone` with the same `0000`
+  heuristic.
+
+Mock providers never make network calls and return deterministic
+`providerMessageId` values so test snapshots stay stable.
+
+## Submission Tokens and Public URLs
+
+The campaign service generates a 32-character URL-safe submission token per
+recipient using `crypto.randomBytes(24).toString('base64url')`. The token is
+unique across the `campaign_recipients` collection (enforced by a unique
+index) and is composed into a public URL using `FRONTEND_URL` — never a
+hardcoded host. Tokens are looked up at submission time by the public form
+service so the resulting response is linked back to the campaign recipient and
+the recipient's status is moved to `clicked`.
+
+## Skip Reasons and Reports
+
+The send service maintains a counter map keyed by skip reason so the campaign
+summary reflects:
+
+- `missing_email` / `invalid_email`
+- `missing_phone` / `invalid_phone`
+- `missing_whatsapp_phone` / `invalid_whatsapp_phone`
+- `contact_blocked`
+- `contact_archived`
+- `duplicate_recipient`
+
+`GET /campaigns/:id/report` aggregates the persisted recipients (instead of
+relying on the cached summary) so the report stays accurate even if a future
+job re-runs and mutates recipient state.
+
+## Backwards-Compatible Recipient Records
+
+Every contact × channel attempt produces exactly one `campaign_recipients`
+document. Skipped recipients are recorded with a `null` `recipient` and a
+populated `skippedReason` rather than being silently dropped, which means:
+
+- Re-running a campaign cannot accidentally create new recipient duplicates
+  because the dedupe key `(channel, recipient)` plus `(channel, contactId)`
+  catches both variations.
+- The detail page surfaces every attempted contact so customers can verify
+  why an expected message did not go out.

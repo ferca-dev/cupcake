@@ -4,6 +4,7 @@ import { loadEnv } from '../config/env.js';
 import { seedAuth } from './seed-auth.js';
 import { seedSurveys } from './seed-surveys.js';
 import { seedContacts } from './seed-contacts.js';
+import { seedCampaigns } from './seed-campaigns.js';
 
 /**
  * Runs all available seeders in dependency order. Idempotent — running the
@@ -18,6 +19,7 @@ const runSeeders = async () => {
     await seedAuth();
     await seedSurveys();
     await seedContacts();
+    await seedCampaigns();
     logger.info('All seeders completed successfully');
   } catch (err) {
     logger.fatal({ err }, 'Seeder failed');

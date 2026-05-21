@@ -26,13 +26,17 @@ const answerSchema = z
 
 export const submitResponseSchema = z
   .object({
+    submissionToken: z
+      .string()
+      .trim()
+      .min(8)
+      .max(128)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .optional(),
     answers: z.array(answerSchema).max(500).default([]),
     metadata: z
       .object({
-        startedAt: z
-          .string()
-          .datetime({ offset: true })
-          .optional(),
+        startedAt: z.string().datetime({ offset: true }).optional(),
         completionTimeSeconds: z.number().int().min(0).max(86_400).optional(),
       })
       .strict()

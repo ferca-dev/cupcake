@@ -78,6 +78,13 @@ const handleLogout = async () => {
         >
           {{ t('contactGroups.list.title') }}
         </RouterLink>
+        <RouterLink
+          v-if="auth.hasPermission('campaigns.send')"
+          :to="{ name: 'campaigns.list' }"
+          class="dashboard-layout__nav-link"
+        >
+          {{ t('campaigns.list.title') }}
+        </RouterLink>
       </nav>
       <div v-if="tenantName" class="dashboard-layout__tenant">
         <small>{{ tenantName }}</small>

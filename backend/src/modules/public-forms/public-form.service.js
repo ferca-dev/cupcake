@@ -1,5 +1,6 @@
 import * as surveyRepo from '../surveys/survey.repository.js';
 import * as responseRepo from '../responses/response.repository.js';
+import * as campaignRepo from '../campaigns/campaign.repository.js';
 import { ConflictError, NotFoundError } from '../../common/errors/index.js';
 import { validateAnswersAgainstSchema } from './answer.validator.js';
 
@@ -28,8 +29,7 @@ const toPublicSchemaView = ({ survey, version }) => ({
     schema: version.schema,
   },
   acceptingResponses: survey.status === 'published',
-  pausedMessage:
-    survey.status === 'paused' ? survey.settings?.pausedMessage ?? null : null,
+  pausedMessage: survey.status === 'paused' ? (survey.settings?.pausedMessage ?? null) : null,
 });
 
 const loadPublishedSurveyContext = async (slug) => {
@@ -61,17 +61,29 @@ export const getPublicForm = async ({ slug }) => {
 
 export const getPublicFormByToken = async ({ slug, submissionToken }) => {
   const ctx = await loadPublishedSurveyContext(slug);
-  // Campaign recipient lookup ships in Phase 08+. We keep the route shape now
-  // so the frontend can wire up the token-aware URLs. The token is echoed
-  // back unchanged so submissions can include it.
+  // A token without a matching recipient is still accepted (the frontend can
+  // submit responses with `allowAnonymous`) but campaign association requires
+  // a real recipient. We surface the recipient channel/contact when found so
+  // the renderer can pre-fill or display context.
+  const recipient = await campaignRepo.findRecipientByToken({
+    submissionToken,
+    tenantId: ctx.survey.tenantId,
+  });
   return {
     ...toPublicSchemaView(ctx),
     submissionToken,
+    recipient: recipient
+      ? {
+          id: recipient._id.toString(),
+          campaignId: recipient.campaignId.toString(),
+          channel: recipient.channel,
+          contactId: recipient.contactId ? recipient.contactId.toString() : null,
+        }
+      : null,
   };
 };
 
-const truncate = (value, max) =>
-  typeof value === 'string' ? value.slice(0, max) : value;
+const truncate = (value, max) => (typeof value === 'string' ? value.slice(0, max) : value);
 
 export const submitPublicResponse = async ({
   slug,
@@ -83,9 +95,7 @@ export const submitPublicResponse = async ({
   const { survey, version } = await loadPublishedSurveyContext(slug);
 
   if (survey.status === 'paused') {
-    throw new ConflictError(
-      survey.settings?.pausedMessage ?? 'This survey is temporarily paused.',
-    );
+    throw new ConflictError(survey.settings?.pausedMessage ?? 'This survey is temporarily paused.');
   }
   if (survey.status !== 'published') {
     throw new ConflictError('This survey is no longer accepting responses.');
@@ -96,10 +106,18 @@ export const submitPublicResponse = async ({
 
   const answers = validateAnswersAgainstSchema(version.schema, payload?.answers ?? []);
 
-  const submittedAt = new Date();
-  const startedAt = payload?.metadata?.startedAt
-    ? new Date(payload.metadata.startedAt)
+  // Match the token to a campaign recipient so the submitted response carries
+  // campaign/recipient context for reporting and the recipient state moves to
+  // `clicked` to mark engagement.
+  const recipient = submissionToken
+    ? await campaignRepo.findRecipientByToken({
+        submissionToken,
+        tenantId: survey.tenantId,
+      })
     : null;
+
+  const submittedAt = new Date();
+  const startedAt = payload?.metadata?.startedAt ? new Date(payload.metadata.startedAt) : null;
   const completionTimeSeconds =
     typeof payload?.metadata?.completionTimeSeconds === 'number'
       ? payload.metadata.completionTimeSeconds
@@ -111,6 +129,9 @@ export const submitPublicResponse = async ({
     tenantId: survey.tenantId,
     surveyId: survey._id,
     surveyVersionId: version._id,
+    campaignId: recipient ? recipient.campaignId : null,
+    campaignRecipientId: recipient ? recipient._id : null,
+    contactId: recipient ? (recipient.contactId ?? null) : null,
     submissionToken: submissionToken ?? null,
     answers,
     metadata: {
@@ -121,6 +142,12 @@ export const submitPublicResponse = async ({
       completionTimeSeconds,
     },
   });
+
+  if (recipient && ['sent', 'delivered'].includes(recipient.status)) {
+    recipient.status = 'clicked';
+    recipient.clickedAt = submittedAt;
+    await recipient.save();
+  }
 
   return {
     id: response._id.toString(),
