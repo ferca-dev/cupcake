@@ -99,6 +99,18 @@ const handleLogout = async () => {
         >
           {{ t('billing.nav') }}
         </RouterLink>
+        <template v-if="auth.isSuperAdmin">
+          <hr class="dashboard-layout__nav-divider" aria-hidden="true" />
+          <RouterLink :to="{ name: 'admin.home' }" class="dashboard-layout__nav-link">
+            {{ t('adminPanel.nav') }}
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'admin.tenants.list' }"
+            class="dashboard-layout__nav-link dashboard-layout__nav-link--nested"
+          >
+            {{ t('adminPanel.tenants.title') }}
+          </RouterLink>
+        </template>
       </nav>
       <div v-if="tenantName" class="dashboard-layout__tenant">
         <small>{{ tenantName }}</small>
@@ -212,6 +224,16 @@ const handleLogout = async () => {
 
 .dashboard-layout__nav-link:hover {
   background: var(--color-surface-muted);
+}
+
+.dashboard-layout__nav-link--nested {
+  margin-left: var(--space-3);
+}
+
+.dashboard-layout__nav-divider {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: var(--space-2) 0;
 }
 
 .dashboard-layout__tenant {

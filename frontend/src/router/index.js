@@ -20,6 +20,10 @@ import CampaignListView from '../views/campaigns/CampaignListView.vue';
 import CampaignDetailView from '../views/campaigns/CampaignDetailView.vue';
 import TemplateListView from '../views/templates/TemplateListView.vue';
 import TransactionHistoryView from '../views/billing/TransactionHistoryView.vue';
+import AdminDashboardView from '../views/admin/AdminDashboardView.vue';
+import TenantListView from '../views/admin/TenantListView.vue';
+import TenantCreateView from '../views/admin/TenantCreateView.vue';
+import TenantDetailView from '../views/admin/TenantDetailView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormView from '../views/public/PublicFormView.vue';
@@ -157,6 +161,46 @@ export const routes = [
           title: 'Billing history',
           requiresAuth: true,
           permissions: ['billing.view'],
+        },
+      },
+      {
+        path: 'admin',
+        name: 'admin.home',
+        component: AdminDashboardView,
+        meta: {
+          title: 'Admin dashboard',
+          requiresAuth: true,
+          roles: ['super_admin'],
+        },
+      },
+      {
+        path: 'admin/tenants',
+        name: 'admin.tenants.list',
+        component: TenantListView,
+        meta: {
+          title: 'Clients',
+          requiresAuth: true,
+          roles: ['super_admin'],
+        },
+      },
+      {
+        path: 'admin/tenants/new',
+        name: 'admin.tenants.create',
+        component: TenantCreateView,
+        meta: {
+          title: 'New client',
+          requiresAuth: true,
+          roles: ['super_admin'],
+        },
+      },
+      {
+        path: 'admin/tenants/:id',
+        name: 'admin.tenants.detail',
+        component: TenantDetailView,
+        meta: {
+          title: 'Client',
+          requiresAuth: true,
+          roles: ['super_admin'],
         },
       },
     ],

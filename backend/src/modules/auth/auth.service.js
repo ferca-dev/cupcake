@@ -268,6 +268,26 @@ export const login = async ({ email, password, ip = null, userAgent = null }) =>
     throw new AuthenticationError('Your account is not currently active');
   }
 
+  // Tenant gate: a user attached to a suspended/cancelled tenant cannot log in.
+  // We surface a tenant-specific failure reason so the audit trail makes the
+  // distinction between "user inactive" and "tenant disabled" explicit.
+  if (user.tenantId) {
+    const tenant = await Tenant.findById(user.tenantId).select('status');
+    if (!tenant || tenant.status !== 'active') {
+      await recordAuditEvent({
+        action: AUDIT_ACTIONS.AUTH_LOGIN_FAILURE,
+        entityType: 'user',
+        entityId: user._id.toString(),
+        userId: user._id,
+        tenantId: user.tenantId,
+        ip,
+        userAgent,
+        metadata: { reason: `tenant_status_${tenant?.status ?? 'missing'}` },
+      });
+      throw new AuthenticationError('Your workspace is not currently active');
+    }
+  }
+
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
     await recordAuditEvent({

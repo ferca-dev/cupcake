@@ -39,12 +39,3 @@ dashboardRouter.get(
   requirePermission(PERMISSIONS.DASHBOARD_VIEW),
   dashboardController.getSurveyStats,
 );
-
-export const adminMetricsRouter = Router();
-
-adminMetricsRouter.use(authenticate);
-adminMetricsRouter.get(
-  '/metrics',
-  requirePermission(PERMISSIONS.ADMIN_DASHBOARD_VIEW),
-  dashboardController.getAdminMetrics,
-);

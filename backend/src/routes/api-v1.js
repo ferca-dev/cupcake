@@ -6,9 +6,10 @@ import { surveysRouter } from '../modules/surveys/survey.routes.js';
 import { contactsRouter, contactGroupsRouter } from '../modules/contacts/contact.routes.js';
 import { campaignsRouter } from '../modules/campaigns/campaign.routes.js';
 import { publicFormsRouter } from '../modules/public-forms/public-form.routes.js';
-import { dashboardRouter, adminMetricsRouter } from '../modules/dashboard/dashboard.routes.js';
+import { dashboardRouter } from '../modules/dashboard/dashboard.routes.js';
 import { templatesRouter } from '../modules/templates/template.routes.js';
 import { transactionsRouter } from '../modules/transactions/transaction.routes.js';
+import { adminRouter } from '../modules/admin/admin.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -62,6 +63,10 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/dashboard/channels',
         '/api/v1/dashboard/recent-activity',
         '/api/v1/admin/metrics',
+        '/api/v1/admin/tenants',
+        '/api/v1/admin/tenants/:id',
+        '/api/v1/admin/tenants/:id/status',
+        '/api/v1/admin/tenants/:id/users',
         '/api/v1/templates',
         '/api/v1/templates/:id',
         '/api/v1/templates/:id/create-survey',
@@ -82,6 +87,6 @@ apiV1Router.use('/contact-groups', contactGroupsRouter);
 apiV1Router.use('/campaigns', campaignsRouter);
 apiV1Router.use('/public', publicFormsRouter);
 apiV1Router.use('/dashboard', dashboardRouter);
-apiV1Router.use('/admin', adminMetricsRouter);
+apiV1Router.use('/admin', adminRouter);
 apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);

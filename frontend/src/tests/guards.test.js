@@ -92,4 +92,28 @@ describe('navigation guards', () => {
     expect(roleGuard(buildRoute({ meta: { roles: ['client_admin'] } }))).toBe(true);
     expect(permissionGuard(buildRoute({ meta: { permissions: ['users.manage'] } }))).toBe(true);
   });
+
+  it('blocks client roles from admin-only routes and lets super admins through', () => {
+    const auth = useAuthStore();
+    auth.setSession({
+      user: { id: '1', role: 'client_admin', name: 'Demo' },
+      tenant: null,
+      accessToken: 'a',
+      refreshToken: 'b',
+      permissions: ['users.manage'],
+    });
+    expect(roleGuard(buildRoute({ meta: { roles: ['super_admin'] } }))).toMatchObject({
+      name: 'forbidden',
+    });
+
+    auth.setSession({
+      user: { id: '2', role: 'super_admin', name: 'Root' },
+      tenant: null,
+      accessToken: 'a',
+      refreshToken: 'b',
+      permissions: [],
+      isSuperAdmin: true,
+    });
+    expect(roleGuard(buildRoute({ meta: { roles: ['super_admin'] } }))).toBe(true);
+  });
 });

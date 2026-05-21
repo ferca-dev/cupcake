@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 12 — transactions and billing history. Tenants now have a tenant-scoped transaction history (payments, refunds, credits, adjustments) backed by a Mongoose `Transaction` model that stores amounts as integer minor units alongside an ISO 4217 currency, an audited super-admin read path, demo seed data, a filterable `TransactionHistoryView`, and a Pinia store. No real payment provider is integrated; the boundary a future Stripe/MercadoPago adapter must respect lives in [docs/billing-architecture.md](docs/billing-architecture.md). The campaign sending architecture introduced in phase 09 still applies; see [docs/provider-architecture.md](docs/provider-architecture.md) for that adapter contract.
+Phase 13 — admin panel. Super admins can now manage tenants from a dedicated frontend area: list with search and status filters, create with optional bootstrap admin, edit name/slug/settings, and run audited status changes (active / suspended / cancelled) that cascade into login access. The previous transactions and billing history (Phase 12) and the dashboard surface (Phases 10–11) remain available. The admin contract is documented in [docs/admin-panel.md](docs/admin-panel.md). The campaign sending architecture introduced in phase 09 still applies; see [docs/provider-architecture.md](docs/provider-architecture.md) for that adapter contract.
 
 ## Stack
 
