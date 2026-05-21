@@ -1,0 +1,394 @@
+// Client-side form-schema utilities used by the builder.
+//
+// Goals:
+//   - Generate stable, backend-safe field/option ids and keys.
+//   - Build a default field for any supported type.
+//   - Run a fast pre-flight validation that mirrors the backend Zod schema in
+//     `backend/src/modules/surveys/form-schema.validator.js`. The backend is
+//     still the authoritative validator on save — this just keeps the user
+//     from hitting a 422 for trivially-fixable issues.
+//   - Normalise the in-memory builder schema into the exact shape the API
+//     accepts.
+//
+// Whenever a rule changes here, mirror the corresponding rule in the backend
+// validator (or rely on the backend response to surface the issue at save
+// time).
+
+import {
+  FIELD_TYPES,
+  FIELD_WIDTHS,
+  OPTIONED_FIELD_TYPES,
+  PRESENTATION_FIELD_TYPES,
+  getFieldCatalogEntry,
+} from './builder.constants.js';
+
+const FIELD_KEY_REGEX = /^[a-z0-9_]+$/;
+const FIELD_ID_REGEX = /^[A-Za-z0-9_-]+$/;
+const LOGIC_OPERATORS = Object.freeze([
+  'equals',
+  'not_equals',
+  'contains',
+  'not_contains',
+  'greater_than',
+  'greater_than_or_equal',
+  'less_than',
+  'less_than_or_equal',
+  'is_empty',
+  'is_not_empty',
+]);
+const VISIBILITY_MODES = Object.freeze(['always', 'show_when', 'hide_when']);
+const LAYOUT_MODES = Object.freeze(['single_page', 'paginated']);
+
+// Counter used to disambiguate ids when several are generated in the same
+// millisecond — guarantees uniqueness even on fast clicks.
+let idCounter = 0;
+const nextCounter = () => {
+  idCounter = (idCounter + 1) % 1_000_000;
+  return idCounter.toString(36).padStart(2, '0');
+};
+
+const randomChunk = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    return arr[0].toString(36);
+  }
+  return Math.floor(Math.random() * 0xffffffff).toString(36);
+};
+
+export const generateFieldId = () => `field_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+
+export const generateOptionId = () => `opt_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+
+export const generateSectionId = () => `section_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+
+/**
+ * Build a backend-safe field key from a candidate label. Falls back to a
+ * stable random suffix if the label contains nothing usable.
+ */
+export const slugifyFieldKey = (raw, fallbackPrefix = 'field') => {
+  const base = String(raw ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 60);
+  if (base) return base;
+  return `${fallbackPrefix}_${randomChunk()}`.slice(0, 60);
+};
+
+const uniqueFieldKey = (desired, existingKeys) => {
+  if (!desired) return desired;
+  if (!existingKeys.has(desired)) return desired;
+  let i = 2;
+  let candidate = `${desired}_${i}`;
+  while (existingKeys.has(candidate)) {
+    i += 1;
+    candidate = `${desired}_${i}`;
+  }
+  return candidate;
+};
+
+const defaultOptions = (type) => {
+  if (!OPTIONED_FIELD_TYPES.has(type)) return [];
+  return [
+    { id: generateOptionId(), key: 'option_1', label: 'Option 1' },
+    { id: generateOptionId(), key: 'option_2', label: 'Option 2' },
+  ];
+};
+
+const defaultValidation = () => ({
+  minLength: null,
+  maxLength: null,
+  min: null,
+  max: null,
+  regex: null,
+});
+
+const defaultVisibility = () => ({ mode: 'always', rules: [] });
+
+const defaultSettings = () => ({ width: 'full', imageUrl: null });
+
+/**
+ * Returns a fresh field shaped like the backend's form schema. `existingKeys`
+ * is passed so the generated key does not collide with fields already in the
+ * draft.
+ */
+export const buildDefaultField = (type, { order = 0, existingKeys } = {}) => {
+  if (!FIELD_TYPES.includes(type)) {
+    throw new Error(`Unsupported field type: ${type}`);
+  }
+  const catalog = getFieldCatalogEntry(type);
+  const isPresentation = PRESENTATION_FIELD_TYPES.has(type);
+  const keySet = existingKeys instanceof Set ? existingKeys : new Set(existingKeys ?? []);
+  const baseLabel = catalog?.defaultLabel ?? catalog?.label ?? '';
+
+  const field = {
+    id: generateFieldId(),
+    type,
+    key: isPresentation ? '' : uniqueFieldKey(slugifyFieldKey(baseLabel || type, type), keySet),
+    label: baseLabel,
+    placeholder: catalog?.defaultPlaceholder ?? '',
+    helpText: '',
+    required: false,
+    order,
+    sectionId: null,
+    options: defaultOptions(type),
+    validation: defaultValidation(),
+    visibility: defaultVisibility(),
+    settings: defaultSettings(),
+  };
+  return field;
+};
+
+/**
+ * Returns a default-shaped, empty schema. Matches the backend's
+ * `emptyFormSchema()` so the builder and the API can round-trip blank
+ * drafts losslessly.
+ */
+export const buildEmptySchema = () => ({
+  fields: [],
+  sections: [],
+  logicRules: [],
+  layout: { mode: 'single_page', showProgress: true },
+});
+
+const cloneField = (field, overrides = {}) => ({
+  ...field,
+  options: Array.isArray(field.options)
+    ? field.options.map((opt) => ({ ...opt }))
+    : [],
+  validation: { ...defaultValidation(), ...(field.validation ?? {}) },
+  visibility: {
+    mode: field.visibility?.mode ?? 'always',
+    rules: Array.isArray(field.visibility?.rules)
+      ? field.visibility.rules.map((rule) => ({ ...rule }))
+      : [],
+  },
+  settings: { ...defaultSettings(), ...(field.settings ?? {}) },
+  ...overrides,
+});
+
+/**
+ * Returns a deep copy of `field` with new ids on the field itself and on
+ * each option. Useful for the duplicate action.
+ */
+export const cloneFieldWithNewIds = (field) => {
+  const cloned = cloneField(field, {
+    id: generateFieldId(),
+    options: Array.isArray(field.options)
+      ? field.options.map((opt) => ({ ...opt, id: generateOptionId() }))
+      : [],
+  });
+  return cloned;
+};
+
+const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
+
+const isPlainObject = (value) =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * Normalises the draft schema into the exact shape the backend expects.
+ * Hydrates defaults, strips presentational keys/options, and reassigns the
+ * `order` property based on array position so the saved schema is canonical.
+ */
+export const normalizeSchemaForApi = (schema) => {
+  const safe = isPlainObject(schema) ? schema : {};
+  const layout = isPlainObject(safe.layout) ? safe.layout : {};
+
+  const fields = Array.isArray(safe.fields) ? safe.fields : [];
+
+  return {
+    fields: fields.map((field, index) => {
+      const isPresentation = PRESENTATION_FIELD_TYPES.has(field?.type);
+      const isOptioned = OPTIONED_FIELD_TYPES.has(field?.type);
+      const settings = isPlainObject(field?.settings) ? field.settings : {};
+      const validation = isPlainObject(field?.validation) ? field.validation : {};
+      const visibility = isPlainObject(field?.visibility) ? field.visibility : {};
+
+      const normalised = {
+        id: field.id,
+        type: field.type,
+        label: typeof field.label === 'string' ? field.label : '',
+        placeholder: typeof field.placeholder === 'string' ? field.placeholder : '',
+        helpText: typeof field.helpText === 'string' ? field.helpText : '',
+        required: Boolean(field.required),
+        order: index + 1,
+        sectionId: typeof field.sectionId === 'string' && field.sectionId ? field.sectionId : null,
+        options: isOptioned
+          ? (Array.isArray(field.options) ? field.options : []).map((opt) => ({
+              key: typeof opt.key === 'string' ? opt.key.trim() : '',
+              label: typeof opt.label === 'string' ? opt.label : '',
+            }))
+          : [],
+        validation: {
+          minLength: isFiniteNumber(validation.minLength) ? validation.minLength : null,
+          maxLength: isFiniteNumber(validation.maxLength) ? validation.maxLength : null,
+          min: isFiniteNumber(validation.min) ? validation.min : null,
+          max: isFiniteNumber(validation.max) ? validation.max : null,
+          regex:
+            typeof validation.regex === 'string' && validation.regex.length > 0
+              ? validation.regex
+              : null,
+        },
+        visibility: {
+          mode: VISIBILITY_MODES.includes(visibility.mode) ? visibility.mode : 'always',
+          rules: Array.isArray(visibility.rules) ? visibility.rules : [],
+        },
+        settings: {
+          width: FIELD_WIDTHS.includes(settings.width) ? settings.width : 'full',
+          imageUrl:
+            typeof settings.imageUrl === 'string' && settings.imageUrl.length > 0
+              ? settings.imageUrl
+              : null,
+        },
+      };
+
+      if (!isPresentation) {
+        const key = typeof field.key === 'string' ? field.key.trim() : '';
+        if (key) normalised.key = key;
+      }
+
+      return normalised;
+    }),
+    sections: Array.isArray(safe.sections)
+      ? safe.sections.map((section, index) => ({
+          id: section.id,
+          title: typeof section.title === 'string' ? section.title : '',
+          description: typeof section.description === 'string' ? section.description : '',
+          order: index + 1,
+        }))
+      : [],
+    logicRules: Array.isArray(safe.logicRules) ? safe.logicRules : [],
+    layout: {
+      mode: LAYOUT_MODES.includes(layout.mode) ? layout.mode : 'single_page',
+      showProgress: layout.showProgress !== false,
+    },
+  };
+};
+
+const issue = (path, message) => ({ path, message });
+
+/**
+ * Validates the in-memory schema and returns a list of issues. The empty
+ * array means the schema is safe to send to the backend. The rules here
+ * mirror the backend Zod schema; the backend remains authoritative.
+ */
+export const validateFormSchema = (schema) => {
+  const issues = [];
+  if (!isPlainObject(schema)) {
+    return [issue([], 'Schema must be an object')];
+  }
+
+  const fields = Array.isArray(schema.fields) ? schema.fields : [];
+  const sections = Array.isArray(schema.sections) ? schema.sections : [];
+  const fieldIds = new Set();
+  const fieldKeys = new Set();
+  const sectionIds = new Set(sections.map((section) => section?.id).filter(Boolean));
+
+  if (fields.length === 0) {
+    issues.push(issue(['fields'], 'Add at least one field before saving.'));
+  }
+
+  fields.forEach((field, index) => {
+    const path = ['fields', index];
+    if (!field || typeof field !== 'object') {
+      issues.push(issue(path, 'Field is malformed.'));
+      return;
+    }
+    if (!field.id || !FIELD_ID_REGEX.test(String(field.id))) {
+      issues.push(issue([...path, 'id'], 'Field id is missing or invalid.'));
+    } else if (fieldIds.has(field.id)) {
+      issues.push(issue([...path, 'id'], `Duplicate field id "${field.id}".`));
+    } else {
+      fieldIds.add(field.id);
+    }
+
+    if (!FIELD_TYPES.includes(field.type)) {
+      issues.push(issue([...path, 'type'], `Unsupported field type "${field.type}".`));
+      return;
+    }
+
+    const isPresentation = PRESENTATION_FIELD_TYPES.has(field.type);
+    const isOptioned = OPTIONED_FIELD_TYPES.has(field.type);
+
+    if (!isPresentation) {
+      const key = typeof field.key === 'string' ? field.key.trim() : '';
+      if (!key) {
+        issues.push(issue([...path, 'key'], 'Field key is required.'));
+      } else if (!FIELD_KEY_REGEX.test(key)) {
+        issues.push(
+          issue([...path, 'key'], 'Field key must be lowercase letters, numbers, or underscores.'),
+        );
+      } else if (fieldKeys.has(key)) {
+        issues.push(issue([...path, 'key'], `Duplicate field key "${key}".`));
+      } else {
+        fieldKeys.add(key);
+      }
+    }
+
+    if (typeof field.label === 'string' && field.label.length > 300) {
+      issues.push(issue([...path, 'label'], 'Label is too long (300 characters max).'));
+    }
+
+    if (isOptioned) {
+      const options = Array.isArray(field.options) ? field.options : [];
+      if (options.length === 0) {
+        issues.push(issue([...path, 'options'], 'Add at least one option.'));
+      } else {
+        const seenKeys = new Set();
+        options.forEach((opt, optIdx) => {
+          const optPath = [...path, 'options', optIdx];
+          const optKey = typeof opt?.key === 'string' ? opt.key.trim() : '';
+          if (!optKey) {
+            issues.push(issue([...optPath, 'key'], 'Option key is required.'));
+          } else if (!FIELD_KEY_REGEX.test(optKey)) {
+            issues.push(
+              issue(
+                [...optPath, 'key'],
+                'Option key must be lowercase letters, numbers, or underscores.',
+              ),
+            );
+          } else if (seenKeys.has(optKey)) {
+            issues.push(issue([...optPath, 'key'], `Duplicate option key "${optKey}".`));
+          } else {
+            seenKeys.add(optKey);
+          }
+          if (!opt?.label || String(opt.label).trim().length === 0) {
+            issues.push(issue([...optPath, 'label'], 'Option label is required.'));
+          }
+        });
+      }
+    } else if (Array.isArray(field.options) && field.options.length > 0) {
+      issues.push(issue([...path, 'options'], 'Options are not allowed for this field type.'));
+    }
+
+    if (field.sectionId && !sectionIds.has(field.sectionId)) {
+      issues.push(
+        issue([...path, 'sectionId'], `Field references unknown section "${field.sectionId}".`),
+      );
+    }
+
+    if (field.visibility && Array.isArray(field.visibility.rules)) {
+      field.visibility.rules.forEach((rule, ruleIdx) => {
+        if (!LOGIC_OPERATORS.includes(rule?.operator)) {
+          issues.push(
+            issue(
+              [...path, 'visibility', 'rules', ruleIdx, 'operator'],
+              'Unsupported visibility operator.',
+            ),
+          );
+        }
+      });
+    }
+  });
+
+  return issues;
+};
+
+export const isValidFormSchema = (schema) => validateFormSchema(schema).length === 0;
+
+export const FIELD_KEY_PATTERN = FIELD_KEY_REGEX;
+export const SUPPORTED_LOGIC_OPERATORS = LOGIC_OPERATORS;

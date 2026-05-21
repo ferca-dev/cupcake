@@ -61,6 +61,9 @@ const handleLogout = async () => {
         <RouterLink :to="{ name: 'dashboard.home' }" class="dashboard-layout__nav-link">
           {{ t('dashboard.welcome', { name: '' }).trim() || 'Dashboard' }}
         </RouterLink>
+        <RouterLink :to="{ name: 'surveys.list' }" class="dashboard-layout__nav-link">
+          {{ t('surveys.list.title') }}
+        </RouterLink>
       </nav>
       <div v-if="tenantName" class="dashboard-layout__tenant">
         <small>{{ tenantName }}</small>

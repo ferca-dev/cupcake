@@ -11,6 +11,8 @@ import LoginView from '../views/auth/LoginView.vue';
 import RegisterView from '../views/auth/RegisterView.vue';
 import ForgotPasswordView from '../views/auth/ForgotPasswordView.vue';
 import DashboardView from '../views/dashboard/DashboardView.vue';
+import SurveyListView from '../views/surveys/SurveyListView.vue';
+import SurveyBuilderView from '../views/surveys/SurveyBuilderView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormPlaceholder from '../views/public/PublicFormPlaceholder.vue';
@@ -59,6 +61,26 @@ export const routes = [
         name: 'dashboard.home',
         component: DashboardView,
         meta: { title: 'Dashboard', requiresAuth: true },
+      },
+      {
+        path: 'surveys',
+        name: 'surveys.list',
+        component: SurveyListView,
+        meta: {
+          title: 'Surveys',
+          requiresAuth: true,
+          permissions: ['surveys.view'],
+        },
+      },
+      {
+        path: 'surveys/:id/edit',
+        name: 'surveys.builder',
+        component: SurveyBuilderView,
+        meta: {
+          title: 'Edit survey',
+          requiresAuth: true,
+          permissions: ['surveys.update'],
+        },
       },
     ],
   },

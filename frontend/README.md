@@ -71,10 +71,24 @@ frontend/
     views/
       auth/{Login,Register,ForgotPassword}View.vue
       dashboard/DashboardView.vue
+      surveys/SurveyListView.vue
+      surveys/SurveyBuilderView.vue
       public/PublicFormPlaceholder.vue
       ForbiddenView.vue
       NotFoundView.vue
+    stores/
+      auth.store.js
+      builder.store.js       # Drag-and-drop builder: draft schema + persistence
+    services/
+      apiClient.js
+      auth.service.js
+      survey.service.js      # /surveys/* REST wrapper
+    features/
+      builder/
+        builder.constants.js # Field type catalog (label, icon, defaults)
+        builder.schema.js    # ID/key generators, validator, normaliser
     components/ui/           # Reusable primitives (button, input, modal, …)
+    components/builder/      # Visual builder pieces (sidebar, canvas, inspector, …)
     styles/
       theme.css              # CSS custom properties (colours, spacing, …)
       global.css             # Base element styles + resets
@@ -130,6 +144,37 @@ All colours, spacing, radii, and shadows are CSS custom properties declared in `
 
 `i18n/en.js` and `i18n/es.js` mirror each other key-for-key. `i18n/index.js` exports `useI18n()` with a reactive `t(key, vars)` helper, falls back to English when a key is missing, and persists the selected locale in `localStorage`. Views never inline user-facing strings — they call `t('section.key')` so a future swap to `vue-i18n` can happen without touching the templates.
 
+### Survey builder
+
+The visual survey builder lives at `/app/surveys/:id/edit`. From the dashboard, the **Surveys** link opens the list view, and **New survey** creates a draft and routes straight into the builder. The builder has three panes:
+
+- **Left palette** (`BuilderSidebar`) — every supported field type grouped by category. Click a card or drag it onto the canvas to append a field.
+- **Center canvas** (`BuilderCanvas`) — the form preview. Fields can be selected, duplicated, removed, and reordered via the inline toolbar. Drag the handle on the left of any field to move it within the form; drop targets are highlighted while a drag is in flight.
+- **Right inspector** (`BuilderInspector`) — edits the selected field's label, placeholder, help text, key, required flag, width, options, and basic validation rules. With no field selected, the inspector exposes survey-level metadata (title, description, slug) and layout (single page vs. paginated, progress bar).
+
+State lives in `stores/builder.store.js`. The store exposes the actions required by the phase prompt: `addField`, `removeField`, `duplicateField`, `selectField`, `updateField`, `reorderFields`, `addOption`, `updateOption`, `removeOption`, `validateSchema`, `saveDraft`, and `publishSurvey`. Drag/drop transient state stays in the canvas component — the store is only mutated when a gesture lands.
+
+#### Schema validation
+
+`features/builder/builder.schema.js` mirrors the backend Zod validator in `backend/src/modules/surveys/form-schema.validator.js`. It provides:
+
+- `generateFieldId()`, `generateOptionId()`, `generateSectionId()` — collision-resistant ids.
+- `slugifyFieldKey(label)` — backend-safe field key (`/^[a-z0-9_]+$/`).
+- `buildDefaultField(type, { existingKeys })` — a field shaped exactly like the API expects, with unique key.
+- `validateFormSchema(schema)` — returns an array of `{ path, message }` issues; empty means the schema is safe to send.
+- `normalizeSchemaForApi(schema)` — strips internal-only fields (option `id`, presentational `key`) and reassigns `order` from array position.
+
+The backend remains the authoritative validator on save — the client-side pass exists to give immediate inline feedback and to avoid round-tripping a payload the backend is guaranteed to reject.
+
+#### Unsaved changes
+
+The builder tracks `isDirty` on every mutating action and warns the user before:
+
+- navigating to another route (via `beforeRouteLeave`), and
+- closing/reloading the tab (via `beforeunload`).
+
+`saveDraft()` always runs the client validator first; `publishSurvey()` auto-saves dirty drafts before calling the backend publish endpoint. The publish endpoint is the real backend route — there is no fake local "published" state.
+
 ### Reusable UI components
 
 `src/components/ui/` ships ten base primitives: `AppButton`, `AppInput`, `AppTextarea`, `AppSelect`, `AppModal`, `AppTable`, `AppCard`, `AppBadge`, `AppAlert`, `AppLoader`. Import them through the barrel:
@@ -142,7 +187,15 @@ Props are documented inline at the top of each component file. Components rely o
 
 ## Testing
 
-Vitest runs the suite under `src/tests/`. The setup file clears Pinia/localStorage/global mocks between tests. The current coverage focuses on the auth store (login, logout, transparent refresh, persistence), the router guards (auth + role + permission resolution), and the `AppButton` UI primitive. Add new component tests under `src/tests/components/`.
+Vitest runs the suite under `src/tests/`. The setup file clears Pinia/localStorage/global mocks between tests. The current coverage includes:
+
+- `auth.store.test.js` — login, logout, transparent refresh, persistence.
+- `guards.test.js` — auth + role + permission resolution.
+- `components/AppButton.test.js` — UI primitive behaviour.
+- `builder.schema.test.js` — id/key generation, validator rules, schema normalisation.
+- `builder.store.test.js` — add/remove/duplicate/reorder/option actions, validation gate, save and publish round-trips against a mocked `fetch`.
+
+Add new component tests under `src/tests/components/` and new store tests alongside the existing files.
 
 ## Building for production
 
