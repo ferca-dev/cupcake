@@ -89,11 +89,12 @@ backend/
       health/             # health.routes.js, health.controller.js
       surveys/            # survey.model, survey-version.model, survey.routes/controller/service/repository/validation,
                           # form-schema.validator.js
+      contacts/           # contact.model, contact-group.model, contact.routes/controller/service/repository/validation
       tenants/            # tenant.model/routes/controller
       users/              # user.model.js
     routes/
       api-v1.js           # /api/v1 router, mounts modules
-    seeders/              # index.js + seed-auth.js (idempotent)
+    seeders/              # index.js + seed-auth.js + seed-surveys.js + seed-contacts.js (idempotent)
     tests/                # Vitest suites + helpers + setup
 ```
 
@@ -196,6 +197,9 @@ sessions.
 - Demo client admin (`DEMO_CLIENT_*` env vars), assigned as tenant owner.
 - One demo draft survey and one demo published survey (with `survey_versions`
   record `versionNumber: 1`) belonging to the demo tenant.
+- Three demo contact groups (`Customers`, `Leads`, `VIPs`) and five demo
+  contacts that mix complete and intentionally incomplete channels (email-only,
+  phone-only, WhatsApp-only, and one archived record).
 
 The seeder is idempotent — running it twice updates the matched records in
 place without creating duplicates.
@@ -413,6 +417,67 @@ Campaign and contact linkage columns (`campaignId`, `campaignRecipientId`, `cont
 - `survey.paused`
 - `survey.archived`
 - `survey.duplicated`
+
+## Endpoints implemented in Phase 08
+
+All contact and contact-group endpoints require an authenticated bearer
+token and a non-super-admin tenant context (super admins must supply
+`X-Impersonate-Tenant` to act on a tenant). All queries are scoped to the
+caller's tenant; cross-tenant ids never resolve.
+
+| Method | Path                                                       | Permission         | Description                                                                |
+| ------ | ---------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------- |
+| GET    | `/api/v1/contacts`                                         | `contacts.manage`  | Paginated list with filters: `search`, `status`, `tag`, `groupId`, `channel`, `email`, `phone`, `whatsappPhone`. |
+| POST   | `/api/v1/contacts`                                         | `contacts.manage`  | Create a contact. Requires at least one of `email`, `phone`, `whatsappPhone`. |
+| GET    | `/api/v1/contacts/:id`                                     | `contacts.manage`  | Fetch a single contact (404 outside tenant).                               |
+| PUT    | `/api/v1/contacts/:id`                                     | `contacts.manage`  | Partial update. Updates that would leave the contact unreachable are rejected. |
+| DELETE | `/api/v1/contacts/:id`                                     | `contacts.manage`  | Soft-archive by default. Pass `?hard=true` to remove the record.            |
+| POST   | `/api/v1/contacts/import`                                  | `contacts.manage`  | Bulk import placeholder. Returns `202` with a `pending_implementation` job.|
+| GET    | `/api/v1/contacts/imports/:id/report`                      | `contacts.manage`  | Bulk import report placeholder. Returns the empty schema with `placeholder: true`. |
+| GET    | `/api/v1/contact-groups`                                   | `groups.manage`    | Paginated list with member counts.                                          |
+| POST   | `/api/v1/contact-groups`                                   | `groups.manage`    | Create a group. Names must be unique per tenant.                            |
+| GET    | `/api/v1/contact-groups/:id`                               | `groups.manage`    | Fetch a single group with the current member count.                         |
+| PUT    | `/api/v1/contact-groups/:id`                               | `groups.manage`    | Update name, description, or status.                                         |
+| DELETE | `/api/v1/contact-groups/:id`                               | `groups.manage`    | Delete the group; pulls the group id from every member contact.             |
+| POST   | `/api/v1/contact-groups/:id/contacts`                      | `groups.manage`    | Add a contact to a group. Body: `{ "contactId": "<id>" }`.                  |
+| DELETE | `/api/v1/contact-groups/:id/contacts/:contactId`           | `groups.manage`    | Remove a contact from a group.                                              |
+
+### Contact data model
+
+- `tenantId` (required), `firstName`, `lastName`, `fullName` (auto-derived when missing).
+- `email`, `phone`, `whatsappPhone` — normalised at the service layer: emails are
+  trimmed/lower-cased, phone-like values are reduced to digits while preserving
+  the leading `+` when present.
+- `tags: [String]` and `groupIds: [ObjectId]` — group ids are validated to belong
+  to the caller's tenant before assignment.
+- `status: 'active' | 'archived' | 'blocked'` — `archived` is the soft-delete state;
+  `blocked` is reserved for explicit suppression and is treated as unreachable on
+  every channel.
+
+Each contact response includes a `channels` block with per-channel readiness:
+
+```json
+"channels": {
+  "email":          { "ready": true,  "reason": null },
+  "phone":          { "ready": false, "reason": "missing_phone" },
+  "whatsapp_phone": { "ready": false, "reason": "invalid_whatsapp_phone" }
+}
+```
+
+Reasons use the campaign-skip vocabulary defined in `00-shared-context.md`
+(`missing_email`, `invalid_email`, `missing_phone`, `invalid_phone`,
+`missing_whatsapp_phone`, `invalid_whatsapp_phone`, `contact_blocked`,
+`contact_archived`). The frontend uses these to render channel pills and
+explain why a contact is incomplete for a given delivery method.
+
+### Audit events (contacts)
+
+`contact.service.js` records the following actions:
+
+- `contact.created`, `contact.updated`, `contact.archived`, `contact.deleted`,
+  `contact.import.requested`
+- `contact_group.created`, `contact_group.updated`, `contact_group.deleted`
+- `contact_group.contact_added`, `contact_group.contact_removed`
 
 ## Security middleware
 

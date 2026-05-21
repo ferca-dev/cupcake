@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 03 — frontend foundation. The Vue 3 + Vite SPA is wired with Pinia, Vue Router, route + role + permission guards, a centralised fetch-based API client, an auth store with transparent refresh-token rotation, login/register/forgot-password flows, a dashboard shell, reusable UI primitives, theme-driven CSS, and an i18n-ready string catalogue (English + Spanish). Phases 01 and 02 already provide the backend foundation (`/api/v1/health`, `/api/v1/auth/*`, `/api/v1/tenants/*`). See [Phase workflow](#phase-workflow) below.
+Phase 08 — contacts and groups. The tenant-scoped contact directory ships with Mongoose models for `contacts` and `contact_groups`, a normalised create/update/list/archive/delete API, channel-eligibility metadata for downstream campaign sending, and a frontend with filters, create/edit modal, group membership management, and i18n-ready strings (English + Spanish). Earlier phases provide the backend foundation (`/api/v1/health`, `/api/v1/auth/*`, `/api/v1/tenants/*`, `/api/v1/surveys/*`, public form routes) plus the survey builder and conditional-logic engine on the frontend. See [Phase workflow](#phase-workflow) below.
 
 ## Stack
 

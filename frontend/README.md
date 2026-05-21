@@ -73,16 +73,21 @@ frontend/
       dashboard/DashboardView.vue
       surveys/SurveyListView.vue
       surveys/SurveyBuilderView.vue
+      contacts/ContactListView.vue       # Contacts table + filters + create/edit modal
+      contacts/ContactFormModal.vue      # Contact draft modal (extracted)
+      contacts/ContactGroupListView.vue  # Groups + membership management
       public/PublicFormPlaceholder.vue
       ForbiddenView.vue
       NotFoundView.vue
     stores/
       auth.store.js
       builder.store.js       # Drag-and-drop builder: draft schema + persistence
+      contacts.store.js      # Contacts + groups (filters, pagination, CRUD, membership)
     services/
       apiClient.js
       auth.service.js
       survey.service.js      # /surveys/* REST wrapper
+      contact.service.js     # /contacts and /contact-groups REST wrappers
     features/
       builder/
         builder.constants.js # Field type catalog (label, icon, defaults)
@@ -187,6 +192,15 @@ Public surveys are reachable at `/f/:slug` (canonical) and `/forms/:slug` (alias
 
 Paused surveys render the configured paused message and disable the submit button. Draft/archived surveys show a "no longer available" state. Submission failures (validation/conflict/network/rate-limit) surface as a banner above the form and, for validation, are mapped to per-field error messages.
 
+### Contacts and contact groups
+
+The contacts module is reachable from the dashboard sidebar when the caller has the matching permission:
+
+- `Contacts` (`/app/contacts`) — list view with filters (`search`, `status`, `channel`, `group`, `tag`), pagination, soft-archive and hard-delete actions, and a side-by-side modal for create/edit. Each row shows per-channel pills (Email / SMS / WhatsApp) coloured by the backend's `channels` block so users can see at a glance which contacts are eligible for which delivery type.
+- `Contact groups` (`/app/contact-groups`) — create/rename/archive groups, plus a "Manage members" modal that toggles individual contacts in or out of the group. Member counts come straight from the backend so the table stays in sync after every change.
+
+State lives in `stores/contacts.store.js`. The store wraps `services/contact.service.js` (which mirrors the `/contacts` and `/contact-groups` REST routes) and exposes actions for fetching, paging, creating, updating, archiving, hard-deleting, group membership management, and a placeholder bulk-import hook that matches the backend's "pending implementation" response shape. Routes are guarded by `meta.permissions: ['contacts.manage']` and `['groups.manage']`.
+
 ### Reusable UI components
 
 `src/components/ui/` ships ten base primitives: `AppButton`, `AppInput`, `AppTextarea`, `AppSelect`, `AppModal`, `AppTable`, `AppCard`, `AppBadge`, `AppAlert`, `AppLoader`. Import them through the barrel:
@@ -207,6 +221,7 @@ Vitest runs the suite under `src/tests/`. The setup file clears Pinia/localStora
 - `builder.schema.test.js` — id/key generation, validator rules, schema normalisation.
 - `builder.store.test.js` — add/remove/duplicate/reorder/option actions, validation gate, save and publish round-trips against a mocked `fetch`.
 - `public-form-answers.test.js` — public-form `buildInitialAnswers`, `validateAnswers`, and `serializeAnswers` helpers.
+- `contacts.store.test.js` — contact store fetch/filter/create/archive/group-delete flows against a mocked `fetch`.
 - `components/PublicFormView.test.js` — load/render/submit/error flows for `PublicFormView` against a mocked `fetch`.
 
 Add new component tests under `src/tests/components/` and new store tests alongside the existing files.
