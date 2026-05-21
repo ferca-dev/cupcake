@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 01 — backend foundation. The Express + Mongoose API is wired with security middleware, a consistent response envelope, centralized errors, request logging, environment validation, and a working `GET /api/v1/health` endpoint. The `frontend/` application package will be initialized in Phase 03. See [Phase workflow](#phase-workflow) below.
+Phase 03 — frontend foundation. The Vue 3 + Vite SPA is wired with Pinia, Vue Router, route + role + permission guards, a centralised fetch-based API client, an auth store with transparent refresh-token rotation, login/register/forgot-password flows, a dashboard shell, reusable UI primitives, theme-driven CSS, and an i18n-ready string catalogue (English + Spanish). Phases 01 and 02 already provide the backend foundation (`/api/v1/health`, `/api/v1/auth/*`, `/api/v1/tenants/*`). See [Phase workflow](#phase-workflow) below.
 
 ## Stack
 
@@ -112,8 +112,14 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
     .env.example                    # Required backend environment variables
     README.md                       # Backend-specific reference
     src/                            # app.js, server.js, config/, common/, modules/, routes/, tests/
-  frontend/                         # Frontend package (initialized in Phase 03)
+  frontend/                         # Vue 3 + Vite SPA (Phase 03+)
     .env.example                    # Required frontend environment variables
+    README.md                       # Frontend-specific reference
+    index.html                      # Vite entry HTML
+    vite.config.js                  # Dev server + build config
+    vitest.config.js                # Unit-test config
+    src/                            # main.js, App.vue, router/, stores/, services/,
+                                    # layouts/, views/, components/, styles/, i18n/, tests/
   docs/
     architecture-decisions.md       # ADRs for stack and tooling choices
     naming-conventions.md           # File, module, route, component, store, env naming

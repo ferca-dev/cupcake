@@ -35,7 +35,10 @@ export const requirePermission = (...permissions) => {
       ensureAuthenticated(req);
       const missing = required.filter((p) => !roleHasPermission(req.user.role, p));
       if (missing.length > 0) {
-        throw new AuthorizationError('Insufficient permissions', missing.map((p) => ({ permission: p })));
+        throw new AuthorizationError(
+          'Insufficient permissions',
+          missing.map((p) => ({ permission: p })),
+        );
       }
       return next();
     } catch (err) {

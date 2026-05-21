@@ -1,0 +1,114 @@
+import { createMemoryHistory, createRouter as createVueRouter, createWebHistory } from 'vue-router';
+
+import { navigationGuard } from './guards.js';
+import { APP_NAME } from '../config/env.js';
+
+import AuthLayout from '../layouts/AuthLayout.vue';
+import DashboardLayout from '../layouts/DashboardLayout.vue';
+import PublicFormLayout from '../layouts/PublicFormLayout.vue';
+
+import LoginView from '../views/auth/LoginView.vue';
+import RegisterView from '../views/auth/RegisterView.vue';
+import ForgotPasswordView from '../views/auth/ForgotPasswordView.vue';
+import DashboardView from '../views/dashboard/DashboardView.vue';
+import ForbiddenView from '../views/ForbiddenView.vue';
+import NotFoundView from '../views/NotFoundView.vue';
+import PublicFormPlaceholder from '../views/public/PublicFormPlaceholder.vue';
+
+export const routes = [
+  {
+    path: '/',
+    redirect: () => ({ name: 'dashboard.home' }),
+  },
+  {
+    path: '/auth',
+    component: AuthLayout,
+    meta: { requiresGuest: true },
+    children: [
+      {
+        path: '',
+        redirect: { name: 'auth.login' },
+      },
+      {
+        path: 'login',
+        name: 'auth.login',
+        component: LoginView,
+        meta: { title: 'Sign in', requiresGuest: true },
+      },
+      {
+        path: 'register',
+        name: 'auth.register',
+        component: RegisterView,
+        meta: { title: 'Create account', requiresGuest: true },
+      },
+      {
+        path: 'forgot-password',
+        name: 'auth.forgot',
+        component: ForgotPasswordView,
+        meta: { title: 'Recover account', requiresGuest: true },
+      },
+    ],
+  },
+  {
+    path: '/app',
+    component: DashboardLayout,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'dashboard.home',
+        component: DashboardView,
+        meta: { title: 'Dashboard', requiresAuth: true },
+      },
+    ],
+  },
+  {
+    path: '/forbidden',
+    name: 'forbidden',
+    component: ForbiddenView,
+    meta: { title: 'Forbidden' },
+  },
+  {
+    path: '/f/:slug',
+    component: PublicFormLayout,
+    children: [
+      {
+        path: '',
+        name: 'public.form',
+        component: PublicFormPlaceholder,
+        meta: { title: 'Form', public: true },
+      },
+    ],
+  },
+  {
+    path: '/forms/:slug',
+    redirect: (to) => ({ name: 'public.form', params: { slug: to.params.slug } }),
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: NotFoundView,
+    meta: { title: 'Page not found' },
+  },
+];
+
+export const createRouter = (options = {}) => {
+  const history =
+    options.history ?? (import.meta.env?.SSR ? createMemoryHistory() : createWebHistory());
+  const router = createVueRouter({
+    history,
+    routes: options.routes ?? routes,
+    scrollBehavior: () => ({ top: 0 }),
+  });
+
+  router.beforeEach(navigationGuard);
+
+  router.afterEach((to) => {
+    const segment = to.meta?.title;
+    if (typeof document !== 'undefined') {
+      document.title = segment ? `${segment} · ${APP_NAME}` : APP_NAME;
+    }
+  });
+
+  return router;
+};

@@ -39,7 +39,11 @@ const registerUser = async (overrides) => {
 };
 
 const createTenantWithAdmin = async ({ tenantName, email, password = 'StrongPass123!' }) => {
-  const tenant = await Tenant.create({ name: tenantName, slug: tenantName.toLowerCase().replace(/\s+/g, '-'), status: 'active' });
+  const tenant = await Tenant.create({
+    name: tenantName,
+    slug: tenantName.toLowerCase().replace(/\s+/g, '-'),
+    status: 'active',
+  });
   const user = await User.create({
     tenantId: tenant._id,
     role: ROLES.CLIENT_ADMIN,
@@ -54,9 +58,7 @@ const createTenantWithAdmin = async ({ tenantName, email, password = 'StrongPass
 };
 
 const loginAs = async (email, password) => {
-  const response = await request(app)
-    .post('/api/v1/auth/login')
-    .send({ email, password });
+  const response = await request(app).post('/api/v1/auth/login').send({ email, password });
   expect(response.status).toBe(200);
   return response.body.data;
 };
@@ -165,9 +167,7 @@ describe('POST /api/v1/auth/logout', () => {
     expect(logout.status).toBe(200);
     expect(logout.body.data.revoked).toBe(true);
 
-    const refreshAttempt = await request(app)
-      .post('/api/v1/auth/refresh')
-      .send({ refreshToken });
+    const refreshAttempt = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
     expect(refreshAttempt.status).toBe(401);
   });
 
@@ -200,9 +200,7 @@ describe('GET /api/v1/auth/me', () => {
   });
 
   it('rejects malformed authorization headers', async () => {
-    const response = await request(app)
-      .get('/api/v1/auth/me')
-      .set('Authorization', 'Token nope');
+    const response = await request(app).get('/api/v1/auth/me').set('Authorization', 'Token nope');
     expect(response.status).toBe(401);
   });
 });

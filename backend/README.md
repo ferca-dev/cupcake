@@ -138,17 +138,17 @@ header, the refresh token can be sent in the request body or via the
 are revocable; logging out revokes the current token, and re-using a revoked
 token invalidates every active session for that user (replay-detection).
 
-| Method | Path                            | Auth      | Description                                                  |
-| ------ | ------------------------------- | --------- | ------------------------------------------------------------ |
-| POST   | `/api/v1/auth/register`         | public    | Create a tenant + `client_admin` user and issue tokens.      |
-| POST   | `/api/v1/auth/login`            | public    | Exchange email/password for access + refresh tokens.         |
-| POST   | `/api/v1/auth/refresh`          | refresh   | Rotate the refresh token, issue a new access token.          |
-| POST   | `/api/v1/auth/logout`           | public    | Revoke the supplied refresh token (idempotent).              |
-| GET    | `/api/v1/auth/me`               | bearer    | Return the current user, tenant, permissions, super-admin.   |
-| POST   | `/api/v1/auth/forgot-password`  | public    | Always responds 200 (placeholder until email is wired).      |
-| POST   | `/api/v1/auth/reset-password`   | public    | Reserved; currently rejects until tokens are implemented.    |
-| GET    | `/api/v1/tenants/me`            | bearer    | The caller's tenant (super admin returns `null` by default). |
-| GET    | `/api/v1/tenants/:id`           | bearer    | Returns the tenant if the caller is super admin or owner.    |
+| Method | Path                           | Auth    | Description                                                  |
+| ------ | ------------------------------ | ------- | ------------------------------------------------------------ |
+| POST   | `/api/v1/auth/register`        | public  | Create a tenant + `client_admin` user and issue tokens.      |
+| POST   | `/api/v1/auth/login`           | public  | Exchange email/password for access + refresh tokens.         |
+| POST   | `/api/v1/auth/refresh`         | refresh | Rotate the refresh token, issue a new access token.          |
+| POST   | `/api/v1/auth/logout`          | public  | Revoke the supplied refresh token (idempotent).              |
+| GET    | `/api/v1/auth/me`              | bearer  | Return the current user, tenant, permissions, super-admin.   |
+| POST   | `/api/v1/auth/forgot-password` | public  | Always responds 200 (placeholder until email is wired).      |
+| POST   | `/api/v1/auth/reset-password`  | public  | Reserved; currently rejects until tokens are implemented.    |
+| GET    | `/api/v1/tenants/me`           | bearer  | The caller's tenant (super admin returns `null` by default). |
+| GET    | `/api/v1/tenants/:id`          | bearer  | Returns the tenant if the caller is super admin or owner.    |
 
 ### Roles and permissions
 

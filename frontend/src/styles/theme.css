@@ -1,0 +1,115 @@
+/*
+ * Design tokens. Components MUST consume colours, spacing, radii, and shadows
+ * through these custom properties so the entire app can be re-skinned by
+ * editing this file alone. Never hardcode HEX values in component scopes.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Palette — primary (indigo) */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-on-primary: #ffffff;
+
+  /* Palette — secondary (rose / accent) */
+  --color-secondary-50: #fff1f2;
+  --color-secondary-100: #ffe4e6;
+  --color-secondary-200: #fecdd3;
+  --color-secondary-600: #e11d48;
+  --color-secondary-700: #be123c;
+
+  /* Palette — neutrals */
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-subtle: #64748b;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f6fb;
+  --color-surface-elevated: #ffffff;
+  --color-border: #e2e8f0;
+  --color-divider: #e5e7eb;
+
+  /* Status colours */
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-on-danger: #ffffff;
+
+  --color-focus: #6366f1;
+
+  /* Typography */
+  --font-family-sans:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-family-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+
+  /* Spacing scale (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3rem;
+
+  /* Radii */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 6px 16px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 24px 48px rgba(15, 23, 42, 0.12);
+
+  /* Layout */
+  --layout-max-width: 80rem;
+  --layout-gap: var(--space-5);
+  --layout-topbar-height: 4rem;
+  --layout-sidebar-width: 16rem;
+}
+
+/*
+ * Dark mode tokens. Activated by adding `data-theme="dark"` on the root
+ * element. Kept colocated with light tokens so designers only touch one file.
+ */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --color-text: #f8fafc;
+  --color-text-muted: #cbd5f5;
+  --color-text-subtle: #94a3b8;
+  --color-surface: #0f172a;
+  --color-surface-muted: #111c34;
+  --color-surface-elevated: #1e293b;
+  --color-border: #1f2a44;
+  --color-divider: #1f2a44;
+}
