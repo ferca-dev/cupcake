@@ -6,10 +6,7 @@ import { Template } from './template.model.js';
  * tenant templates is controlled by `status` separately at the service layer).
  */
 export const tenantVisibilityFilter = (tenantId) => ({
-  $or: [
-    { tenantId: null, status: 'active' },
-    { tenantId },
-  ],
+  $or: [{ tenantId: null, status: 'active' }, { tenantId }],
 });
 
 export const findTemplates = async ({

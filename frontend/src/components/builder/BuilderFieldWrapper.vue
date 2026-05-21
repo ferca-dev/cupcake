@@ -23,7 +23,9 @@ const { t } = useI18n();
 
 const widthClass = computed(() => {
   const width = props.field.settings?.width;
-  return FIELD_WIDTHS.includes(width) ? `builder-field-wrapper--${width}` : 'builder-field-wrapper--full';
+  return FIELD_WIDTHS.includes(width)
+    ? `builder-field-wrapper--${width}`
+    : 'builder-field-wrapper--full';
 });
 
 const onSelect = () => emit('select', props.field.id);

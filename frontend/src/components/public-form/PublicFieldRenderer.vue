@@ -92,11 +92,7 @@ const onCheckboxGroupChange = (optionKey, checked, emit) => {
     :data-field-id="field.id"
     :data-field-type="field.type"
   >
-    <label
-      v-if="field.type !== 'checkbox'"
-      :for="fieldId"
-      class="public-field__label"
-    >
+    <label v-if="field.type !== 'checkbox'" :for="fieldId" class="public-field__label">
       {{ field.label || '' }}
       <span v-if="field.required" class="public-field__required" aria-hidden="true">*</span>
     </label>

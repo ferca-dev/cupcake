@@ -149,9 +149,7 @@ describe('POST /api/v1/surveys', () => {
   });
 
   it('rejects unauthenticated callers', async () => {
-    const response = await request(app)
-      .post('/api/v1/surveys')
-      .send({ title: 'Anonymous' });
+    const response = await request(app).post('/api/v1/surveys').send({ title: 'Anonymous' });
     expect(response.status).toBe(401);
   });
 });
@@ -309,9 +307,7 @@ describe('Lifecycle actions', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(publish.status).toBe(200);
     expect(publish.body.data.survey.status).toBe('published');
-    expect(publish.body.data.survey.publishedVersionId).toEqual(
-      publish.body.data.version.id,
-    );
+    expect(publish.body.data.survey.publishedVersionId).toEqual(publish.body.data.version.id);
     expect(publish.body.data.version.versionNumber).toBe(1);
 
     const versions = await SurveyVersion.find({ surveyId: id });

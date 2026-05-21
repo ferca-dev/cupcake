@@ -43,11 +43,7 @@ describe('buildInitialAnswers', () => {
 describe('validateAnswers', () => {
   it('flags missing required fields', () => {
     const state = { field_name: '' };
-    const errors = validateAnswers(
-      schema([field({ required: true })]),
-      state,
-      translator,
-    );
+    const errors = validateAnswers(schema([field({ required: true })]), state, translator);
     expect(errors.field_name).toBe('publicForm.fieldErrors.required');
   });
 

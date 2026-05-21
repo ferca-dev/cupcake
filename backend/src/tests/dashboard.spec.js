@@ -587,4 +587,3 @@ describe('Dashboard survey stats parity with /surveys/:id/stats', () => {
     expect(moduleResponse.body.data.stats.surveyId).toBe(survey._id.toString());
   });
 });
-

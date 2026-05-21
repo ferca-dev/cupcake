@@ -35,17 +35,17 @@ Indexes:
 
 Categories live in `backend/src/modules/templates/template.model.js`:
 
-| Key                       | Description                       |
-| ------------------------- | --------------------------------- |
-| `customer_satisfaction`   | Customer satisfaction surveys     |
-| `employee_feedback`       | Internal employee feedback        |
-| `event_registration`      | Event/registration forms          |
-| `product_feedback`        | Product-specific feedback         |
-| `nps`                     | Net Promoter Score                |
-| `contact_info`            | Contact/lead capture              |
-| `post_service`            | Post-service follow-ups           |
-| `lead_capture`            | Lead generation                   |
-| `other`                   | Catch-all                         |
+| Key                     | Description                   |
+| ----------------------- | ----------------------------- |
+| `customer_satisfaction` | Customer satisfaction surveys |
+| `employee_feedback`     | Internal employee feedback    |
+| `event_registration`    | Event/registration forms      |
+| `product_feedback`      | Product-specific feedback     |
+| `nps`                   | Net Promoter Score            |
+| `contact_info`          | Contact/lead capture          |
+| `post_service`          | Post-service follow-ups       |
+| `lead_capture`          | Lead generation               |
+| `other`                 | Catch-all                     |
 
 The `schema` field is validated by the same `parseFormSchema` validator
 used for surveys (`backend/src/modules/surveys/form-schema.validator.js`),
@@ -66,14 +66,14 @@ results to that tenant. Filtering by scope (`?scope=system` /
 
 ## Permissions
 
-| Action                                  | Permission required                | Notes                                                                 |
-| --------------------------------------- | ---------------------------------- | --------------------------------------------------------------------- |
-| List / read templates                   | `surveys.view` or `templates.manage` | Members can browse templates to start surveys without write access. |
-| Create a tenant template                | `templates.manage`                 | `isSystemTemplate` is silently ignored for non-super-admins.          |
-| Create a **system** template            | `templates.manage` + `super_admin` | Tenant admins receive `403 AUTHORIZATION_ERROR`.                      |
-| Update / delete a tenant template       | `templates.manage`                 | Only inside the caller's tenant.                                      |
-| Update / delete a system template       | `templates.manage` + `super_admin` | Tenant admins receive `403`.                                          |
-| Create a survey from a template         | `surveys.create`                   | Inactive templates refuse the request.                                |
+| Action                            | Permission required                  | Notes                                                               |
+| --------------------------------- | ------------------------------------ | ------------------------------------------------------------------- |
+| List / read templates             | `surveys.view` or `templates.manage` | Members can browse templates to start surveys without write access. |
+| Create a tenant template          | `templates.manage`                   | `isSystemTemplate` is silently ignored for non-super-admins.        |
+| Create a **system** template      | `templates.manage` + `super_admin`   | Tenant admins receive `403 AUTHORIZATION_ERROR`.                    |
+| Update / delete a tenant template | `templates.manage`                   | Only inside the caller's tenant.                                    |
+| Update / delete a system template | `templates.manage` + `super_admin`   | Tenant admins receive `403`.                                        |
+| Create a survey from a template   | `surveys.create`                     | Inactive templates refuse the request.                              |
 
 By default `client_admin` carries `templates.manage`; `client_member` does
 not — members can browse and instantiate templates but cannot author them.
@@ -83,14 +83,14 @@ not — members can browse and instantiate templates but cannot author them.
 All endpoints live under `/api/v1/templates`, require a bearer token, and
 respect tenant context the same way as the surveys module.
 
-| Method | Path                                       | Description                                                    |
-| ------ | ------------------------------------------ | -------------------------------------------------------------- |
-| GET    | `/api/v1/templates`                        | List visible templates. Query: `page`, `limit`, `status`, `category`, `search`, `scope`. |
-| POST   | `/api/v1/templates`                        | Create a template. Super admins may pass `isSystemTemplate: true`. |
-| GET    | `/api/v1/templates/:id`                    | Return a single template visible to the caller.                |
-| PUT    | `/api/v1/templates/:id`                    | Update a template the caller is allowed to edit.               |
-| DELETE | `/api/v1/templates/:id`                    | Delete a template the caller is allowed to edit.               |
-| POST   | `/api/v1/templates/:id/create-survey`      | Create a `draft` survey from the template. Body: `{ title?, slug?, description? }`. |
+| Method | Path                                  | Description                                                                              |
+| ------ | ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/templates`                   | List visible templates. Query: `page`, `limit`, `status`, `category`, `search`, `scope`. |
+| POST   | `/api/v1/templates`                   | Create a template. Super admins may pass `isSystemTemplate: true`.                       |
+| GET    | `/api/v1/templates/:id`               | Return a single template visible to the caller.                                          |
+| PUT    | `/api/v1/templates/:id`               | Update a template the caller is allowed to edit.                                         |
+| DELETE | `/api/v1/templates/:id`               | Delete a template the caller is allowed to edit.                                         |
+| POST   | `/api/v1/templates/:id/create-survey` | Create a `draft` survey from the template. Body: `{ title?, slug?, description? }`.      |
 
 ## Schema duplication
 

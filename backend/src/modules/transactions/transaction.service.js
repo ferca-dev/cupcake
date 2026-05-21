@@ -1,11 +1,7 @@
 import mongoose from 'mongoose';
 
 import * as repo from './transaction.repository.js';
-import {
-  AuthorizationError,
-  NotFoundError,
-  ValidationError,
-} from '../../common/errors/index.js';
+import { AuthorizationError, NotFoundError, ValidationError } from '../../common/errors/index.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 
 const ENTITY_TYPE = 'transaction';

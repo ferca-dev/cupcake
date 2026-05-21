@@ -65,7 +65,14 @@ const baseField = (overrides) => ({
 
 const sampleSchema = () => ({
   fields: [
-    baseField({ id: 'field_a', type: 'short_text', key: 'name', label: 'Name', required: true, order: 1 }),
+    baseField({
+      id: 'field_a',
+      type: 'short_text',
+      key: 'name',
+      label: 'Name',
+      required: true,
+      order: 1,
+    }),
     baseField({ id: 'field_b', type: 'long_text', key: 'comments', label: 'Comments', order: 2 }),
   ],
   sections: [],
@@ -88,7 +95,10 @@ beforeEach(async () => {
 
 describe('GET /api/v1/templates', () => {
   it('returns active system templates plus the caller tenant templates', async () => {
-    const { tenant } = await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    const { tenant } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
     const { tenant: otherTenant } = await createTenantWithAdmin({
       tenantName: 'Beta',
       email: 'beta@test.local',
@@ -186,7 +196,10 @@ describe('GET /api/v1/templates/:id', () => {
 
 describe('POST /api/v1/templates', () => {
   it('lets a client admin create a tenant template', async () => {
-    const { tenant } = await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    const { tenant } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
     const token = await login('acme@test.local');
 
     const response = await request(app)
@@ -297,7 +310,10 @@ describe('PUT /api/v1/templates/:id', () => {
   });
 
   it('lets a tenant admin edit their own template', async () => {
-    const { tenant } = await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    const { tenant } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
     const tenantTemplate = await Template.create({
       tenantId: tenant._id,
       title: 'Original',
@@ -339,7 +355,10 @@ describe('DELETE /api/v1/templates/:id', () => {
 
 describe('POST /api/v1/templates/:id/create-survey', () => {
   it('creates a draft survey with a duplicated schema and unique slug', async () => {
-    const { tenant } = await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    const { tenant } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
     const template = await Template.create({
       tenantId: null,
       title: 'Customer satisfaction',

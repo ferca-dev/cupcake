@@ -210,8 +210,7 @@ export default {
       statusReasonLabel: 'Reason (optional)',
       statusReasonHint: 'Captured in the audit log for accountability.',
       confirmSuspend: 'Suspend "{name}"? Existing sessions will be revoked.',
-      confirmCancel:
-        'Cancel "{name}"? All users will be deactivated and refresh tokens revoked.',
+      confirmCancel: 'Cancel "{name}"? All users will be deactivated and refresh tokens revoked.',
       confirmActivate: 'Reactivate "{name}" and restore deactivated users?',
       statusChanged: 'Status updated successfully.',
       updateError: 'We could not update the client.',
@@ -252,6 +251,13 @@ export default {
   },
   layout: {
     skipToContent: 'Skip to main content',
+    toggleNav: 'Toggle navigation menu',
+    dashboardHome: 'Dashboard',
+  },
+  roles: {
+    super_admin: 'Super admin',
+    client_admin: 'Workspace admin',
+    client_member: 'Workspace member',
   },
   notFound: {
     title: 'Page not found',

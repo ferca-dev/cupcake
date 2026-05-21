@@ -39,7 +39,11 @@ const onDragStart = (event, type) => {
       <p>{{ t('builder.sidebar.subtitle') }}</p>
     </header>
 
-    <div v-for="category in categoriesWithFields" :key="category.key" class="builder-sidebar__group">
+    <div
+      v-for="category in categoriesWithFields"
+      :key="category.key"
+      class="builder-sidebar__group"
+    >
       <h4 class="builder-sidebar__group-title">{{ category.label }}</h4>
       <div class="builder-sidebar__grid">
         <button

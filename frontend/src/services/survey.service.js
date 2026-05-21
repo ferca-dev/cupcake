@@ -38,13 +38,9 @@ export const publicFormService = Object.freeze({
 
   getByToken: (slug, token) =>
     apiClient
-      .get(
-        `/public/forms/${encodeURIComponent(slug)}/token/${encodeURIComponent(token)}`,
-      )
+      .get(`/public/forms/${encodeURIComponent(slug)}/token/${encodeURIComponent(token)}`)
       .then(unwrap),
 
   submit: (slug, payload) =>
-    apiClient
-      .post(`/public/forms/${encodeURIComponent(slug)}/responses`, payload)
-      .then(unwrap),
+    apiClient.post(`/public/forms/${encodeURIComponent(slug)}/responses`, payload).then(unwrap),
 });

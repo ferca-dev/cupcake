@@ -14,7 +14,7 @@ const limiter = env.isTest ? (_req, _res, next) => next() : createAuthRateLimite
 authRouter.post('/register', limiter, authController.register);
 authRouter.post('/login', limiter, authController.login);
 authRouter.post('/refresh', limiter, authController.refresh);
-authRouter.post('/logout', authController.logout);
+authRouter.post('/logout', limiter, authController.logout);
 authRouter.get('/me', authenticate, authController.me);
 authRouter.post('/forgot-password', limiter, authController.forgotPassword);
 authRouter.post('/reset-password', limiter, authController.resetPassword);

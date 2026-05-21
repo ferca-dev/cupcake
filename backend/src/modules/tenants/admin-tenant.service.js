@@ -7,11 +7,7 @@ import { RefreshToken } from '../auth/refresh-token.model.js';
 import { hashPassword } from '../../common/auth/passwords.js';
 import { ROLES } from '../../common/auth/roles.js';
 import { slugify, uniqueSlug } from '../../common/utils/slug.js';
-import {
-  ConflictError,
-  NotFoundError,
-  ValidationError,
-} from '../../common/errors/index.js';
+import { ConflictError, NotFoundError, ValidationError } from '../../common/errors/index.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 
 export const TENANT_AUDIT_ACTIONS = Object.freeze({
@@ -349,13 +345,7 @@ const cascadeStatus = async ({ tenant, previousStatus, nextStatus }) => {
   return { affectedUsers, revokedTokens };
 };
 
-export const updateTenantStatus = async ({
-  id,
-  payload,
-  actor,
-  ip = null,
-  userAgent = null,
-}) => {
+export const updateTenantStatus = async ({ id, payload, actor, ip = null, userAgent = null }) => {
   const tenant = await requireTenantDoc(id);
   const previousStatus = tenant.status;
   if (previousStatus === payload.status) {

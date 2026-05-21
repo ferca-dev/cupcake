@@ -4,12 +4,7 @@ import { useRouter } from 'vue-router';
 
 import { useAdminStore } from '../../stores/admin.store.js';
 import { useI18n } from '../../i18n/index.js';
-import {
-  AppAlert,
-  AppButton,
-  AppCard,
-  AppInput,
-} from '../../components/ui/index.js';
+import { AppAlert, AppButton, AppCard, AppInput } from '../../components/ui/index.js';
 
 const router = useRouter();
 const store = useAdminStore();
@@ -97,11 +92,7 @@ const submit = async () => {
 
     <AppCard padded>
       <form class="tenant-create__form" @submit.prevent="submit">
-        <AppInput
-          v-model="form.name"
-          :label="t('adminPanel.create.nameField')"
-          required
-        />
+        <AppInput v-model="form.name" :label="t('adminPanel.create.nameField')" required />
         <AppInput
           v-model="form.slug"
           :label="t('adminPanel.create.slugField')"
@@ -126,10 +117,7 @@ const submit = async () => {
         </label>
 
         <template v-if="form.withAdmin">
-          <AppInput
-            v-model="form.adminName"
-            :label="t('adminPanel.create.adminNameField')"
-          />
+          <AppInput v-model="form.adminName" :label="t('adminPanel.create.adminNameField')" />
           <AppInput
             v-model="form.adminEmail"
             type="email"

@@ -175,9 +175,7 @@ describe('GET /api/v1/public/forms/:slug', () => {
     const { tenant, user } = await createTenantAndAdmin();
     const { survey, version } = await publishSurvey({ tenant, user, slug: 'versioned' });
 
-    survey.currentDraftSchema = sampleSchema([
-      sampleField({ id: 'field_new', key: 'new_field' }),
-    ]);
+    survey.currentDraftSchema = sampleSchema([sampleField({ id: 'field_new', key: 'new_field' })]);
     await survey.save();
 
     const response = await request(app).get('/api/v1/public/forms/versioned');
@@ -192,9 +190,7 @@ describe('GET /api/v1/public/forms/:slug/token/:submissionToken', () => {
     const { tenant, user } = await createTenantAndAdmin();
     await publishSurvey({ tenant, user, slug: 'with-token' });
 
-    const response = await request(app).get(
-      '/api/v1/public/forms/with-token/token/abc12345token',
-    );
+    const response = await request(app).get('/api/v1/public/forms/with-token/token/abc12345token');
     expect(response.status).toBe(200);
     expect(response.body.data.submissionToken).toBe('abc12345token');
   });
@@ -203,9 +199,7 @@ describe('GET /api/v1/public/forms/:slug/token/:submissionToken', () => {
     const { tenant, user } = await createTenantAndAdmin();
     await publishSurvey({ tenant, user, slug: 'with-token-bad' });
 
-    const response = await request(app).get(
-      '/api/v1/public/forms/with-token-bad/token/!!!',
-    );
+    const response = await request(app).get('/api/v1/public/forms/with-token-bad/token/!!!');
     expect(response.status).toBe(422);
   });
 });
@@ -357,9 +351,7 @@ describe('POST /api/v1/public/forms/:slug/responses', () => {
           visibility: {
             mode: 'show_when',
             conditionMode: 'all',
-            conditions: [
-              { fieldId: 'field_satisfaction', operator: 'equals', value: 'low' },
-            ],
+            conditions: [{ fieldId: 'field_satisfaction', operator: 'equals', value: 'low' }],
           },
         }),
       ],
@@ -401,9 +393,7 @@ describe('POST /api/v1/public/forms/:slug/responses', () => {
           visibility: {
             mode: 'show_when',
             conditionMode: 'all',
-            conditions: [
-              { fieldId: 'field_satisfaction', operator: 'equals', value: 'low' },
-            ],
+            conditions: [{ fieldId: 'field_satisfaction', operator: 'equals', value: 'low' }],
           },
         }),
       ],

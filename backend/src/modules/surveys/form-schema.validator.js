@@ -215,11 +215,7 @@ const sectionSchema = z
 
 const logicActionSchema = z
   .object({
-    type: z.enum([
-      ...VISIBILITY_ACTION_TYPES,
-      ...NAVIGATION_ACTION_TYPES,
-      ...END_ACTION_TYPES,
-    ]),
+    type: z.enum([...VISIBILITY_ACTION_TYPES, ...NAVIGATION_ACTION_TYPES, ...END_ACTION_TYPES]),
     target: z.string().trim().max(80).nullable().optional().default(null),
   })
   .strict();
@@ -302,13 +298,7 @@ const looksNumeric = (value) =>
   (typeof value === 'number' && Number.isFinite(value)) ||
   (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)));
 
-const validateConditions = ({
-  ctx,
-  conditions,
-  basePath,
-  fieldsById,
-  ownerFieldId = null,
-}) => {
+const validateConditions = ({ ctx, conditions, basePath, fieldsById, ownerFieldId = null }) => {
   conditions.forEach((cond, condIdx) => {
     const sourcePath = [...basePath, condIdx];
     const source = fieldsById.get(cond.fieldId);

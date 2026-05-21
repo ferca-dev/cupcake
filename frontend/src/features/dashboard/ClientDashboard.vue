@@ -94,10 +94,7 @@ const statusVariant = (status) => {
 <template>
   <div class="dashboard">
     <DashboardKpiGrid>
-      <DashboardKpi
-        :label="t('dashboard.client.kpis.totalSurveys')"
-        :value="surveys.total"
-      />
+      <DashboardKpi :label="t('dashboard.client.kpis.totalSurveys')" :value="surveys.total" />
       <DashboardKpi
         :label="t('dashboard.client.kpis.activeSurveys')"
         :value="surveys.active"
@@ -108,10 +105,7 @@ const statusVariant = (status) => {
         :value="responses.total"
         tone="primary"
       />
-      <DashboardKpi
-        :label="t('dashboard.client.kpis.totalCampaigns')"
-        :value="campaigns.total"
-      />
+      <DashboardKpi :label="t('dashboard.client.kpis.totalCampaigns')" :value="campaigns.total" />
       <DashboardKpi
         :label="t('dashboard.client.kpis.totalContacts')"
         :value="contacts.total"
@@ -207,10 +201,7 @@ const statusVariant = (status) => {
 
       <AppCard class="dashboard__activity">
         <template #title>{{ t('dashboard.client.activityTitle') }}</template>
-        <DashboardActivityList
-          :items="activity"
-          :empty="t('dashboard.client.activityEmpty')"
-        />
+        <DashboardActivityList :items="activity" :empty="t('dashboard.client.activityEmpty')" />
       </AppCard>
     </div>
   </div>

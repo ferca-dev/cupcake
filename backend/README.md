@@ -141,17 +141,17 @@ header, the refresh token can be sent in the request body or via the
 are revocable; logging out revokes the current token, and re-using a revoked
 token invalidates every active session for that user (replay-detection).
 
-| Method | Path                           | Auth    | Description                                                  |
-| ------ | ------------------------------ | ------- | ------------------------------------------------------------ |
-| POST   | `/api/v1/auth/register`        | public  | Create a tenant + `client_admin` user and issue tokens.      |
-| POST   | `/api/v1/auth/login`           | public  | Exchange email/password for access + refresh tokens.         |
-| POST   | `/api/v1/auth/refresh`         | refresh | Rotate the refresh token, issue a new access token.          |
-| POST   | `/api/v1/auth/logout`          | public  | Revoke the supplied refresh token (idempotent).              |
-| GET    | `/api/v1/auth/me`              | bearer  | Return the current user, tenant, permissions, super-admin.   |
-| POST   | `/api/v1/auth/forgot-password` | public  | Always responds 200 (placeholder until email is wired).      |
-| POST   | `/api/v1/auth/reset-password`  | public  | Reserved; currently rejects until tokens are implemented.    |
-| GET    | `/api/v1/tenants/me`           | bearer  | The caller's tenant (super admin returns `null` by default). |
-| GET    | `/api/v1/tenants/:id`          | bearer  | Returns the tenant if the caller is super admin or owner.    |
+| Method | Path                           | Auth    | Description                                                                                                                                          |
+| ------ | ------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/v1/auth/register`        | public  | Create a tenant + `client_admin` user and issue tokens.                                                                                              |
+| POST   | `/api/v1/auth/login`           | public  | Exchange email/password for access + refresh tokens.                                                                                                 |
+| POST   | `/api/v1/auth/refresh`         | refresh | Rotate the refresh token, issue a new access token.                                                                                                  |
+| POST   | `/api/v1/auth/logout`          | public  | Revoke the supplied refresh token (idempotent).                                                                                                      |
+| GET    | `/api/v1/auth/me`              | bearer  | Return the current user, tenant, permissions, super-admin.                                                                                           |
+| POST   | `/api/v1/auth/forgot-password` | public  | Always responds 200 without revealing account existence. Email delivery is deferred — see [docs/known-limitations.md](../docs/known-limitations.md). |
+| POST   | `/api/v1/auth/reset-password`  | public  | Rejects every call until a reset-token store exists — see [docs/known-limitations.md](../docs/known-limitations.md).                                 |
+| GET    | `/api/v1/tenants/me`           | bearer  | The caller's tenant (super admin returns `null` by default).                                                                                         |
+| GET    | `/api/v1/tenants/:id`          | bearer  | Returns the tenant if the caller is super admin or owner.                                                                                            |
 
 ### Roles and permissions
 
@@ -211,28 +211,28 @@ authenticated bearer token and apply the tenant filter from `req.tenantContext`
 (set by `authenticate` + `requireTenantContext`). Super admins must use the
 `X-Impersonate-Tenant` header to scope mutations to a specific tenant.
 
-| Method | Path                                | Permission                                | Description                                                  |
-| ------ | ----------------------------------- | ----------------------------------------- | ------------------------------------------------------------ |
-| GET    | `/api/v1/surveys`                   | `surveys.view`                            | Paginated list of surveys for the caller's tenant.           |
-| POST   | `/api/v1/surveys`                   | `surveys.create`                          | Create a new draft survey.                                   |
-| GET    | `/api/v1/surveys/:id`               | `surveys.view`                            | Return one survey (404 if not in tenant).                    |
-| PUT    | `/api/v1/surveys/:id`               | `surveys.update`                          | Update title, description, slug, settings, draft schema.     |
-| DELETE | `/api/v1/surveys/:id`               | `surveys.delete`                          | Permanently remove a survey.                                 |
-| POST   | `/api/v1/surveys/:id/publish`       | `surveys.publish`                         | Validate the draft, snapshot it as an immutable version, set `status=published`. |
-| POST   | `/api/v1/surveys/:id/pause`         | `surveys.publish`                         | Transition `published → paused`. Public URL still resolves but later phases will reject submissions. |
-| POST   | `/api/v1/surveys/:id/archive`       | `surveys.publish` _or_ `surveys.delete`   | Lock the survey read-only and stamp `archivedAt`.            |
-| POST   | `/api/v1/surveys/:id/duplicate`     | `surveys.create`                          | Create a new `draft` with the same schema and a unique slug. |
-| GET    | `/api/v1/surveys/:id/versions`      | `surveys.view`                            | Return published versions (descending `versionNumber`).      |
-| GET    | `/api/v1/surveys/:id/stats`         | `surveys.view`                            | Survey-level analytics powered by the dashboard module (Phase 10). |
+| Method | Path                            | Permission                              | Description                                                                                          |
+| ------ | ------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/surveys`               | `surveys.view`                          | Paginated list of surveys for the caller's tenant.                                                   |
+| POST   | `/api/v1/surveys`               | `surveys.create`                        | Create a new draft survey.                                                                           |
+| GET    | `/api/v1/surveys/:id`           | `surveys.view`                          | Return one survey (404 if not in tenant).                                                            |
+| PUT    | `/api/v1/surveys/:id`           | `surveys.update`                        | Update title, description, slug, settings, draft schema.                                             |
+| DELETE | `/api/v1/surveys/:id`           | `surveys.delete`                        | Permanently remove a survey.                                                                         |
+| POST   | `/api/v1/surveys/:id/publish`   | `surveys.publish`                       | Validate the draft, snapshot it as an immutable version, set `status=published`.                     |
+| POST   | `/api/v1/surveys/:id/pause`     | `surveys.publish`                       | Transition `published → paused`. Public URL still resolves but later phases will reject submissions. |
+| POST   | `/api/v1/surveys/:id/archive`   | `surveys.publish` _or_ `surveys.delete` | Lock the survey read-only and stamp `archivedAt`.                                                    |
+| POST   | `/api/v1/surveys/:id/duplicate` | `surveys.create`                        | Create a new `draft` with the same schema and a unique slug.                                         |
+| GET    | `/api/v1/surveys/:id/versions`  | `surveys.view`                          | Return published versions (descending `versionNumber`).                                              |
+| GET    | `/api/v1/surveys/:id/stats`     | `surveys.view`                          | Survey-level analytics powered by the dashboard module (Phase 10).                                   |
 
 ### Survey lifecycle
 
-| Status      | Public?        | Mutable schema?    | Notes                                                      |
-| ----------- | -------------- | ------------------ | ---------------------------------------------------------- |
-| `draft`     | No             | Yes (`currentDraftSchema`) | Newly created or duplicated surveys start here.   |
-| `published` | Yes            | Draft only         | Publishing copies the draft into a new `survey_versions` record; the version is immutable. |
-| `paused`    | URL resolves   | Draft only         | Public submissions will be rejected in later phases.       |
-| `archived`  | No             | No                 | Stamped with `archivedAt`. Update and lifecycle endpoints return `409 CONFLICT`. |
+| Status      | Public?      | Mutable schema?            | Notes                                                                                      |
+| ----------- | ------------ | -------------------------- | ------------------------------------------------------------------------------------------ |
+| `draft`     | No           | Yes (`currentDraftSchema`) | Newly created or duplicated surveys start here.                                            |
+| `published` | Yes          | Draft only                 | Publishing copies the draft into a new `survey_versions` record; the version is immutable. |
+| `paused`    | URL resolves | Draft only                 | Public submissions will be rejected in later phases.                                       |
+| `archived`  | No           | No                         | Stamped with `archivedAt`. Update and lifecycle endpoints return `409 CONFLICT`.           |
 
 Republishing a survey creates a new `survey_versions` record with an
 incremented `versionNumber`; existing versions are never mutated. Responses
@@ -269,32 +269,36 @@ The schema shape is:
       "required": true,
       "options": [
         { "key": "high", "label": "High" },
-        { "key": "low",  "label": "Low" }
+        { "key": "low", "label": "Low" },
       ],
-      "validation": { "minLength": null, "maxLength": null, "min": null, "max": null, "regex": null },
-      "visibility": {
-        "mode": "always",            // "always" | "show_when" | "hide_when"
-        "conditionMode": "all",      // "all" | "any" when mode != "always"
-        "conditions": []
+      "validation": {
+        "minLength": null,
+        "maxLength": null,
+        "min": null,
+        "max": null,
+        "regex": null,
       },
-      "settings": { "width": "full", "imageUrl": null }
-    }
+      "visibility": {
+        "mode": "always", // "always" | "show_when" | "hide_when"
+        "conditionMode": "all", // "all" | "any" when mode != "always"
+        "conditions": [],
+      },
+      "settings": { "width": "full", "imageUrl": null },
+    },
   ],
   "sections": [],
   "logicRules": [
     {
       "id": "rule_show_comments",
       "name": "Ask for comments when satisfaction is low",
-      "type": "visibility",          // "visibility" | "navigation" | "end"
+      "type": "visibility", // "visibility" | "navigation" | "end"
       "targetFieldId": "field_comments",
-      "conditions": [
-        { "fieldId": "field_satisfaction", "operator": "equals", "value": "low" }
-      ],
+      "conditions": [{ "fieldId": "field_satisfaction", "operator": "equals", "value": "low" }],
       "conditionMode": "all",
-      "action": { "type": "show", "target": null }
-    }
+      "action": { "type": "show", "target": null },
+    },
   ],
-  "layout": { "mode": "single_page", "showProgress": true }
+  "layout": { "mode": "single_page", "showProgress": true },
 }
 ```
 
@@ -337,11 +341,11 @@ Public form routes live under `/api/v1/public/forms/*` and **do not require
 authentication**. They expose only the immutable published schema (never the
 draft) and submit responses against that exact version.
 
-| Method | Path                                                       | Auth   | Description                                                          |
-| ------ | ---------------------------------------------------------- | ------ | -------------------------------------------------------------------- |
-| GET    | `/api/v1/public/forms/:slug`                               | public | Return the published schema + display settings for the survey slug.  |
-| GET    | `/api/v1/public/forms/:slug/token/:submissionToken`        | public | Same payload, scoped to a campaign submission token.                 |
-| POST   | `/api/v1/public/forms/:slug/responses`                     | public | Submit answers. Returns the response id + the configured thank-you message. |
+| Method | Path                                                | Auth   | Description                                                                 |
+| ------ | --------------------------------------------------- | ------ | --------------------------------------------------------------------------- |
+| GET    | `/api/v1/public/forms/:slug`                        | public | Return the published schema + display settings for the survey slug.         |
+| GET    | `/api/v1/public/forms/:slug/token/:submissionToken` | public | Same payload, scoped to a campaign submission token.                        |
+| POST   | `/api/v1/public/forms/:slug/responses`              | public | Submit answers. Returns the response id + the configured thank-you message. |
 
 Response shape for the GET endpoints:
 
@@ -402,6 +406,7 @@ Submission request body:
 - `submissionToken` (single)
 - `(tenantId, surveyId, createdAt DESC)`
 - `(surveyVersionId, createdAt DESC)`
+- `(campaignId, createdAt DESC)`
 - `campaignRecipientId`
 
 Campaign and contact linkage columns (`campaignId`, `campaignRecipientId`, `contactId`) ship empty for Phase 06 and will be wired up when the campaign module lands.
@@ -425,22 +430,22 @@ token and a non-super-admin tenant context (super admins must supply
 `X-Impersonate-Tenant` to act on a tenant). All queries are scoped to the
 caller's tenant; cross-tenant ids never resolve.
 
-| Method | Path                                                       | Permission         | Description                                                                |
-| ------ | ---------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------- |
-| GET    | `/api/v1/contacts`                                         | `contacts.manage`  | Paginated list with filters: `search`, `status`, `tag`, `groupId`, `channel`, `email`, `phone`, `whatsappPhone`. |
-| POST   | `/api/v1/contacts`                                         | `contacts.manage`  | Create a contact. Requires at least one of `email`, `phone`, `whatsappPhone`. |
-| GET    | `/api/v1/contacts/:id`                                     | `contacts.manage`  | Fetch a single contact (404 outside tenant).                               |
-| PUT    | `/api/v1/contacts/:id`                                     | `contacts.manage`  | Partial update. Updates that would leave the contact unreachable are rejected. |
-| DELETE | `/api/v1/contacts/:id`                                     | `contacts.manage`  | Soft-archive by default. Pass `?hard=true` to remove the record.            |
-| POST   | `/api/v1/contacts/import`                                  | `contacts.manage`  | Bulk import placeholder. Returns `202` with a `pending_implementation` job.|
-| GET    | `/api/v1/contacts/imports/:id/report`                      | `contacts.manage`  | Bulk import report placeholder. Returns the empty schema with `placeholder: true`. |
-| GET    | `/api/v1/contact-groups`                                   | `groups.manage`    | Paginated list with member counts.                                          |
-| POST   | `/api/v1/contact-groups`                                   | `groups.manage`    | Create a group. Names must be unique per tenant.                            |
-| GET    | `/api/v1/contact-groups/:id`                               | `groups.manage`    | Fetch a single group with the current member count.                         |
-| PUT    | `/api/v1/contact-groups/:id`                               | `groups.manage`    | Update name, description, or status.                                         |
-| DELETE | `/api/v1/contact-groups/:id`                               | `groups.manage`    | Delete the group; pulls the group id from every member contact.             |
-| POST   | `/api/v1/contact-groups/:id/contacts`                      | `groups.manage`    | Add a contact to a group. Body: `{ "contactId": "<id>" }`.                  |
-| DELETE | `/api/v1/contact-groups/:id/contacts/:contactId`           | `groups.manage`    | Remove a contact from a group.                                              |
+| Method | Path                                             | Permission        | Description                                                                                                      |
+| ------ | ------------------------------------------------ | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/contacts`                               | `contacts.manage` | Paginated list with filters: `search`, `status`, `tag`, `groupId`, `channel`, `email`, `phone`, `whatsappPhone`. |
+| POST   | `/api/v1/contacts`                               | `contacts.manage` | Create a contact. Requires at least one of `email`, `phone`, `whatsappPhone`.                                    |
+| GET    | `/api/v1/contacts/:id`                           | `contacts.manage` | Fetch a single contact (404 outside tenant).                                                                     |
+| PUT    | `/api/v1/contacts/:id`                           | `contacts.manage` | Partial update. Updates that would leave the contact unreachable are rejected.                                   |
+| DELETE | `/api/v1/contacts/:id`                           | `contacts.manage` | Soft-archive by default. Pass `?hard=true` to remove the record.                                                 |
+| POST   | `/api/v1/contacts/import`                        | `contacts.manage` | Bulk import placeholder. Returns `202` with a `pending_implementation` job.                                      |
+| GET    | `/api/v1/contacts/imports/:id/report`            | `contacts.manage` | Bulk import report placeholder. Returns the empty schema with `placeholder: true`.                               |
+| GET    | `/api/v1/contact-groups`                         | `groups.manage`   | Paginated list with member counts.                                                                               |
+| POST   | `/api/v1/contact-groups`                         | `groups.manage`   | Create a group. Names must be unique per tenant.                                                                 |
+| GET    | `/api/v1/contact-groups/:id`                     | `groups.manage`   | Fetch a single group with the current member count.                                                              |
+| PUT    | `/api/v1/contact-groups/:id`                     | `groups.manage`   | Update name, description, or status.                                                                             |
+| DELETE | `/api/v1/contact-groups/:id`                     | `groups.manage`   | Delete the group; pulls the group id from every member contact.                                                  |
+| POST   | `/api/v1/contact-groups/:id/contacts`            | `groups.manage`   | Add a contact to a group. Body: `{ "contactId": "<id>" }`.                                                       |
+| DELETE | `/api/v1/contact-groups/:id/contacts/:contactId` | `groups.manage`   | Remove a contact from a group.                                                                                   |
 
 ### Contact data model
 
@@ -486,13 +491,13 @@ campaigns, recipients, audit logs) into tenant-safe analytics. All routes
 require an authenticated bearer token and the `dashboard.view` permission
 (super admins also receive these implicitly via `admin.dashboard.view`).
 
-| Method | Path                                  | Permission             | Description                                                                                                              |
-| ------ | ------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| GET    | `/api/v1/dashboard/summary`           | `dashboard.view`       | Tenant overview (surveys, responses, campaigns, channels, recent activity). Returns global metrics when a super admin omits `X-Impersonate-Tenant`. |
-| GET    | `/api/v1/dashboard/surveys/:id`       | `dashboard.view`       | Per-survey response totals, channel breakdown, daily trend, and latest responses.                                        |
-| GET    | `/api/v1/dashboard/channels`          | `dashboard.view`       | Per-channel send/failure/skip aggregations with skipped reasons and provider counts.                                     |
-| GET    | `/api/v1/dashboard/recent-activity`   | `dashboard.view`       | Latest audit-log entries scoped to the tenant.                                                                           |
-| GET    | `/api/v1/admin/metrics`               | `admin.dashboard.view` | Global tenants/users/surveys/responses/campaigns/channels and recent activity. Refused (`403`) for tenant-bound clients. |
+| Method | Path                                | Permission             | Description                                                                                                                                         |
+| ------ | ----------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/dashboard/summary`         | `dashboard.view`       | Tenant overview (surveys, responses, campaigns, channels, recent activity). Returns global metrics when a super admin omits `X-Impersonate-Tenant`. |
+| GET    | `/api/v1/dashboard/surveys/:id`     | `dashboard.view`       | Per-survey response totals, channel breakdown, daily trend, and latest responses.                                                                   |
+| GET    | `/api/v1/dashboard/channels`        | `dashboard.view`       | Per-channel send/failure/skip aggregations with skipped reasons and provider counts.                                                                |
+| GET    | `/api/v1/dashboard/recent-activity` | `dashboard.view`       | Latest audit-log entries scoped to the tenant.                                                                                                      |
+| GET    | `/api/v1/admin/metrics`             | `admin.dashboard.view` | Global tenants/users/surveys/responses/campaigns/channels and recent activity. Refused (`403`) for tenant-bound clients.                            |
 
 Implementation lives in `modules/dashboard`. The service runs aggregation
 pipelines in parallel with `Promise.all`, uses `mongoose.trusted({ $in: ... })`
@@ -509,14 +514,14 @@ require an authenticated bearer token. Tenant-bound users see active
 system templates plus their own; super admins see everything (or an
 impersonated tenant's templates via `X-Impersonate-Tenant`).
 
-| Method | Path                                       | Permission                                | Description                                                       |
-| ------ | ------------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------- |
-| GET    | `/api/v1/templates`                        | `surveys.view` _or_ `templates.manage`    | List visible templates with optional `category` / `scope` filters. |
-| POST   | `/api/v1/templates`                        | `templates.manage`                        | Create a template. `isSystemTemplate: true` requires `super_admin`. |
-| GET    | `/api/v1/templates/:id`                    | `surveys.view` _or_ `templates.manage`    | Fetch a single template the caller can see.                       |
-| PUT    | `/api/v1/templates/:id`                    | `templates.manage`                        | Update title/description/category/status/schema (system templates require super admin). |
-| DELETE | `/api/v1/templates/:id`                    | `templates.manage`                        | Delete a template (system templates require super admin).         |
-| POST   | `/api/v1/templates/:id/create-survey`      | `surveys.create`                          | Create a draft survey from the template, with a deep-cloned schema. |
+| Method | Path                                  | Permission                             | Description                                                                             |
+| ------ | ------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/templates`                   | `surveys.view` _or_ `templates.manage` | List visible templates with optional `category` / `scope` filters.                      |
+| POST   | `/api/v1/templates`                   | `templates.manage`                     | Create a template. `isSystemTemplate: true` requires `super_admin`.                     |
+| GET    | `/api/v1/templates/:id`               | `surveys.view` _or_ `templates.manage` | Fetch a single template the caller can see.                                             |
+| PUT    | `/api/v1/templates/:id`               | `templates.manage`                     | Update title/description/category/status/schema (system templates require super admin). |
+| DELETE | `/api/v1/templates/:id`               | `templates.manage`                     | Delete a template (system templates require super admin).                               |
+| POST   | `/api/v1/templates/:id/create-survey` | `surveys.create`                       | Create a draft survey from the template, with a deep-cloned schema.                     |
 
 The full data model, visibility rules, permissions matrix, audit events,
 and duplication semantics are documented in

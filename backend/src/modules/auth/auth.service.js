@@ -471,10 +471,10 @@ export const getCurrentUser = async (userId) => {
 };
 
 /**
- * Forgot-password placeholder. We intentionally do not reveal whether the
- * email is registered and do not send a real email yet — Phase 14 will wire
- * the email provider. The response shape is stable so the frontend and tests
- * can rely on it now.
+ * Records a password-reset request without leaking whether the email is
+ * registered. Sending the actual reset email is intentionally deferred and
+ * tracked in docs/known-limitations.md; the response shape is stable so
+ * frontend and tests can rely on it. The audit trail captures every attempt.
  */
 export const requestPasswordReset = async ({ email, ip = null, userAgent = null }) => {
   const normalised = email.toLowerCase().trim();
@@ -493,11 +493,13 @@ export const requestPasswordReset = async ({ email, ip = null, userAgent = null 
 };
 
 /**
- * Reset-password placeholder. Until a real reset-token store exists we always
- * fail closed so no password can be changed without a real token mechanism.
+ * Fails closed: this endpoint exists so the frontend route is reachable, but
+ * the reset-token store and email delivery are intentionally deferred and
+ * documented in docs/known-limitations.md. No password can ever be changed
+ * through this code path until that store is implemented.
  */
 export const resetPassword = async () => {
-  throw new ValidationError('Password reset tokens are not implemented yet');
+  throw new ValidationError('Password reset is temporarily unavailable');
 };
 
 export const __testing = {

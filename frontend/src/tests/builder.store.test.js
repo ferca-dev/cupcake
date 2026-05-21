@@ -135,27 +135,29 @@ describe('builder store', () => {
   describe('persistence', () => {
     it('hydrates from the API and clears dirty state on setSurvey', () => {
       const builder = useBuilderStore();
-      builder.setSurvey(surveyFixture({
-        currentDraftSchema: {
-          fields: [
-            {
-              id: 'field_x',
-              type: 'short_text',
-              key: 'hello',
-              label: 'Hello',
-              required: false,
-              order: 1,
-              options: [],
-              validation: {},
-              visibility: { mode: 'always', conditionMode: 'all', conditions: [] },
-              settings: { width: 'full', imageUrl: null },
-            },
-          ],
-          sections: [],
-          logicRules: [],
-          layout: { mode: 'single_page', showProgress: true },
-        },
-      }));
+      builder.setSurvey(
+        surveyFixture({
+          currentDraftSchema: {
+            fields: [
+              {
+                id: 'field_x',
+                type: 'short_text',
+                key: 'hello',
+                label: 'Hello',
+                required: false,
+                order: 1,
+                options: [],
+                validation: {},
+                visibility: { mode: 'always', conditionMode: 'all', conditions: [] },
+                settings: { width: 'full', imageUrl: null },
+              },
+            ],
+            sections: [],
+            logicRules: [],
+            layout: { mode: 'single_page', showProgress: true },
+          },
+        }),
+      );
       expect(builder.surveyId).toBe('survey-1');
       expect(builder.schema.fields).toHaveLength(1);
       expect(builder.isDirty).toBe(false);

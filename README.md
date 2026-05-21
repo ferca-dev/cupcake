@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 13 — admin panel. Super admins can now manage tenants from a dedicated frontend area: list with search and status filters, create with optional bootstrap admin, edit name/slug/settings, and run audited status changes (active / suspended / cancelled) that cascade into login access. The previous transactions and billing history (Phase 12) and the dashboard surface (Phases 10–11) remain available. The admin contract is documented in [docs/admin-panel.md](docs/admin-panel.md). The campaign sending architecture introduced in phase 09 still applies; see [docs/provider-architecture.md](docs/provider-architecture.md) for that adapter contract.
+Phase 14 — hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin) is feature-complete for the closed beta. Phase 14 focused on production fitness rather than new features: targeted MongoDB indexes for high-traffic queries, rate-limit coverage on every auth endpoint, refresh-token reuse coverage, English documentation, troubleshooting notes, and a published [production-readiness checklist](docs/production-readiness.md). Deferred features (real password-reset emails, bulk contact import, real messaging/payment providers) are documented openly in [docs/known-limitations.md](docs/known-limitations.md). Earlier phase contracts remain valid: the admin panel ([docs/admin-panel.md](docs/admin-panel.md)), campaign sending ([docs/provider-architecture.md](docs/provider-architecture.md)), templates ([docs/templates.md](docs/templates.md)), dashboard ([docs/dashboard-analytics.md](docs/dashboard-analytics.md)), and billing history ([docs/billing-architecture.md](docs/billing-architecture.md)).
 
 ## Stack
 
@@ -181,6 +181,12 @@ Phase index:
 - `12` — Transactions and billing history.
 - `13` — Admin panel.
 - `14` — Hardening.
+
+## Troubleshooting and operational docs
+
+- [docs/troubleshooting.md](docs/troubleshooting.md) — common local issues, seeder, env, and first-deploy smoke test.
+- [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 14.
+- [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
 
 ## Continuous integration
 

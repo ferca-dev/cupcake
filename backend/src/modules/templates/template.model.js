@@ -65,5 +65,4 @@ const toPublic = (_doc, ret) => {
 templateSchema.set('toJSON', { virtuals: true, versionKey: false, transform: toPublic });
 templateSchema.set('toObject', { virtuals: true, versionKey: false, transform: toPublic });
 
-export const Template =
-  mongoose.models.Template ?? mongoose.model('Template', templateSchema);
+export const Template = mongoose.models.Template ?? mongoose.model('Template', templateSchema);

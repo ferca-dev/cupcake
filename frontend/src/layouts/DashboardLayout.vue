@@ -14,7 +14,12 @@ const isSidebarOpen = ref(false);
 
 const tenantName = computed(() => auth.tenant?.name ?? '');
 const userName = computed(() => auth.displayName);
-const userRole = computed(() => auth.role ?? '');
+const userRole = computed(() => {
+  const role = auth.role;
+  if (!role) return '';
+  const translated = t(`roles.${role}`);
+  return translated === `roles.${role}` ? role.replace('_', ' ') : translated;
+});
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -36,7 +41,7 @@ const handleLogout = async () => {
         class="dashboard-layout__nav-toggle"
         :aria-expanded="isSidebarOpen"
         aria-controls="dashboard-sidebar"
-        :aria-label="t('common.actions')"
+        :aria-label="t('layout.toggleNav')"
         @click="toggleSidebar"
       >
         <span aria-hidden="true">☰</span>
@@ -59,7 +64,7 @@ const handleLogout = async () => {
     <aside id="dashboard-sidebar" class="dashboard-layout__sidebar" aria-label="Primary">
       <nav class="dashboard-layout__nav">
         <RouterLink :to="{ name: 'dashboard.home' }" class="dashboard-layout__nav-link">
-          {{ t('dashboard.welcome', { name: '' }).trim() || 'Dashboard' }}
+          {{ t('layout.dashboardHome') }}
         </RouterLink>
         <RouterLink :to="{ name: 'surveys.list' }" class="dashboard-layout__nav-link">
           {{ t('surveys.list.title') }}

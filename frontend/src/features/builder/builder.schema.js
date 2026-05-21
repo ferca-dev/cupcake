@@ -62,13 +62,17 @@ const randomChunk = () => {
   return Math.floor(Math.random() * 0xffffffff).toString(36);
 };
 
-export const generateFieldId = () => `field_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+export const generateFieldId = () =>
+  `field_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
 
-export const generateOptionId = () => `opt_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+export const generateOptionId = () =>
+  `opt_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
 
-export const generateSectionId = () => `section_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+export const generateSectionId = () =>
+  `section_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
 
-export const generateRuleId = () => `rule_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
+export const generateRuleId = () =>
+  `rule_${Date.now().toString(36)}${nextCounter()}${randomChunk()}`;
 
 /**
  * Build a backend-safe field key from a candidate label. Falls back to a
@@ -169,14 +173,12 @@ export const buildEmptySchema = () => ({
 const normalizeCondition = (cond) => ({
   fieldId: typeof cond?.fieldId === 'string' ? cond.fieldId : '',
   operator: LOGIC_OPERATORS.includes(cond?.operator) ? cond.operator : 'equals',
-  value: NO_VALUE_OPERATORS.has(cond?.operator) ? undefined : cond?.value ?? '',
+  value: NO_VALUE_OPERATORS.has(cond?.operator) ? undefined : (cond?.value ?? ''),
 });
 
 const cloneField = (field, overrides = {}) => ({
   ...field,
-  options: Array.isArray(field.options)
-    ? field.options.map((opt) => ({ ...opt }))
-    : [],
+  options: Array.isArray(field.options) ? field.options.map((opt) => ({ ...opt })) : [],
   validation: { ...defaultValidation(), ...(field.validation ?? {}) },
   visibility: {
     mode: VISIBILITY_MODES.includes(field.visibility?.mode) ? field.visibility.mode : 'always',
@@ -571,25 +573,26 @@ export const validateFormSchema = (schema) => {
         issues.push(issue([...path, 'targetFieldId'], 'Pick a target field to show or hide.'));
       }
       if (!VISIBILITY_ACTIONS.includes(rule.action?.type)) {
-        issues.push(issue([...path, 'action', 'type'], 'Visibility rules must show or hide a field.'));
+        issues.push(
+          issue([...path, 'action', 'type'], 'Visibility rules must show or hide a field.'),
+        );
       }
     } else if (rule.type === 'navigation') {
       if (!NAVIGATION_ACTIONS.includes(rule.action?.type)) {
         issues.push(
-          issue([...path, 'action', 'type'], 'Navigation rules must jump to a field, section, or page.'),
+          issue(
+            [...path, 'action', 'type'],
+            'Navigation rules must jump to a field, section, or page.',
+          ),
         );
       }
       const target = rule.action?.target;
       if (!target) {
         issues.push(issue([...path, 'action', 'target'], 'Pick where to jump to.'));
       } else if (rule.action.type === 'jump_to_field' && !fieldsById.has(target)) {
-        issues.push(
-          issue([...path, 'action', 'target'], `Unknown jump target "${target}".`),
-        );
+        issues.push(issue([...path, 'action', 'target'], `Unknown jump target "${target}".`));
       } else if (rule.action.type === 'jump_to_section' && !sectionIds.has(target)) {
-        issues.push(
-          issue([...path, 'action', 'target'], `Unknown section "${target}".`),
-        );
+        issues.push(issue([...path, 'action', 'target'], `Unknown section "${target}".`));
       } else if (rule.action.type === 'jump_to_page') {
         const num = Number(target);
         if (!Number.isInteger(num) || num < 1) {

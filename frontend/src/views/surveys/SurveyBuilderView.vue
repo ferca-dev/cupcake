@@ -267,8 +267,12 @@ watch(lastError, (value) => {
         <div class="survey-builder__title-block">
           <h2 class="survey-builder__title">{{ survey?.title ?? t('builder.header.loading') }}</h2>
           <div class="survey-builder__meta">
-            <AppBadge v-if="surveyStatus" :variant="statusBadgeVariant">{{ surveyStatus }}</AppBadge>
-            <span v-if="isDirty" class="survey-builder__dirty">{{ t('builder.header.unsaved') }}</span>
+            <AppBadge v-if="surveyStatus" :variant="statusBadgeVariant">{{
+              surveyStatus
+            }}</AppBadge>
+            <span v-if="isDirty" class="survey-builder__dirty">{{
+              t('builder.header.unsaved')
+            }}</span>
             <span v-else class="survey-builder__saved">{{ t('builder.header.saved') }}</span>
           </div>
         </div>

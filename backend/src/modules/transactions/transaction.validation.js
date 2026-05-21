@@ -10,14 +10,7 @@ export const listTransactionsQuerySchema = z
     type: z.enum(TRANSACTION_TYPES).optional(),
     provider: z.string().trim().min(1).max(80).optional(),
     sort: z
-      .enum([
-        'createdAt',
-        '-createdAt',
-        'paidAt',
-        '-paidAt',
-        'amount',
-        '-amount',
-      ])
+      .enum(['createdAt', '-createdAt', 'paidAt', '-paidAt', 'amount', '-amount'])
       .optional()
       .default('-createdAt'),
   })

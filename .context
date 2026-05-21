@@ -95,3 +95,27 @@ Error:
 - Before each phase, load `prompts/00-shared-context.md` and the relevant phase file.
 - Do not start the next phase until the current phase Definition of Done is satisfied.
 - If a later phase reveals a missing foundation from an earlier phase, fix the foundation in the same branch instead of working around it.
+
+## Final architecture (post Phase 14)
+
+Backend modules live under `backend/src/modules/`: `auth`, `users`, `tenants`,
+`surveys`, `responses`, `contacts`, `campaigns`, `public-forms`, `templates`,
+`dashboard`, `transactions`, `admin`, `audit`, `health`. Cross-cutting code
+lives under `backend/src/common/` (`auth`, `constants`, `errors`,
+`middlewares`, `responses`, `utils`). The full route map is exposed at `GET
+/api/v1` and documented in [backend/README.md](backend/README.md).
+
+Frontend feature folders live under `frontend/src/views/` and
+`frontend/src/features/`. Pinia stores under `frontend/src/stores/` (one per
+domain) call the matching service in `frontend/src/services/`, which goes
+through `apiClient.js` for refresh-token-aware fetch. Layouts live in
+`frontend/src/layouts/`, route guards in `frontend/src/router/guards.js`, and
+all user-facing strings in `frontend/src/i18n/{en,es}.js`.
+
+## Deferred features
+
+Intentionally deferred past Phase 14 and documented in
+[docs/known-limitations.md](docs/known-limitations.md): password reset by
+email, bulk contact import, real email/SMS/WhatsApp providers (mock only),
+real payments, in-product user management UI. Each surface returns a stable
+"temporarily unavailable" response — never a silent success.

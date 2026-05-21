@@ -32,9 +32,7 @@ const toPublicSurvey = (survey) => ({
   slug: survey.slug,
   status: survey.status,
   currentDraftSchema: survey.currentDraftSchema ?? null,
-  publishedVersionId: survey.publishedVersionId
-    ? survey.publishedVersionId.toString()
-    : null,
+  publishedVersionId: survey.publishedVersionId ? survey.publishedVersionId.toString() : null,
   settings: survey.settings,
   createdBy: survey.createdBy ? survey.createdBy.toString() : null,
   updatedBy: survey.updatedBy ? survey.updatedBy.toString() : null,
@@ -134,13 +132,7 @@ export const getSurvey = async ({ id, tenantId, allowSuperAdminGlobal = false })
   return toPublicSurvey(survey);
 };
 
-export const createSurvey = async ({
-  tenantId,
-  actor,
-  payload,
-  ip = null,
-  userAgent = null,
-}) => {
+export const createSurvey = async ({ tenantId, actor, payload, ip = null, userAgent = null }) => {
   const tenant = ensureTenant(tenantId);
   const schema = payload.schema ? parseFormSchema(payload.schema) : emptyFormSchema();
   const slug = await resolveUniqueSlug({
@@ -246,8 +238,7 @@ export const publishSurvey = async ({ id, tenantId, actor, ip = null, userAgent 
   // sneak into an immutable version record.
   const validatedSchema = parseFormSchema(draftSchema);
 
-  const nextVersionNumber =
-    (await repo.findLatestVersionNumber({ surveyId: survey._id })) + 1;
+  const nextVersionNumber = (await repo.findLatestVersionNumber({ surveyId: survey._id })) + 1;
 
   const now = new Date();
   const version = await repo.createSurveyVersion({

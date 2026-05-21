@@ -14,7 +14,12 @@ const { t } = useI18n();
 
 const name = computed(() => auth.displayName || 'there');
 const tenantName = computed(() => auth.tenant?.name ?? '—');
-const roleLabel = computed(() => (auth.role ?? '').replace('_', ' '));
+const roleLabel = computed(() => {
+  const role = auth.role;
+  if (!role) return '';
+  const translated = t(`roles.${role}`);
+  return translated === `roles.${role}` ? role.replace('_', ' ') : translated;
+});
 
 const isGlobal = computed(() => store.scope === 'global');
 const summary = computed(() => store.summary);

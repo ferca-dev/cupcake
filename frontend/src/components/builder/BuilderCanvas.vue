@@ -97,7 +97,10 @@ const onListDragOver = (event) => {
     event.dataTransfer.types.includes('application/x-cupcake-field-id')
   ) {
     event.preventDefault();
-    if (!dragFieldId.value && event.dataTransfer.types.includes('application/x-cupcake-field-type')) {
+    if (
+      !dragFieldId.value &&
+      event.dataTransfer.types.includes('application/x-cupcake-field-type')
+    ) {
       event.dataTransfer.dropEffect = 'copy';
     }
   }

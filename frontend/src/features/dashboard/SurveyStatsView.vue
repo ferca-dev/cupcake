@@ -4,7 +4,14 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useDashboardStore } from '../../stores/dashboard.store.js';
 import { useI18n } from '../../i18n/index.js';
-import { AppAlert, AppBadge, AppButton, AppCard, AppLoader, AppTable } from '../../components/ui/index.js';
+import {
+  AppAlert,
+  AppBadge,
+  AppButton,
+  AppCard,
+  AppLoader,
+  AppTable,
+} from '../../components/ui/index.js';
 import DashboardKpi from './DashboardKpi.vue';
 import DashboardKpiGrid from './DashboardKpiGrid.vue';
 import DashboardChannelsTable from './DashboardChannelsTable.vue';
@@ -112,10 +119,7 @@ const back = () => router.push({ name: 'dashboard.home' });
           :value="stats.completedResponses"
           tone="success"
         />
-        <DashboardKpi
-          :label="t('dashboard.surveyStats.totalSent')"
-          :value="stats.totalSent"
-        />
+        <DashboardKpi :label="t('dashboard.surveyStats.totalSent')" :value="stats.totalSent" />
         <DashboardKpi
           :label="t('dashboard.surveyStats.responseRate')"
           :value="formatRate(stats.responseRate)"

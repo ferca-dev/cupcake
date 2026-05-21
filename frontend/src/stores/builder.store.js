@@ -215,13 +215,21 @@ export const useBuilderStore = defineStore('builder', {
             }))
           : [];
       }
-      if ('validation' in sanitized && sanitized.validation && typeof sanitized.validation === 'object') {
+      if (
+        'validation' in sanitized &&
+        sanitized.validation &&
+        typeof sanitized.validation === 'object'
+      ) {
         updated.validation = {
           ...updated.validation,
           ...sanitized.validation,
         };
       }
-      if ('visibility' in sanitized && sanitized.visibility && typeof sanitized.visibility === 'object') {
+      if (
+        'visibility' in sanitized &&
+        sanitized.visibility &&
+        typeof sanitized.visibility === 'object'
+      ) {
         updated.visibility = {
           mode: sanitized.visibility.mode ?? updated.visibility.mode ?? 'always',
           conditionMode:
@@ -342,7 +350,7 @@ export const useBuilderStore = defineStore('builder', {
         conditionMode: visibility?.conditionMode ?? baseline.conditionMode ?? 'all',
         conditions: Array.isArray(visibility?.conditions)
           ? visibility.conditions
-          : baseline.conditions ?? [],
+          : (baseline.conditions ?? []),
       };
       const nextFields = this.schema.fields.slice();
       nextFields[index] = { ...current, visibility: merged };

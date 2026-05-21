@@ -2,12 +2,7 @@ import mongoose from 'mongoose';
 
 const { Schema, Types } = mongoose;
 
-export const TRANSACTION_TYPES = Object.freeze([
-  'payment',
-  'refund',
-  'credit',
-  'adjustment',
-]);
+export const TRANSACTION_TYPES = Object.freeze(['payment', 'refund', 'credit', 'adjustment']);
 
 export const TRANSACTION_STATUSES = Object.freeze([
   'pending',

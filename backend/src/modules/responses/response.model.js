@@ -71,6 +71,8 @@ const responseSchema = new Schema(
 responseSchema.index({ tenantId: 1, surveyId: 1, createdAt: -1 });
 responseSchema.index({ surveyVersionId: 1, createdAt: -1 });
 responseSchema.index({ campaignRecipientId: 1 });
+// Campaign reporting groups responses by campaign in time order.
+responseSchema.index({ campaignId: 1, createdAt: -1 });
 
 const toPublic = (_doc, ret) => {
   ret.id = ret._id?.toString();

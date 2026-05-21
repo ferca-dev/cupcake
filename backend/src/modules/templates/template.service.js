@@ -102,9 +102,7 @@ const resolveUniqueSurveySlug = async ({ desired, fallbackSource }) => {
     }
     return desired;
   }
-  return uniqueSlug(slugify(fallbackSource), async (candidate) =>
-    surveyRepo.slugExists(candidate),
-  );
+  return uniqueSlug(slugify(fallbackSource), async (candidate) => surveyRepo.slugExists(candidate));
 };
 
 /**
@@ -274,7 +272,7 @@ export const createSurveyFromTemplate = async ({
     tenantId,
     title,
     description:
-      payload?.description !== undefined ? payload.description : template.description ?? null,
+      payload?.description !== undefined ? payload.description : (template.description ?? null),
     slug,
     status: 'draft',
     currentDraftSchema: clonedSchema,

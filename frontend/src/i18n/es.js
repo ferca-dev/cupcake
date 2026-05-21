@@ -252,6 +252,13 @@ export default {
   },
   layout: {
     skipToContent: 'Saltar al contenido principal',
+    toggleNav: 'Mostrar u ocultar el menú',
+    dashboardHome: 'Panel principal',
+  },
+  roles: {
+    super_admin: 'Super administrador',
+    client_admin: 'Administrador del espacio',
+    client_member: 'Miembro del espacio',
   },
   notFound: {
     title: 'Página no encontrada',

@@ -6,13 +6,7 @@
 import { computed, ref, watch } from 'vue';
 
 import { useI18n } from '../../i18n/index.js';
-import {
-  AppAlert,
-  AppButton,
-  AppInput,
-  AppSelect,
-  AppTextarea,
-} from '../ui/index.js';
+import { AppAlert, AppButton, AppInput, AppSelect, AppTextarea } from '../ui/index.js';
 import {
   FIELD_WIDTHS,
   OPTIONED_FIELD_TYPES,
@@ -222,12 +216,17 @@ const submitMetadata = () => {
           <AppInput
             :model-value="field.settings?.imageUrl ?? ''"
             :label="t('builder.inspector.fields.imageUrl')"
-            @update:model-value="(value) => setField({ settings: { width: field.settings?.width, imageUrl: value } })"
+            @update:model-value="
+              (value) => setField({ settings: { width: field.settings?.width, imageUrl: value } })
+            "
           />
         </template>
 
         <template v-if="isOptioned">
-          <section class="builder-inspector__options" :aria-label="t('builder.inspector.options.title')">
+          <section
+            class="builder-inspector__options"
+            :aria-label="t('builder.inspector.options.title')"
+          >
             <header class="builder-inspector__section-header">
               <h4>{{ t('builder.inspector.options.title') }}</h4>
               <AppButton variant="ghost" size="sm" @click="$emit('add-option')">
@@ -247,19 +246,21 @@ const submitMetadata = () => {
                   :model-value="option.label"
                   :label="t('builder.inspector.options.label')"
                   :error="optionIssueMessage(optionIdx, 'label')"
-                  @update:model-value="(value) => $emit('update-option', { optionId: option.id, payload: { label: value } })"
+                  @update:model-value="
+                    (value) =>
+                      $emit('update-option', { optionId: option.id, payload: { label: value } })
+                  "
                 />
                 <AppInput
                   :model-value="option.key"
                   :label="t('builder.inspector.options.key')"
                   :error="optionIssueMessage(optionIdx, 'key')"
-                  @update:model-value="(value) => $emit('update-option', { optionId: option.id, payload: { key: value } })"
+                  @update:model-value="
+                    (value) =>
+                      $emit('update-option', { optionId: option.id, payload: { key: value } })
+                  "
                 />
-                <AppButton
-                  variant="ghost"
-                  size="sm"
-                  @click="$emit('remove-option', option.id)"
-                >
+                <AppButton variant="ghost" size="sm" @click="$emit('remove-option', option.id)">
                   {{ t('builder.inspector.options.remove') }}
                 </AppButton>
               </li>
@@ -267,38 +268,75 @@ const submitMetadata = () => {
           </section>
         </template>
 
-        <template v-if="!isPresentational && (field.type === 'short_text' || field.type === 'long_text' || field.type === 'email')">
-          <section class="builder-inspector__validation" :aria-label="t('builder.inspector.validation.title')">
+        <template
+          v-if="
+            !isPresentational &&
+            (field.type === 'short_text' || field.type === 'long_text' || field.type === 'email')
+          "
+        >
+          <section
+            class="builder-inspector__validation"
+            :aria-label="t('builder.inspector.validation.title')"
+          >
             <h4>{{ t('builder.inspector.validation.title') }}</h4>
             <AppInput
               type="number"
               :model-value="field.validation?.minLength ?? ''"
               :label="t('builder.inspector.validation.minLength')"
-              @update:model-value="(value) => setField({ validation: { ...field.validation, minLength: value === '' ? null : Number(value) } })"
+              @update:model-value="
+                (value) =>
+                  setField({
+                    validation: {
+                      ...field.validation,
+                      minLength: value === '' ? null : Number(value),
+                    },
+                  })
+              "
             />
             <AppInput
               type="number"
               :model-value="field.validation?.maxLength ?? ''"
               :label="t('builder.inspector.validation.maxLength')"
-              @update:model-value="(value) => setField({ validation: { ...field.validation, maxLength: value === '' ? null : Number(value) } })"
+              @update:model-value="
+                (value) =>
+                  setField({
+                    validation: {
+                      ...field.validation,
+                      maxLength: value === '' ? null : Number(value),
+                    },
+                  })
+              "
             />
           </section>
         </template>
 
         <template v-if="!isPresentational && field.type === 'number'">
-          <section class="builder-inspector__validation" :aria-label="t('builder.inspector.validation.title')">
+          <section
+            class="builder-inspector__validation"
+            :aria-label="t('builder.inspector.validation.title')"
+          >
             <h4>{{ t('builder.inspector.validation.title') }}</h4>
             <AppInput
               type="number"
               :model-value="field.validation?.min ?? ''"
               :label="t('builder.inspector.validation.min')"
-              @update:model-value="(value) => setField({ validation: { ...field.validation, min: value === '' ? null : Number(value) } })"
+              @update:model-value="
+                (value) =>
+                  setField({
+                    validation: { ...field.validation, min: value === '' ? null : Number(value) },
+                  })
+              "
             />
             <AppInput
               type="number"
               :model-value="field.validation?.max ?? ''"
               :label="t('builder.inspector.validation.max')"
-              @update:model-value="(value) => setField({ validation: { ...field.validation, max: value === '' ? null : Number(value) } })"
+              @update:model-value="
+                (value) =>
+                  setField({
+                    validation: { ...field.validation, max: value === '' ? null : Number(value) },
+                  })
+              "
             />
           </section>
         </template>
@@ -322,14 +360,19 @@ const submitMetadata = () => {
               :source-fields="sourceFieldsForSelected"
               :issues="conditionsIssues"
               @update:conditions="(conditions) => $emit('update-visibility', { conditions })"
-              @update:condition-mode="(conditionMode) => $emit('update-visibility', { conditionMode })"
+              @update:condition-mode="
+                (conditionMode) => $emit('update-visibility', { conditionMode })
+              "
             />
           </section>
         </template>
       </template>
 
       <template v-else>
-        <section class="builder-inspector__meta" :aria-label="t('builder.inspector.metadata.title')">
+        <section
+          class="builder-inspector__meta"
+          :aria-label="t('builder.inspector.metadata.title')"
+        >
           <h4>{{ t('builder.inspector.metadata.title') }}</h4>
           <AppInput
             v-model="metadataDraft.title"
@@ -346,12 +389,20 @@ const submitMetadata = () => {
             :label="t('builder.inspector.metadata.slug')"
             :hint="t('builder.inspector.metadata.slugHint')"
           />
-          <AppButton variant="secondary" size="sm" :loading="isSavingMetadata" @click="submitMetadata">
+          <AppButton
+            variant="secondary"
+            size="sm"
+            :loading="isSavingMetadata"
+            @click="submitMetadata"
+          >
             {{ t('builder.inspector.metadata.save') }}
           </AppButton>
         </section>
 
-        <section class="builder-inspector__layout" :aria-label="t('builder.inspector.layout.title')">
+        <section
+          class="builder-inspector__layout"
+          :aria-label="t('builder.inspector.layout.title')"
+        >
           <h4>{{ t('builder.inspector.layout.title') }}</h4>
           <AppSelect
             :model-value="layout.mode"

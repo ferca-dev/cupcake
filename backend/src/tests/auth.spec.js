@@ -156,6 +156,35 @@ describe('POST /api/v1/auth/refresh', () => {
     const response = await request(app).post('/api/v1/auth/refresh').send({});
     expect(response.status).toBe(401);
   });
+
+  it('revokes every active refresh token for the user when a reuse is detected', async () => {
+    // Reuse detection is the breach-recovery path. Hitting the endpoint twice
+    // with the same revoked token must invalidate the legitimate new session
+    // too, so a stolen refresh secret cannot quietly outlive the rotation.
+    const { response } = await registerUser();
+    const originalRefresh = response.body.data.refreshToken;
+
+    const rotation = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: originalRefresh });
+    expect(rotation.status).toBe(200);
+    const newRefresh = rotation.body.data.refreshToken;
+
+    // Reuse of the original (now revoked) token must trigger the
+    // defensive revocation of every still-active token for the same user.
+    const reuse = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: originalRefresh });
+    expect(reuse.status).toBe(401);
+
+    const stillValid = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: newRefresh });
+    expect(stillValid.status).toBe(401);
+
+    const remaining = await RefreshToken.find({ revokedAt: null });
+    expect(remaining).toHaveLength(0);
+  });
 });
 
 describe('POST /api/v1/auth/logout', () => {

@@ -25,16 +25,18 @@ const schema = (overrides = {}) => ({
 
 describe('frontend logic engine', () => {
   it('evaluates equals/contains operators', () => {
-    expect(evaluateCondition({ fieldId: 'a', operator: 'equals', value: 'x' }, { a: 'x' })).toBe(true);
+    expect(evaluateCondition({ fieldId: 'a', operator: 'equals', value: 'x' }, { a: 'x' })).toBe(
+      true,
+    );
     expect(
       evaluateCondition({ fieldId: 'a', operator: 'contains', value: 'foo' }, { a: 'hello FOO' }),
     ).toBe(true);
   });
 
   it('handles numeric comparisons', () => {
-    expect(
-      evaluateCondition({ fieldId: 'a', operator: 'greater_than', value: 3 }, { a: 5 }),
-    ).toBe(true);
+    expect(evaluateCondition({ fieldId: 'a', operator: 'greater_than', value: 3 }, { a: 5 })).toBe(
+      true,
+    );
     expect(
       evaluateCondition({ fieldId: 'a', operator: 'less_than_or_equal', value: 5 }, { a: '5' }),
     ).toBe(true);
@@ -51,8 +53,12 @@ describe('frontend logic engine', () => {
       { fieldId: 'a', operator: 'equals', value: 'x' },
       { fieldId: 'b', operator: 'equals', value: 'y' },
     ];
-    expect(evaluateConditionGroup({ conditions, conditionMode: 'all' }, { a: 'x', b: 'z' })).toBe(false);
-    expect(evaluateConditionGroup({ conditions, conditionMode: 'any' }, { a: 'x', b: 'z' })).toBe(true);
+    expect(evaluateConditionGroup({ conditions, conditionMode: 'all' }, { a: 'x', b: 'z' })).toBe(
+      false,
+    );
+    expect(evaluateConditionGroup({ conditions, conditionMode: 'any' }, { a: 'x', b: 'z' })).toBe(
+      true,
+    );
   });
 
   it('computes visibility from the show_when shortcut', () => {

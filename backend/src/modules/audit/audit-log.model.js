@@ -19,6 +19,9 @@ const auditLogSchema = new Schema(
   },
 );
 
+// Tenant audit feeds (recent activity widgets) read by tenant in time order.
+auditLogSchema.index({ tenantId: 1, createdAt: -1 });
+
 auditLogSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,

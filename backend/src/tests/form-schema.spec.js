@@ -38,10 +38,7 @@ describe('form schema validator', () => {
   it('rejects duplicate field keys', () => {
     expect(() =>
       parseFormSchema({
-        fields: [
-          baseField({ id: 'f1', key: 'same' }),
-          baseField({ id: 'f2', key: 'same' }),
-        ],
+        fields: [baseField({ id: 'f1', key: 'same' }), baseField({ id: 'f2', key: 'same' })],
       }),
     ).toThrow(/Duplicate field key/);
   });
@@ -49,10 +46,7 @@ describe('form schema validator', () => {
   it('rejects duplicate field ids', () => {
     expect(() =>
       parseFormSchema({
-        fields: [
-          baseField({ id: 'dup', key: 'a' }),
-          baseField({ id: 'dup', key: 'b' }),
-        ],
+        fields: [baseField({ id: 'dup', key: 'a' }), baseField({ id: 'dup', key: 'b' })],
       }),
     ).toThrow(/Duplicate field id/);
   });
@@ -92,9 +86,7 @@ describe('form schema validator', () => {
   it('rejects options on non-optioned types', () => {
     expect(() =>
       parseFormSchema({
-        fields: [
-          { ...baseField(), options: [{ key: 'x', label: 'X' }] },
-        ],
+        fields: [{ ...baseField(), options: [{ key: 'x', label: 'X' }] }],
       }),
     ).toThrow(/Options are not allowed/);
   });
@@ -185,10 +177,7 @@ describe('form schema validator', () => {
   it('detects circular navigation rules', () => {
     expect(() =>
       parseFormSchema({
-        fields: [
-          baseField(),
-          baseField({ id: 'field_b', key: 'b' }),
-        ],
+        fields: [baseField(), baseField({ id: 'field_b', key: 'b' })],
         logicRules: [
           {
             id: 'r1',
@@ -238,10 +227,7 @@ describe('form schema validator', () => {
   it('accepts a fully-formed visibility rule', () => {
     expect(() =>
       parseFormSchema({
-        fields: [
-          baseField(),
-          baseField({ id: 'field_b', key: 'b' }),
-        ],
+        fields: [baseField(), baseField({ id: 'field_b', key: 'b' })],
         logicRules: [visibilityRule()],
       }),
     ).not.toThrow();

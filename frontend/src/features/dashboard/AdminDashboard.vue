@@ -75,31 +75,19 @@ const statusVariant = (status) => {
         :value="clients.inactive"
         tone="warning"
       />
-      <DashboardKpi
-        :label="t('dashboard.admin.kpis.totalUsers')"
-        :value="users.total"
-      />
-      <DashboardKpi
-        :label="t('dashboard.admin.kpis.totalSurveys')"
-        :value="surveys.total"
-      />
+      <DashboardKpi :label="t('dashboard.admin.kpis.totalUsers')" :value="users.total" />
+      <DashboardKpi :label="t('dashboard.admin.kpis.totalSurveys')" :value="surveys.total" />
       <DashboardKpi
         :label="t('dashboard.admin.kpis.totalResponses')"
         :value="responses.total"
         tone="primary"
       />
-      <DashboardKpi
-        :label="t('dashboard.admin.kpis.totalCampaigns')"
-        :value="campaigns.total"
-      />
+      <DashboardKpi :label="t('dashboard.admin.kpis.totalCampaigns')" :value="campaigns.total" />
     </DashboardKpiGrid>
 
     <AppCard>
       <template #title>{{ t('dashboard.admin.channelsTitle') }}</template>
-      <DashboardChannelsTable
-        :channels="channels"
-        :empty="t('dashboard.client.channelsEmpty')"
-      />
+      <DashboardChannelsTable :channels="channels" :empty="t('dashboard.client.channelsEmpty')" />
     </AppCard>
 
     <div class="dashboard__grid">
@@ -127,10 +115,7 @@ const statusVariant = (status) => {
 
       <AppCard class="dashboard__activity">
         <template #title>{{ t('dashboard.admin.activityTitle') }}</template>
-        <DashboardActivityList
-          :items="activity"
-          :empty="t('dashboard.client.activityEmpty')"
-        />
+        <DashboardActivityList :items="activity" :empty="t('dashboard.client.activityEmpty')" />
       </AppCard>
     </div>
   </div>

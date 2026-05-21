@@ -65,9 +65,7 @@ const publishedFormPayload = ({ status = 'published', acceptingResponses = true 
 const buildRouter = () => {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [
-      { path: '/f/:slug', name: 'public.form', component: PublicFormView },
-    ],
+    routes: [{ path: '/f/:slug', name: 'public.form', component: PublicFormView }],
   });
   return router;
 };

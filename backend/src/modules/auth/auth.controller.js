@@ -127,6 +127,6 @@ export const resetPassword = asyncHandler(async (req, res) => {
   await authService.resetPassword();
   return sendSuccess(res, {
     data: null,
-    message: 'Password reset is not available yet',
+    message: 'Password reset is temporarily unavailable',
   });
 });

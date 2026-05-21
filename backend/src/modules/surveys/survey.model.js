@@ -2,12 +2,7 @@ import mongoose from 'mongoose';
 
 const { Schema, Types } = mongoose;
 
-export const SURVEY_STATUSES = Object.freeze([
-  'draft',
-  'published',
-  'paused',
-  'archived',
-]);
+export const SURVEY_STATUSES = Object.freeze(['draft', 'published', 'paused', 'archived']);
 
 export const PUBLIC_SURVEY_STATUSES = Object.freeze(['published', 'paused']);
 

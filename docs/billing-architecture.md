@@ -55,10 +55,10 @@ provider webhook callbacks.
 Routes live under `/api/v1/transactions` and require the `billing.view`
 permission:
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/transactions` | Tenant-scoped list with `status`, `type`, `provider`, `page`, `limit`, `sort` filters. |
-| GET | `/transactions/:id` | Single transaction by id. |
+| Method | Path                | Description                                                                            |
+| ------ | ------------------- | -------------------------------------------------------------------------------------- |
+| GET    | `/transactions`     | Tenant-scoped list with `status`, `type`, `provider`, `page`, `limit`, `sort` filters. |
+| GET    | `/transactions/:id` | Single transaction by id.                                                              |
 
 Tenant scoping rules:
 

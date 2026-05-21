@@ -2,10 +2,7 @@ import { Router } from 'express';
 
 import * as transactionController from './transaction.controller.js';
 import { authenticate } from '../../common/middlewares/authenticate.js';
-import {
-  requirePermission,
-  requireTenantContext,
-} from '../../common/middlewares/authorize.js';
+import { requirePermission, requireTenantContext } from '../../common/middlewares/authorize.js';
 import { PERMISSIONS } from '../../common/auth/roles.js';
 
 export const transactionsRouter = Router();

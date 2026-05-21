@@ -207,9 +207,10 @@ const submitEdit = async () => {
 
 const confirmDelete = async (template) => {
   if (!template) return;
-  const confirmed = typeof window !== 'undefined'
-    ? window.confirm(t('templates.confirmDelete', { title: template.title }))
-    : true;
+  const confirmed =
+    typeof window !== 'undefined'
+      ? window.confirm(t('templates.confirmDelete', { title: template.title }))
+      : true;
   if (!confirmed) return;
   deleteTarget.value = template;
   try {
@@ -304,16 +305,14 @@ const confirmDelete = async (template) => {
 
     <AppModal
       v-model="editDialogOpen"
-      :title="editTarget ? t('templates.editModal.editTitle') : t('templates.editModal.createTitle')"
+      :title="
+        editTarget ? t('templates.editModal.editTitle') : t('templates.editModal.createTitle')
+      "
       @close="editDialogOpen = false"
     >
       <div class="templates-list__modal-body">
         <AppAlert v-if="editError" variant="error">{{ editError }}</AppAlert>
-        <AppInput
-          v-model="editDraft.title"
-          :label="t('templates.editModal.titleField')"
-          required
-        />
+        <AppInput v-model="editDraft.title" :label="t('templates.editModal.titleField')" required />
         <AppTextarea
           v-model="editDraft.description"
           :label="t('templates.editModal.descriptionField')"

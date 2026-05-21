@@ -31,7 +31,9 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
     </header>
 
     <div class="builder-renderer__control">
-      <template v-if="field.type === 'short_text' || field.type === 'email' || field.type === 'phone'">
+      <template
+        v-if="field.type === 'short_text' || field.type === 'email' || field.type === 'phone'"
+      >
         <input
           type="text"
           class="builder-renderer__input"
@@ -69,7 +71,9 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
       <template v-else-if="field.type === 'select'">
         <select class="builder-renderer__input" disabled>
           <option value="" disabled selected>{{ field.placeholder || 'Select an option' }}</option>
-          <option v-for="opt in field.options" :key="opt.id" :value="opt.key">{{ opt.label }}</option>
+          <option v-for="opt in field.options" :key="opt.id" :value="opt.key">
+            {{ opt.label }}
+          </option>
         </select>
       </template>
 
@@ -113,7 +117,9 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
 
       <template v-else-if="field.type === 'nps'">
         <div class="builder-renderer__nps">
-          <button v-for="value in npsValues" :key="value" type="button" disabled>{{ value }}</button>
+          <button v-for="value in npsValues" :key="value" type="button" disabled>
+            {{ value }}
+          </button>
         </div>
       </template>
 
@@ -141,7 +147,9 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
       <template v-else-if="field.type === 'image_block'">
         <div class="builder-renderer__image">
           <img v-if="field.settings?.imageUrl" :src="field.settings.imageUrl" alt="" />
-          <div v-else class="builder-renderer__image-placeholder">🖼 Add an image URL in the inspector</div>
+          <div v-else class="builder-renderer__image-placeholder">
+            🖼 Add an image URL in the inspector
+          </div>
         </div>
       </template>
 

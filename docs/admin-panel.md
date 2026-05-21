@@ -19,15 +19,15 @@ to be suspended or cancelled.
 
 ## Endpoints
 
-| Method | Path | Purpose |
-| ------ | ---- | ------- |
-| GET    | `/api/v1/admin/metrics` | Global metrics powering the admin dashboard. |
-| GET    | `/api/v1/admin/tenants` | Paginated tenant list with filters and per-tenant user counts. |
-| POST   | `/api/v1/admin/tenants` | Create a tenant, optionally provisioning the first client admin. |
-| GET    | `/api/v1/admin/tenants/:id` | Tenant detail including owner summary. |
-| PUT    | `/api/v1/admin/tenants/:id` | Update name, slug, plan, and settings. |
-| PATCH  | `/api/v1/admin/tenants/:id/status` | Change tenant status with audit trail. |
-| GET    | `/api/v1/admin/tenants/:id/users` | List every user belonging to the tenant. |
+| Method | Path                               | Purpose                                                          |
+| ------ | ---------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/api/v1/admin/metrics`            | Global metrics powering the admin dashboard.                     |
+| GET    | `/api/v1/admin/tenants`            | Paginated tenant list with filters and per-tenant user counts.   |
+| POST   | `/api/v1/admin/tenants`            | Create a tenant, optionally provisioning the first client admin. |
+| GET    | `/api/v1/admin/tenants/:id`        | Tenant detail including owner summary.                           |
+| PUT    | `/api/v1/admin/tenants/:id`        | Update name, slug, plan, and settings.                           |
+| PATCH  | `/api/v1/admin/tenants/:id/status` | Change tenant status with audit trail.                           |
+| GET    | `/api/v1/admin/tenants/:id/users`  | List every user belonging to the tenant.                         |
 
 ### Tenant list query parameters
 
@@ -77,11 +77,11 @@ accountability for admin actions.
 Tenant status changes cascade into the access surface so that the rules
 are enforced server-side, not just in the UI:
 
-| Status | Login | Existing sessions | User accounts |
-| ------ | ----- | ----------------- | ------------- |
-| `active` | Allowed | Continue working | Stay as-is; previously `inactive` users restored to `active`. |
+| Status      | Login                                                  | Existing sessions                                                                                                          | User accounts                                                                  |
+| ----------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `active`    | Allowed                                                | Continue working                                                                                                           | Stay as-is; previously `inactive` users restored to `active`.                  |
 | `suspended` | Rejected with `Your workspace is not currently active` | All active refresh tokens revoked, the `authenticate` middleware rejects every access token while the tenant is suspended. | Users are not modified — restoring `active` brings them back online instantly. |
-| `cancelled` | Rejected | Refresh tokens revoked. | All non-`inactive` users are deactivated. |
+| `cancelled` | Rejected                                               | Refresh tokens revoked.                                                                                                    | All non-`inactive` users are deactivated.                                      |
 
 The `authenticate` middleware reads the tenant's status on every
 authenticated request, so a tenant can be suspended at any moment and the
@@ -92,10 +92,10 @@ effect propagates without waiting for the access token to expire.
 Every admin write produces an `audit_logs` entry under
 `entityType: 'tenant'`:
 
-| Action | When |
-| ------ | ---- |
-| `admin.tenant.created` | Tenant created from `POST /api/v1/admin/tenants`. |
-| `admin.tenant.updated` | Editable fields changed by `PUT /api/v1/admin/tenants/:id`. The `changedKeys` field records which fields moved. |
+| Action                        | When                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `admin.tenant.created`        | Tenant created from `POST /api/v1/admin/tenants`.                                                                     |
+| `admin.tenant.updated`        | Editable fields changed by `PUT /api/v1/admin/tenants/:id`. The `changedKeys` field records which fields moved.       |
 | `admin.tenant.status_changed` | Status transitions. Metadata includes `previousStatus`, `nextStatus`, `reason`, `affectedUsers`, and `revokedTokens`. |
 
 Login attempts that fail because of tenant status are recorded as
@@ -127,7 +127,7 @@ Login attempts that fail because of tenant status are recorded as
   covers permissions, status cascades, audit logging, and the
   `authenticate` middleware's tenant gate.
 - Frontend: `pnpm test --filter @cupcake/frontend -- --run admin.store
-  guards` covers the store's loading/error paths and the role guard for
+guards` covers the store's loading/error paths and the role guard for
   super-admin-only routes.
 - Manual: sign in as the seeded super admin (`SUPER_ADMIN_EMAIL`) and
   navigate to **Admin panel → Clients**. Create a tenant, change its

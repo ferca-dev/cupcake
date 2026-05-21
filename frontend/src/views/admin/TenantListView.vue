@@ -145,7 +145,9 @@ onMounted(() => refresh());
     </AppTable>
 
     <p v-if="pagination" class="tenants-list__pagination">
-      {{ t('adminPanel.tenants.pagination', { count: items.length, total: pagination.total ?? 0 }) }}
+      {{
+        t('adminPanel.tenants.pagination', { count: items.length, total: pagination.total ?? 0 })
+      }}
     </p>
   </section>
 </template>

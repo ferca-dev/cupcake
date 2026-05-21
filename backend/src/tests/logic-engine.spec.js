@@ -25,27 +25,27 @@ const schema = (overrides = {}) => ({
 
 describe('logic engine operators', () => {
   it('evaluates equals against strings', () => {
-    expect(
-      evaluateCondition({ fieldId: 'a', operator: 'equals', value: 'x' }, { a: 'x' }),
-    ).toBe(true);
-    expect(
-      evaluateCondition({ fieldId: 'a', operator: 'equals', value: 'x' }, { a: 'y' }),
-    ).toBe(false);
+    expect(evaluateCondition({ fieldId: 'a', operator: 'equals', value: 'x' }, { a: 'x' })).toBe(
+      true,
+    );
+    expect(evaluateCondition({ fieldId: 'a', operator: 'equals', value: 'x' }, { a: 'y' })).toBe(
+      false,
+    );
   });
 
   it('evaluates equals against numbers stored as strings', () => {
-    expect(
-      evaluateCondition({ fieldId: 'a', operator: 'equals', value: 7 }, { a: '7' }),
-    ).toBe(true);
+    expect(evaluateCondition({ fieldId: 'a', operator: 'equals', value: 7 }, { a: '7' })).toBe(
+      true,
+    );
   });
 
   it('evaluates equals against booleans', () => {
-    expect(
-      evaluateCondition({ fieldId: 'a', operator: 'equals', value: true }, { a: true }),
-    ).toBe(true);
-    expect(
-      evaluateCondition({ fieldId: 'a', operator: 'equals', value: false }, { a: true }),
-    ).toBe(false);
+    expect(evaluateCondition({ fieldId: 'a', operator: 'equals', value: true }, { a: true })).toBe(
+      true,
+    );
+    expect(evaluateCondition({ fieldId: 'a', operator: 'equals', value: false }, { a: true })).toBe(
+      false,
+    );
   });
 
   it('checks array membership via equals on checkbox_group selections', () => {
@@ -94,7 +94,9 @@ describe('logic engine operators', () => {
   });
 
   it('returns false for unknown operators', () => {
-    expect(evaluateCondition({ fieldId: 'a', operator: 'magic', value: 'x' }, { a: 'x' })).toBe(false);
+    expect(evaluateCondition({ fieldId: 'a', operator: 'magic', value: 'x' }, { a: 'x' })).toBe(
+      false,
+    );
   });
 });
 
@@ -108,12 +110,12 @@ describe('logic engine condition groups', () => {
       { fieldId: 'a', operator: 'equals', value: 'x' },
       { fieldId: 'b', operator: 'equals', value: 'y' },
     ];
-    expect(
-      evaluateConditionGroup({ conditions, conditionMode: 'all' }, { a: 'x', b: 'y' }),
-    ).toBe(true);
-    expect(
-      evaluateConditionGroup({ conditions, conditionMode: 'all' }, { a: 'x', b: 'z' }),
-    ).toBe(false);
+    expect(evaluateConditionGroup({ conditions, conditionMode: 'all' }, { a: 'x', b: 'y' })).toBe(
+      true,
+    );
+    expect(evaluateConditionGroup({ conditions, conditionMode: 'all' }, { a: 'x', b: 'z' })).toBe(
+      false,
+    );
   });
 
   it('returns true when at least one condition holds for mode=any', () => {
@@ -121,12 +123,12 @@ describe('logic engine condition groups', () => {
       { fieldId: 'a', operator: 'equals', value: 'x' },
       { fieldId: 'b', operator: 'equals', value: 'y' },
     ];
-    expect(
-      evaluateConditionGroup({ conditions, conditionMode: 'any' }, { a: 'no', b: 'y' }),
-    ).toBe(true);
-    expect(
-      evaluateConditionGroup({ conditions, conditionMode: 'any' }, { a: 'no', b: 'no' }),
-    ).toBe(false);
+    expect(evaluateConditionGroup({ conditions, conditionMode: 'any' }, { a: 'no', b: 'y' })).toBe(
+      true,
+    );
+    expect(evaluateConditionGroup({ conditions, conditionMode: 'any' }, { a: 'no', b: 'no' })).toBe(
+      false,
+    );
   });
 });
 
@@ -176,10 +178,7 @@ describe('computeFieldVisibility', () => {
 
   it('applies top-level visibility logicRules over per-field defaults', () => {
     const s = schema({
-      fields: [
-        field({ id: 'driver', key: 'driver' }),
-        field({ id: 'extra', key: 'extra' }),
-      ],
+      fields: [field({ id: 'driver', key: 'driver' }), field({ id: 'extra', key: 'extra' })],
       logicRules: [
         {
           id: 'rule_1',
@@ -198,7 +197,11 @@ describe('computeFieldVisibility', () => {
   it('keeps presentation fields visible regardless of rules', () => {
     const s = schema({
       fields: [
-        { id: 'd1', type: 'divider', visibility: { mode: 'always', conditionMode: 'all', conditions: [] } },
+        {
+          id: 'd1',
+          type: 'divider',
+          visibility: { mode: 'always', conditionMode: 'all', conditions: [] },
+        },
       ],
     });
     expect(computeFieldVisibility(s, {}).get('d1')).toBe(true);

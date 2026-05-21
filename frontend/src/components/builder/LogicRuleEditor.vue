@@ -28,7 +28,8 @@ const { t } = useI18n();
 
 const sourceFields = computed(() =>
   props.fields.filter(
-    (field) => field?.id && !PRESENTATION_FIELD_TYPES.has(field.type) && field.type !== 'file_upload',
+    (field) =>
+      field?.id && !PRESENTATION_FIELD_TYPES.has(field.type) && field.type !== 'file_upload',
   ),
 );
 
@@ -93,8 +94,8 @@ const onTypeChange = (rule, nextType) => {
   updateRule(rule.id, {
     type: nextType,
     action: DEFAULT_ACTION_BY_TYPE[nextType] ?? DEFAULT_ACTION_BY_TYPE.visibility,
-    targetFieldId: nextType === 'visibility' ? rule.targetFieldId ?? null : null,
-    targetSectionId: nextType === 'navigation' ? rule.targetSectionId ?? null : null,
+    targetFieldId: nextType === 'visibility' ? (rule.targetFieldId ?? null) : null,
+    targetSectionId: nextType === 'navigation' ? (rule.targetSectionId ?? null) : null,
   });
 };
 
@@ -111,7 +112,12 @@ const onActionTargetChange = (rule, target) => {
   <section class="logic-rule-editor" :aria-label="t('builder.logic.title')">
     <header class="logic-rule-editor__header">
       <h4>{{ t('builder.logic.title') }}</h4>
-      <AppButton variant="secondary" size="sm" :disabled="sourceFields.length === 0" @click="$emit('add')">
+      <AppButton
+        variant="secondary"
+        size="sm"
+        :disabled="sourceFields.length === 0"
+        @click="$emit('add')"
+      >
         + {{ t('builder.logic.addRule') }}
       </AppButton>
     </header>

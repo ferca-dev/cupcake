@@ -35,8 +35,7 @@ const toObjectId = (value, label) => {
  * the queries scope to that tenant; when `null` they run globally — callers
  * decide which is appropriate.
  */
-const tenantMatch = (tenantId) =>
-  tenantId ? { tenantId: toObjectId(tenantId, 'tenantId') } : {};
+const tenantMatch = (tenantId) => (tenantId ? { tenantId: toObjectId(tenantId, 'tenantId') } : {});
 
 const zeroChannelMap = (extra = {}) => {
   const base = {};
@@ -47,9 +46,7 @@ const zeroChannelMap = (extra = {}) => {
 };
 
 const buildChannelStatusGrid = (rows) => {
-  const grid = zeroChannelMap(
-    Object.fromEntries(RECIPIENT_STATUSES.map((s) => [s, 0])),
-  );
+  const grid = zeroChannelMap(Object.fromEntries(RECIPIENT_STATUSES.map((s) => [s, 0])));
   for (const row of rows) {
     const channel = row?._id?.channel;
     const status = row?._id?.status;
@@ -429,7 +426,8 @@ export const getSurveyDashboardStats = async ({ tenantId, surveyId }) => {
     };
   }
   const totalSent = CHANNELS.reduce((acc, ch) => acc + channelTotals[ch].sent, 0);
-  const responseRate = totalSent > 0 ? Math.round((totalResponses / totalSent) * 10000) / 10000 : null;
+  const responseRate =
+    totalSent > 0 ? Math.round((totalResponses / totalSent) * 10000) / 10000 : null;
 
   return {
     surveyId: survey._id.toString(),
@@ -600,7 +598,11 @@ export const getAdminMetrics = async ({ limit = 10 } = {}) => {
         },
       },
     ]),
-    Tenant.find({}).sort({ createdAt: -1 }).limit(limit).select('_id name slug status createdAt').lean(),
+    Tenant.find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('_id name slug status createdAt')
+      .lean(),
     getRecentActivity({ tenantId: null, limit }),
   ]);
 

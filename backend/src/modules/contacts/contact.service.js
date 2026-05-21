@@ -359,9 +359,10 @@ export const deleteContact = async ({
 };
 
 /**
- * Placeholder for the future bulk import flow. The route accepts the call so
- * frontend wiring can be built ahead of time, but the response is explicit
- * about the deferred state and does not pretend a real parse happened.
+ * Bulk import flow is intentionally deferred (see docs/known-limitations.md).
+ * The endpoint accepts the call so frontend wiring is stable; the response
+ * explicitly returns `pending_implementation` so callers cannot assume a
+ * real parse happened. Every request is audited.
  */
 export const requestContactImport = async ({
   tenantId,

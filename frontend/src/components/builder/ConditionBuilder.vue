@@ -66,7 +66,11 @@ const operatorsFor = (fieldId) => {
 const valueOptionsFor = (fieldId) => {
   const source = sourceById.value.get(fieldId);
   if (!source) return null;
-  if (source.type === 'select' || source.type === 'radio_group' || source.type === 'checkbox_group') {
+  if (
+    source.type === 'select' ||
+    source.type === 'radio_group' ||
+    source.type === 'checkbox_group'
+  ) {
     return (source.options ?? []).map((opt) => ({
       value: opt.key,
       label: opt.label || opt.key,
@@ -84,7 +88,8 @@ const valueOptionsFor = (fieldId) => {
 const inputTypeFor = (fieldId) => {
   const source = sourceById.value.get(fieldId);
   if (!source) return 'text';
-  if (source.type === 'number' || source.type === 'rating' || source.type === 'nps') return 'number';
+  if (source.type === 'number' || source.type === 'rating' || source.type === 'nps')
+    return 'number';
   if (source.type === 'date') return 'date';
   if (source.type === 'time') return 'time';
   return 'text';
@@ -92,7 +97,11 @@ const inputTypeFor = (fieldId) => {
 
 const issueAt = (idx, segment) =>
   props.issues
-    .filter((issue) => issue.path?.[issue.path.length - 2] === idx && issue.path?.[issue.path.length - 1] === segment)
+    .filter(
+      (issue) =>
+        issue.path?.[issue.path.length - 2] === idx &&
+        issue.path?.[issue.path.length - 1] === segment,
+    )
     .map((issue) => issue.message)
     .join(' ');
 
@@ -125,10 +134,7 @@ const removeCondition = (index) => {
 const addCondition = () => {
   const firstField = props.sourceFields[0];
   if (!firstField) return;
-  emitConditions([
-    ...props.conditions,
-    { fieldId: firstField.id, operator: 'equals', value: '' },
-  ]);
+  emitConditions([...props.conditions, { fieldId: firstField.id, operator: 'equals', value: '' }]);
 };
 
 const changeMode = (mode) => emit('update:condition-mode', mode);
@@ -137,7 +143,9 @@ const changeMode = (mode) => emit('update:condition-mode', mode);
 <template>
   <div class="condition-builder">
     <header v-if="conditions.length > 1 && showModeToggle" class="condition-builder__mode">
-      <span class="condition-builder__mode-label">{{ t('builder.logic.conditionMode.label') }}</span>
+      <span class="condition-builder__mode-label">{{
+        t('builder.logic.conditionMode.label')
+      }}</span>
       <AppSelect
         :model-value="conditionMode"
         :options="modeOptions"
@@ -191,7 +199,12 @@ const changeMode = (mode) => emit('update:condition-mode', mode);
       </li>
     </ol>
 
-    <AppButton variant="secondary" size="sm" :disabled="sourceFields.length === 0" @click="addCondition">
+    <AppButton
+      variant="secondary"
+      size="sm"
+      :disabled="sourceFields.length === 0"
+      @click="addCondition"
+    >
       + {{ t('builder.logic.condition.add') }}
     </AppButton>
     <small v-if="sourceFields.length === 0" class="condition-builder__hint">

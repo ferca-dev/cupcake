@@ -198,7 +198,8 @@ export const computeFieldVisibility = (schema, answers) => {
     if (!rule.targetFieldId || !result.has(rule.targetFieldId)) continue;
     const satisfied = evaluateConditionGroup(rule, answers);
     if (!satisfied) continue;
-    const desired = rule.action?.type === 'show' ? true : rule.action?.type === 'hide' ? false : null;
+    const desired =
+      rule.action?.type === 'show' ? true : rule.action?.type === 'hide' ? false : null;
     if (desired === null) continue;
     result.set(rule.targetFieldId, desired);
   }

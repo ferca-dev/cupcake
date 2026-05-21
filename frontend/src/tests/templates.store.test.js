@@ -92,9 +92,7 @@ describe('templates store', () => {
 
   it('updates the matching item after PUT', async () => {
     const updated = sampleTemplate({ id: 'tpl_1', title: 'Renamed' });
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({ success: true, data: { template: updated } }),
-    );
+    fetchMock.mockResolvedValueOnce(jsonResponse({ success: true, data: { template: updated } }));
     const store = useTemplatesStore();
     store.items = [sampleTemplate({ id: 'tpl_1' }), sampleTemplate({ id: 'tpl_2' })];
     await store.updateTemplate('tpl_1', { title: 'Renamed' });

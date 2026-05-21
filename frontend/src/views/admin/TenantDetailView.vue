@@ -175,14 +175,8 @@ onMounted(refresh);
             :hint="t('adminPanel.create.slugHint')"
           />
           <div class="tenant-detail__row">
-            <AppInput
-              v-model="form.timezone"
-              :label="t('adminPanel.create.timezoneField')"
-            />
-            <AppInput
-              v-model="form.locale"
-              :label="t('adminPanel.create.localeField')"
-            />
+            <AppInput v-model="form.timezone" :label="t('adminPanel.create.timezoneField')" />
+            <AppInput v-model="form.locale" :label="t('adminPanel.create.localeField')" />
           </div>
           <div class="tenant-detail__actions">
             <AppButton type="submit" :loading="isMutating">
@@ -239,7 +233,9 @@ onMounted(refresh);
         <template #title>{{ t('adminPanel.detail.sectionOwner') }}</template>
         <p v-if="!tenant.owner">{{ t('adminPanel.detail.ownerNone') }}</p>
         <ul v-else class="tenant-detail__owner">
-          <li><strong>{{ tenant.owner.name }}</strong></li>
+          <li>
+            <strong>{{ tenant.owner.name }}</strong>
+          </li>
           <li>{{ tenant.owner.email }}</li>
           <li>
             <AppBadge :variant="tenant.owner.status === 'active' ? 'success' : 'warning'">
@@ -263,7 +259,9 @@ onMounted(refresh);
             </AppBadge>
           </template>
           <template #cell:lastLoginAt="{ row }">
-            {{ row.lastLoginAt ? formatDate(row.lastLoginAt) : t('adminPanel.detail.neverLoggedIn') }}
+            {{
+              row.lastLoginAt ? formatDate(row.lastLoginAt) : t('adminPanel.detail.neverLoggedIn')
+            }}
           </template>
         </AppTable>
       </AppCard>

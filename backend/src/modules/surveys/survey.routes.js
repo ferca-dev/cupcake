@@ -14,11 +14,7 @@ export const surveysRouter = Router();
 surveysRouter.use(authenticate);
 surveysRouter.use(requireTenantContext());
 
-surveysRouter.get(
-  '/',
-  requirePermission(PERMISSIONS.SURVEYS_VIEW),
-  surveyController.listSurveys,
-);
+surveysRouter.get('/', requirePermission(PERMISSIONS.SURVEYS_VIEW), surveyController.listSurveys);
 
 surveysRouter.post(
   '/',
@@ -26,11 +22,7 @@ surveysRouter.post(
   surveyController.createSurvey,
 );
 
-surveysRouter.get(
-  '/:id',
-  requirePermission(PERMISSIONS.SURVEYS_VIEW),
-  surveyController.getSurvey,
-);
+surveysRouter.get('/:id', requirePermission(PERMISSIONS.SURVEYS_VIEW), surveyController.getSurvey);
 
 surveysRouter.put(
   '/:id',

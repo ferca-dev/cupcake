@@ -23,13 +23,13 @@ audit logs) into the metrics shown on the client and super admin dashboards.
 All endpoints sit under `/api/v1` and require the `dashboard.view` permission
 (or `admin.dashboard.view` for the global metrics route).
 
-| Method | Path                                  | Audience                | Notes                                                                                              |
-| ------ | ------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/dashboard/summary`                  | Client / super admin    | Tenant-scoped overview. Super admins without a tenant impersonation header receive the global view. |
-| GET    | `/dashboard/surveys/:id`              | Client / super admin    | Per-survey response and channel metrics. Survey is loaded under the caller's tenant scope first.    |
-| GET    | `/dashboard/channels`                 | Client / super admin    | Per-channel send/failure/skip aggregations.                                                         |
-| GET    | `/dashboard/recent-activity?limit=N`  | Client / super admin    | Latest audit log entries (action, entity, timestamp).                                              |
-| GET    | `/admin/metrics?limit=N`              | Super admin             | Global tenants, users, surveys, responses, campaigns, channels, and recent activity.                |
+| Method | Path                                 | Audience             | Notes                                                                                               |
+| ------ | ------------------------------------ | -------------------- | --------------------------------------------------------------------------------------------------- |
+| GET    | `/dashboard/summary`                 | Client / super admin | Tenant-scoped overview. Super admins without a tenant impersonation header receive the global view. |
+| GET    | `/dashboard/surveys/:id`             | Client / super admin | Per-survey response and channel metrics. Survey is loaded under the caller's tenant scope first.    |
+| GET    | `/dashboard/channels`                | Client / super admin | Per-channel send/failure/skip aggregations.                                                         |
+| GET    | `/dashboard/recent-activity?limit=N` | Client / super admin | Latest audit log entries (action, entity, timestamp).                                               |
+| GET    | `/admin/metrics?limit=N`             | Super admin          | Global tenants, users, surveys, responses, campaigns, channels, and recent activity.                |
 
 The `/dashboard/*` router uses `requireTenantContext({ allowSuperAdminGlobal: true })`
 so super admins can either:
@@ -72,7 +72,7 @@ collections. Key trade-offs:
   parallel and joins the results in memory. This keeps the round-trip count
   low without requiring a denormalised projection.
 - **Indexes already exist.** `tenantId + createdAt`, `tenantId + surveyId +
-  createdAt`, and `tenantId + status` indexes on surveys, responses, and
+createdAt`, and `tenantId + status` indexes on surveys, responses, and
   recipients support every dashboard query without additional indexes.
 - **Bounded working sets.** The "best/low performing surveys" query pulls at
   most 200 candidate surveys per tenant before ranking — enough for any single
@@ -92,14 +92,18 @@ Stable shape — zero/empty when there is no data:
 {
   "scope": "tenant",
   "summary": {
-    "surveys": { "total": 0, "active": 0, "byStatus": { "draft": 0, "published": 0, "paused": 0, "archived": 0 } },
+    "surveys": {
+      "total": 0,
+      "active": 0,
+      "byStatus": { "draft": 0, "published": 0, "paused": 0, "archived": 0 }
+    },
     "responses": { "total": 0 },
     "campaigns": { "total": 0, "byStatus": {} },
     "contacts": { "total": 0, "groups": 0 },
     "channels": {
       "totals": {
-        "email":    { "attempted": 0, "sent": 0, "failed": 0, "skipped": 0, "pending": 0 },
-        "sms":      { "attempted": 0, "sent": 0, "failed": 0, "skipped": 0, "pending": 0 },
+        "email": { "attempted": 0, "sent": 0, "failed": 0, "skipped": 0, "pending": 0 },
+        "sms": { "attempted": 0, "sent": 0, "failed": 0, "skipped": 0, "pending": 0 },
         "whatsapp": { "attempted": 0, "sent": 0, "failed": 0, "skipped": 0, "pending": 0 }
       },
       "skippedReasons": {}

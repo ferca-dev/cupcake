@@ -89,7 +89,7 @@ export const requestContactImport = asyncHandler(async (req, res) => {
   return sendSuccess(res, {
     statusCode: HTTP_STATUS.ACCEPTED,
     data: { job },
-    message: 'Bulk import endpoint is prepared. Implementation pending.',
+    message: 'Bulk import is temporarily unavailable',
   });
 });
 
@@ -101,7 +101,7 @@ export const getContactImportReport = asyncHandler(async (req, res) => {
   });
   return sendSuccess(res, {
     data: { report },
-    message: 'Import report placeholder. Implementation pending.',
+    message: 'Bulk import is temporarily unavailable',
   });
 });
 

@@ -1,8 +1,5 @@
 import * as dashboardService from './dashboard.service.js';
-import {
-  recentActivityQuerySchema,
-  adminMetricsQuerySchema,
-} from './dashboard.validation.js';
+import { recentActivityQuerySchema, adminMetricsQuerySchema } from './dashboard.validation.js';
 import { asyncHandler } from '../../common/utils/async-handler.js';
 import { sendSuccess } from '../../common/responses/index.js';
 import { AuthorizationError } from '../../common/errors/index.js';
@@ -38,9 +35,7 @@ export const getSummary = asyncHandler(async (req, res) => {
 export const getSurveyStats = asyncHandler(async (req, res) => {
   const tenantId = requireTenantOrAdmin(req);
   if (!tenantId) {
-    throw new AuthorizationError(
-      'Super admin must select a tenant to inspect survey stats',
-    );
+    throw new AuthorizationError('Super admin must select a tenant to inspect survey stats');
   }
   const stats = await dashboardService.getSurveyDashboardStats({
     tenantId,
@@ -52,9 +47,7 @@ export const getSurveyStats = asyncHandler(async (req, res) => {
 export const getChannels = asyncHandler(async (req, res) => {
   const tenantId = requireTenantOrAdmin(req);
   if (!tenantId) {
-    throw new AuthorizationError(
-      'Super admin must select a tenant to inspect channel metrics',
-    );
+    throw new AuthorizationError('Super admin must select a tenant to inspect channel metrics');
   }
   const metrics = await dashboardService.getChannelMetrics({ tenantId });
   return sendSuccess(res, { data: metrics, message: 'Channel metrics fetched' });
