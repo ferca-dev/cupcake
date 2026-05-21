@@ -175,6 +175,18 @@ The builder tracks `isDirty` on every mutating action and warns the user before:
 
 `saveDraft()` always runs the client validator first; `publishSurvey()` auto-saves dirty drafts before calling the backend publish endpoint. The publish endpoint is the real backend route — there is no fake local "published" state.
 
+### Public form renderer
+
+Public surveys are reachable at `/f/:slug` (canonical) and `/forms/:slug` (alias) without an auth session. The `/f/:slug/r/:submissionToken` and `/forms/:slug/r/:submissionToken` variants render the same form but carry a campaign submission token through to the response payload.
+
+- `views/public/PublicFormView.vue` — loads the published schema via `publicFormService.get(slug)` (or `getByToken(slug, token)`), tracks per-field state and errors, validates on submit, and posts the response.
+- `views/public/PublicThankYouView.vue` — success state showing the configured `thankYouMessage`.
+- `components/public-form/PublicFieldRenderer.vue` — interactive renderer for the supported field types (text/long text/email/phone/number/date/time/select/radio/checkbox group/checkbox/yes-no/rating/nps/file/hidden) plus the presentational blocks (section title, text block, image, divider, page break).
+- `features/public-form/answers.js` — `buildInitialAnswers`, `validateAnswers`, and `serializeAnswers` mirror the backend rules in `backend/src/modules/public-forms/answer.validator.js`. The backend stays authoritative — server-side validation errors are mapped back onto the same field-level keys.
+- `services/survey.service.js` exports `publicFormService` (`get`, `getByToken`, `submit`). It uses the shared `apiClient`, so the unauthenticated public routes still benefit from the global error envelope.
+
+Paused surveys render the configured paused message and disable the submit button. Draft/archived surveys show a "no longer available" state. Submission failures (validation/conflict/network/rate-limit) surface as a banner above the form and, for validation, are mapped to per-field error messages.
+
 ### Reusable UI components
 
 `src/components/ui/` ships ten base primitives: `AppButton`, `AppInput`, `AppTextarea`, `AppSelect`, `AppModal`, `AppTable`, `AppCard`, `AppBadge`, `AppAlert`, `AppLoader`. Import them through the barrel:
@@ -194,6 +206,8 @@ Vitest runs the suite under `src/tests/`. The setup file clears Pinia/localStora
 - `components/AppButton.test.js` — UI primitive behaviour.
 - `builder.schema.test.js` — id/key generation, validator rules, schema normalisation.
 - `builder.store.test.js` — add/remove/duplicate/reorder/option actions, validation gate, save and publish round-trips against a mocked `fetch`.
+- `public-form-answers.test.js` — public-form `buildInitialAnswers`, `validateAnswers`, and `serializeAnswers` helpers.
+- `components/PublicFormView.test.js` — load/render/submit/error flows for `PublicFormView` against a mocked `fetch`.
 
 Add new component tests under `src/tests/components/` and new store tests alongside the existing files.
 

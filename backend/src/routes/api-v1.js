@@ -3,6 +3,7 @@ import { healthRouter } from '../modules/health/health.routes.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
 import { tenantsRouter } from '../modules/tenants/tenant.routes.js';
 import { surveysRouter } from '../modules/surveys/survey.routes.js';
+import { publicFormsRouter } from '../modules/public-forms/public-form.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -35,6 +36,9 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/surveys/:id/duplicate',
         '/api/v1/surveys/:id/versions',
         '/api/v1/surveys/:id/stats',
+        '/api/v1/public/forms/:slug',
+        '/api/v1/public/forms/:slug/token/:submissionToken',
+        '/api/v1/public/forms/:slug/responses',
       ],
     },
     message: 'API metadata',
@@ -45,3 +49,4 @@ apiV1Router.use('/health', healthRouter);
 apiV1Router.use('/auth', authRouter);
 apiV1Router.use('/tenants', tenantsRouter);
 apiV1Router.use('/surveys', surveysRouter);
+apiV1Router.use('/public', publicFormsRouter);

@@ -36,6 +36,11 @@ export const findSurveys = async ({
 export const findSurveyById = async ({ id, tenantId = null }) =>
   Survey.findOne(tenantFilter({ _id: id }, tenantId));
 
+export const findSurveyBySlug = async (slug) => Survey.findOne({ slug });
+
+export const findVersionById = async ({ id, tenantId = null }) =>
+  SurveyVersion.findOne(tenantFilter({ _id: id }, tenantId));
+
 export const slugExists = async (slug, { excludeId = null } = {}) => {
   const filter = { slug };
   if (excludeId) filter._id = { $ne: excludeId };

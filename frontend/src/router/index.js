@@ -15,7 +15,7 @@ import SurveyListView from '../views/surveys/SurveyListView.vue';
 import SurveyBuilderView from '../views/surveys/SurveyBuilderView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
-import PublicFormPlaceholder from '../views/public/PublicFormPlaceholder.vue';
+import PublicFormView from '../views/public/PublicFormView.vue';
 
 export const routes = [
   {
@@ -97,7 +97,13 @@ export const routes = [
       {
         path: '',
         name: 'public.form',
-        component: PublicFormPlaceholder,
+        component: PublicFormView,
+        meta: { title: 'Form', public: true },
+      },
+      {
+        path: 'r/:submissionToken',
+        name: 'public.form.token',
+        component: PublicFormView,
         meta: { title: 'Form', public: true },
       },
     ],
@@ -105,6 +111,16 @@ export const routes = [
   {
     path: '/forms/:slug',
     redirect: (to) => ({ name: 'public.form', params: { slug: to.params.slug } }),
+  },
+  {
+    path: '/forms/:slug/r/:submissionToken',
+    redirect: (to) => ({
+      name: 'public.form.token',
+      params: {
+        slug: to.params.slug,
+        submissionToken: to.params.submissionToken,
+      },
+    }),
   },
   {
     path: '/:pathMatch(.*)*',

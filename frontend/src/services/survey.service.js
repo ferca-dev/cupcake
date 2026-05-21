@@ -28,3 +28,23 @@ export const surveyService = Object.freeze({
 
   listVersions: (id) => apiClient.get(`/surveys/${id}/versions`).then(unwrap),
 });
+
+// Public form service. Talks to the unauthenticated `/public/forms/*`
+// endpoints. The shared apiClient still injects the bearer token when
+// available (so an authenticated previewer keeps their session), but the
+// backend ignores authentication for these routes.
+export const publicFormService = Object.freeze({
+  get: (slug) => apiClient.get(`/public/forms/${encodeURIComponent(slug)}`).then(unwrap),
+
+  getByToken: (slug, token) =>
+    apiClient
+      .get(
+        `/public/forms/${encodeURIComponent(slug)}/token/${encodeURIComponent(token)}`,
+      )
+      .then(unwrap),
+
+  submit: (slug, payload) =>
+    apiClient
+      .post(`/public/forms/${encodeURIComponent(slug)}/responses`, payload)
+      .then(unwrap),
+});

@@ -252,6 +252,81 @@ duplicate-detection rules (field ids, field keys, option keys, section ids,
 logic rule ids). Validation errors come back as `422 VALIDATION_ERROR` with
 issue paths, so the builder UI can render inline messages later.
 
+## Endpoints implemented in Phase 06
+
+Public form routes live under `/api/v1/public/forms/*` and **do not require
+authentication**. They expose only the immutable published schema (never the
+draft) and submit responses against that exact version.
+
+| Method | Path                                                       | Auth   | Description                                                          |
+| ------ | ---------------------------------------------------------- | ------ | -------------------------------------------------------------------- |
+| GET    | `/api/v1/public/forms/:slug`                               | public | Return the published schema + display settings for the survey slug.  |
+| GET    | `/api/v1/public/forms/:slug/token/:submissionToken`        | public | Same payload, scoped to a campaign submission token.                 |
+| POST   | `/api/v1/public/forms/:slug/responses`                     | public | Submit answers. Returns the response id + the configured thank-you message. |
+
+Response shape for the GET endpoints:
+
+```json
+{
+  "success": true,
+  "data": {
+    "survey": {
+      "id": "...",
+      "slug": "feedback",
+      "title": "Feedback",
+      "description": "Tell us how it went",
+      "status": "published",
+      "settings": {
+        "allowAnonymous": true,
+        "requireContactData": false,
+        "thankYouMessage": "Thanks!",
+        "closeMessage": "...",
+        "pausedMessage": "...",
+        "oneResponsePerContact": false,
+        "collectIp": false
+      }
+    },
+    "version": { "id": "...", "versionNumber": 1, "schema": { "fields": [] } },
+    "acceptingResponses": true,
+    "pausedMessage": null
+  }
+}
+```
+
+Submission request body:
+
+```json
+{
+  "answers": [{ "fieldId": "field_name", "value": "Ada" }],
+  "metadata": { "startedAt": "2026-05-20T10:00:00.000Z" },
+  "submissionToken": "optional-campaign-token"
+}
+```
+
+### Public form rules
+
+- Draft surveys, archived surveys, and surveys without a published version return `404 NOT_FOUND`.
+- Paused surveys return their schema on `GET` (so the frontend can render the configured paused message) but reject submissions with `409 CONFLICT` and the `pausedMessage`.
+- Anonymous submissions are rejected with `409 CONFLICT` when `settings.allowAnonymous` is `false` and no `submissionToken` is supplied.
+- Submissions are validated against the published schema via `modules/public-forms/answer.validator.js`. Failures come back as `422 VALIDATION_ERROR` with `details[].path = ['answers', '<fieldId>']`.
+- IP addresses are only persisted when `settings.collectIp` is `true`.
+- Submissions are rate-limited (30/minute/IP) by `createPublicFormRateLimiter`. The limiter is skipped in tests.
+- Every response stores `tenantId`, `surveyId`, `surveyVersionId`, the supplied `submissionToken`, the normalised answers, and `metadata { ip, userAgent, startedAt, submittedAt, completionTimeSeconds }`.
+
+### Response model
+
+`modules/responses/response.model.js` stores responses with indexes on:
+
+- `tenantId` (single)
+- `surveyId` (single)
+- `surveyVersionId` (single)
+- `submissionToken` (single)
+- `(tenantId, surveyId, createdAt DESC)`
+- `(surveyVersionId, createdAt DESC)`
+- `campaignRecipientId`
+
+Campaign and contact linkage columns (`campaignId`, `campaignRecipientId`, `contactId`) ship empty for Phase 06 and will be wired up when the campaign module lands.
+
 ### Audit events
 
 `survey.service.js` records the following actions (entity type `survey`):
