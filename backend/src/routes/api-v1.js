@@ -13,6 +13,7 @@ import { tokenBillingRouter } from '../modules/tokens/token-billing.routes.js';
 import { adminRouter } from '../modules/admin/admin.routes.js';
 import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
+import { mediaRouter } from '../modules/media/media.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -81,6 +82,9 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/settings/profile',
         '/api/v1/settings/password',
         '/api/v1/settings/preferences',
+        '/api/v1/media/images',
+        '/api/v1/media/images/:id',
+        '/api/v1/media/images/:id/url',
         '/api/v1/templates',
         '/api/v1/templates/:id',
         '/api/v1/templates/:id/create-survey',
@@ -119,6 +123,7 @@ apiV1Router.use('/public', publicFormsRouter);
 apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminRouter);
 apiV1Router.use('/settings', settingsRouter);
+apiV1Router.use('/media', mediaRouter);
 apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
 apiV1Router.use('/billing', tokenBillingRouter);

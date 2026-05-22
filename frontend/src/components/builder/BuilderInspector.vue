@@ -7,6 +7,7 @@ import { computed, ref, watch } from 'vue';
 
 import { useI18n } from '../../i18n/index.js';
 import { AppAlert, AppButton, AppInput, AppSelect, AppTextarea } from '../ui/index.js';
+import { mediaService } from '../../services/media.service.js';
 import {
   FIELD_WIDTHS,
   OPTIONED_FIELD_TYPES,
@@ -122,6 +123,9 @@ const metadataDraft = ref({
   description: props.surveyDescription,
   slug: props.surveySlug,
 });
+const imageFileInput = ref(null);
+const isUploadingImage = ref(false);
+const imageUploadError = ref('');
 
 watch(
   () => [props.surveyTitle, props.surveyDescription, props.surveySlug],
@@ -136,6 +140,37 @@ const submitMetadata = () => {
     description: metadataDraft.value.description ?? '',
     slug: metadataDraft.value.slug?.trim() || undefined,
   });
+};
+
+const triggerImageUpload = () => {
+  imageFileInput.value?.click();
+};
+
+const onImageFileChange = async (event) => {
+  const file = event.target.files?.[0] ?? null;
+  if (!file || !props.field) return;
+
+  imageUploadError.value = '';
+  isUploadingImage.value = true;
+  try {
+    const data = await mediaService.uploadImage({ file, purpose: 'survey_image' });
+    const asset = data?.asset;
+    const imageUrl = asset?.publicUrl || asset?.url || '';
+    if (imageUrl) {
+      setField({
+        settings: {
+          width: props.field.settings?.width,
+          imageUrl,
+          mediaAssetId: asset.id,
+        },
+      });
+    }
+  } catch (err) {
+    imageUploadError.value = err?.message || t('builder.inspector.fields.imageUploadError');
+  } finally {
+    isUploadingImage.value = false;
+    event.target.value = '';
+  }
 };
 </script>
 
@@ -217,9 +252,52 @@ const submitMetadata = () => {
             :model-value="field.settings?.imageUrl ?? ''"
             :label="t('builder.inspector.fields.imageUrl')"
             @update:model-value="
-              (value) => setField({ settings: { width: field.settings?.width, imageUrl: value } })
+              (value) =>
+                setField({
+                  settings: {
+                    width: field.settings?.width,
+                    imageUrl: value,
+                    mediaAssetId: null,
+                  },
+                })
             "
           />
+          <div class="builder-inspector__media-actions">
+            <input
+              ref="imageFileInput"
+              class="builder-inspector__file-input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              @change="onImageFileChange"
+            />
+            <AppButton
+              variant="secondary"
+              size="sm"
+              :loading="isUploadingImage"
+              @click="triggerImageUpload"
+            >
+              {{ t('builder.inspector.fields.uploadImage') }}
+            </AppButton>
+            <AppButton
+              v-if="field.settings?.imageUrl"
+              variant="ghost"
+              size="sm"
+              @click="
+                setField({
+                  settings: {
+                    width: field.settings?.width,
+                    imageUrl: null,
+                    mediaAssetId: null,
+                  },
+                })
+              "
+            >
+              {{ t('builder.inspector.fields.clearImage') }}
+            </AppButton>
+          </div>
+          <small v-if="imageUploadError" class="builder-inspector__inline-error" role="alert">
+            {{ imageUploadError }}
+          </small>
         </template>
 
         <template v-if="isOptioned">
@@ -493,6 +571,16 @@ const submitMetadata = () => {
 .builder-inspector__inline-error {
   color: var(--color-danger-600);
   font-size: var(--font-size-xs);
+}
+
+.builder-inspector__media-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.builder-inspector__file-input {
+  display: none;
 }
 
 .builder-inspector__option-list {

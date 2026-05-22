@@ -81,6 +81,24 @@ describe('builder store', () => {
       expect('evil' in current).toBe(false);
     });
 
+    it('stores uploaded image asset references on image blocks', () => {
+      const builder = useBuilderStore();
+      const image = builder.addField('image_block');
+      builder.updateField(image.id, {
+        settings: {
+          width: 'half',
+          imageUrl: 'http://localhost:4000/uploads/tenants/t/surveys/pixel.png',
+          mediaAssetId: '665000000000000000000001',
+        },
+      });
+
+      expect(builder.schema.fields[0].settings).toMatchObject({
+        width: 'half',
+        imageUrl: 'http://localhost:4000/uploads/tenants/t/surveys/pixel.png',
+        mediaAssetId: '665000000000000000000001',
+      });
+    });
+
     it('reorders fields and refreshes order numbers', () => {
       const builder = useBuilderStore();
       const a = builder.addField('short_text');

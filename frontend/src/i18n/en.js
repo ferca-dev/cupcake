@@ -215,6 +215,10 @@ export default {
       statusChanged: 'Status updated successfully.',
       updateError: 'We could not update the client.',
       saveChanges: 'Save changes',
+      logoUrlField: 'Logo URL',
+      primaryColorField: 'Primary color',
+      uploadLogo: 'Upload logo',
+      logoUploadError: 'We could not upload the logo.',
     },
     create: {
       title: 'Create a new client',
@@ -573,7 +577,8 @@ export default {
     },
     packages: {
       title: 'Buy more tokens',
-      subtitle: 'Pick a package and submit a purchase request. A super admin reviews and approves it.',
+      subtitle:
+        'Pick a package and submit a purchase request. A super admin reviews and approves it.',
       tokens: '{tokens} tokens',
       request: 'Request',
       empty: 'No packages available yet.',
@@ -1046,6 +1051,9 @@ export default {
         width: 'Width',
         staticText: 'Content',
         imageUrl: 'Image URL',
+        uploadImage: 'Upload image',
+        clearImage: 'Clear image',
+        imageUploadError: 'The image could not be uploaded.',
       },
       options: {
         title: 'Options',

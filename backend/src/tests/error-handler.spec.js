@@ -87,22 +87,39 @@ describe('global error handler', () => {
   });
 
   it('returns 500 for unknown errors without exposing the stack in production', async () => {
-    const previousEnv = process.env.APP_ENV;
-    process.env.APP_ENV = 'production';
+    const previous = {
+      APP_ENV: process.env.APP_ENV,
+      STORAGE_DRIVER: process.env.STORAGE_DRIVER,
+      S3_REGION: process.env.S3_REGION,
+      S3_BUCKET: process.env.S3_BUCKET,
+      S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
+      S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
+    };
     const { resetEnvCache } = await import('../config/env.js');
-    resetEnvCache();
+    try {
+      process.env.APP_ENV = 'production';
+      process.env.STORAGE_DRIVER = 's3';
+      process.env.S3_REGION = 'us-east-1';
+      process.env.S3_BUCKET = 'cupcake-test';
+      process.env.S3_ACCESS_KEY_ID = 'test-key';
+      process.env.S3_SECRET_ACCESS_KEY = 'test-secret';
+      resetEnvCache();
 
-    const app = buildHarness((_req, _res, next) => next(new Error('boom — internal detail')));
+      const app = buildHarness((_req, _res, next) => next(new Error('boom — internal detail')));
 
-    const response = await request(app).get('/test');
-    expect(response.status).toBe(500);
-    expect(response.body.error.code).toBe(ERROR_CODES.INTERNAL_ERROR);
-    expect(response.body.error.message).toBe('An unexpected error occurred');
-    expect(JSON.stringify(response.body)).not.toContain('boom');
-    expect(JSON.stringify(response.body)).not.toMatch(/at\s.+:\d+:\d+/);
-
-    process.env.APP_ENV = previousEnv;
-    resetEnvCache();
+      const response = await request(app).get('/test');
+      expect(response.status).toBe(500);
+      expect(response.body.error.code).toBe(ERROR_CODES.INTERNAL_ERROR);
+      expect(response.body.error.message).toBe('An unexpected error occurred');
+      expect(JSON.stringify(response.body)).not.toContain('boom');
+      expect(JSON.stringify(response.body)).not.toMatch(/at\s.+:\d+:\d+/);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      resetEnvCache();
+    }
   });
 
   it('includes a stack trace in non-production environments for easier debugging', async () => {

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useAdminStore } from '../../stores/admin.store.js';
 import { useI18n } from '../../i18n/index.js';
+import { mediaService } from '../../services/media.service.js';
 import {
   AppAlert,
   AppBadge,
@@ -28,12 +29,16 @@ const isMutating = computed(() => store.isMutating);
 const errorMessage = ref('');
 const successMessage = ref('');
 const statusReason = ref('');
+const logoFileInput = ref(null);
+const isUploadingLogo = ref(false);
 
 const form = reactive({
   name: '',
   slug: '',
   timezone: '',
   locale: '',
+  logoUrl: '',
+  primaryColor: '',
 });
 
 const refresh = async () => {
@@ -47,6 +52,8 @@ const refresh = async () => {
       form.slug = doc.slug ?? '';
       form.timezone = doc.settings?.timezone ?? '';
       form.locale = doc.settings?.locale ?? '';
+      form.logoUrl = doc.settings?.branding?.logoUrl ?? '';
+      form.primaryColor = doc.settings?.branding?.primaryColor ?? '';
     }
   } catch (err) {
     errorMessage.value = err?.message ?? t('adminPanel.detail.updateError');
@@ -92,10 +99,26 @@ const buildUpdatePayload = () => {
   const nextLocale = form.locale.trim();
   const currentTimezone = tenant.value.settings?.timezone ?? '';
   const currentLocale = tenant.value.settings?.locale ?? '';
-  if (nextTimezone !== currentTimezone || nextLocale !== currentLocale) {
+  const nextLogoUrl = form.logoUrl.trim();
+  const nextPrimaryColor = form.primaryColor.trim();
+  const currentLogoUrl = tenant.value.settings?.branding?.logoUrl ?? '';
+  const currentPrimaryColor = tenant.value.settings?.branding?.primaryColor ?? '';
+  if (
+    nextTimezone !== currentTimezone ||
+    nextLocale !== currentLocale ||
+    nextLogoUrl !== currentLogoUrl ||
+    nextPrimaryColor !== currentPrimaryColor
+  ) {
     payload.settings = {};
     if (nextTimezone !== currentTimezone) payload.settings.timezone = nextTimezone;
     if (nextLocale !== currentLocale) payload.settings.locale = nextLocale;
+    if (nextLogoUrl !== currentLogoUrl || nextPrimaryColor !== currentPrimaryColor) {
+      payload.settings.branding = {};
+      if (nextLogoUrl !== currentLogoUrl) payload.settings.branding.logoUrl = nextLogoUrl || null;
+      if (nextPrimaryColor !== currentPrimaryColor) {
+        payload.settings.branding.primaryColor = nextPrimaryColor || null;
+      }
+    }
   }
   return payload;
 };
@@ -140,6 +163,37 @@ const changeStatus = async (status) => {
   }
 };
 
+const triggerLogoUpload = () => {
+  logoFileInput.value?.click();
+};
+
+const onLogoFileChange = async (event) => {
+  const file = event.target.files?.[0] ?? null;
+  if (!file || !tenant.value?.id) return;
+
+  errorMessage.value = '';
+  successMessage.value = '';
+  isUploadingLogo.value = true;
+  try {
+    const data = await mediaService.uploadImage({
+      file,
+      purpose: 'tenant_branding',
+      tenantId: tenant.value.id,
+    });
+    const asset = data?.asset;
+    const logoUrl = asset?.publicUrl || asset?.url || '';
+    if (logoUrl) {
+      form.logoUrl = logoUrl;
+      await saveChanges();
+    }
+  } catch (err) {
+    errorMessage.value = err?.message ?? t('adminPanel.detail.logoUploadError');
+  } finally {
+    isUploadingLogo.value = false;
+    event.target.value = '';
+  }
+};
+
 watch(tenantId, () => {
   refresh();
 });
@@ -177,6 +231,43 @@ onMounted(refresh);
           <div class="tenant-detail__row">
             <AppInput v-model="form.timezone" :label="t('adminPanel.create.timezoneField')" />
             <AppInput v-model="form.locale" :label="t('adminPanel.create.localeField')" />
+          </div>
+          <div
+            class="tenant-detail__branding"
+            :class="{ 'tenant-detail__branding--empty': !form.logoUrl }"
+          >
+            <img
+              v-if="form.logoUrl"
+              class="tenant-detail__logo-preview"
+              :src="form.logoUrl"
+              :alt="tenant.name"
+            />
+            <div class="tenant-detail__branding-fields">
+              <AppInput v-model="form.logoUrl" :label="t('adminPanel.detail.logoUrlField')" />
+              <AppInput
+                v-model="form.primaryColor"
+                :label="t('adminPanel.detail.primaryColorField')"
+                placeholder="#2563eb"
+              />
+              <div class="tenant-detail__upload-actions">
+                <input
+                  ref="logoFileInput"
+                  class="tenant-detail__file-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  @change="onLogoFileChange"
+                />
+                <AppButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  :loading="isUploadingLogo"
+                  @click="triggerLogoUpload"
+                >
+                  {{ t('adminPanel.detail.uploadLogo') }}
+                </AppButton>
+              </div>
+            </div>
           </div>
           <div class="tenant-detail__actions">
             <AppButton type="submit" :loading="isMutating">
@@ -309,6 +400,41 @@ onMounted(refresh);
   gap: var(--space-2);
 }
 
+.tenant-detail__branding {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.tenant-detail__branding--empty {
+  grid-template-columns: 1fr;
+}
+
+.tenant-detail__logo-preview {
+  width: 6rem;
+  height: 6rem;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.tenant-detail__branding-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tenant-detail__upload-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tenant-detail__file-input {
+  display: none;
+}
+
 .tenant-detail__owner {
   list-style: none;
   margin: 0;
@@ -320,6 +446,10 @@ onMounted(refresh);
 
 @media (max-width: 720px) {
   .tenant-detail__row {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-detail__branding {
     grid-template-columns: 1fr;
   }
 }

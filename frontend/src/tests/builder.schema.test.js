@@ -198,5 +198,23 @@ describe('builder schema utilities', () => {
       expect('key' in normalised.fields[0]).toBe(false);
       expect(normalised.fields[1].key).toBeTruthy();
     });
+
+    it('keeps uploaded media metadata on image blocks', () => {
+      const schema = buildEmptySchema();
+      const image = buildDefaultField('image_block', { existingKeys: new Set() });
+      image.settings = {
+        width: 'half',
+        imageUrl: 'http://localhost:4000/uploads/tenants/t/surveys/pixel.png',
+        mediaAssetId: '665000000000000000000001',
+      };
+      schema.fields.push(image);
+
+      const normalised = normalizeSchemaForApi(schema);
+      expect(normalised.fields[0].settings).toMatchObject({
+        width: 'half',
+        imageUrl: image.settings.imageUrl,
+        mediaAssetId: image.settings.mediaAssetId,
+      });
+    });
   });
 });

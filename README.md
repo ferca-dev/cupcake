@@ -94,15 +94,16 @@ The backend validates every variable on boot via Zod and **fails fast** with a r
 
 The variables to know first:
 
-| Variable                                   | Where    | Why it matters                                                        |
-| ------------------------------------------ | -------- | --------------------------------------------------------------------- |
-| `MONGODB_URI`                              | backend  | Mongo connection string. Defaults to the Docker container.            |
-| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | backend  | Token signing. Random ≥16-char values required in any non-local env.  |
-| `APP_NAME`                                 | backend  | Brand string at runtime. Never hardcode "Cupcake".                    |
-| `VITE_APP_NAME`                            | frontend | Brand string in the UI.                                               |
-| `VITE_API_BASE_URL`                        | frontend | Where the SPA calls the API. Defaults to localhost:4000.              |
-| `CORS_ORIGIN`                              | backend  | Comma-separated allow list for SPA origins.                           |
-| `SUPER_ADMIN_*` / `DEMO_CLIENT_*`          | backend  | Credentials the seeder uses. **Rotate them before exposing the app.** |
+| Variable                                   | Where    | Why it matters                                                                         |
+| ------------------------------------------ | -------- | -------------------------------------------------------------------------------------- |
+| `MONGODB_URI`                              | backend  | Mongo connection string. Defaults to the Docker container.                             |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | backend  | Token signing. Random ≥16-char values required in any non-local env.                   |
+| `APP_NAME`                                 | backend  | Brand string at runtime. Never hardcode "Cupcake".                                     |
+| `VITE_APP_NAME`                            | frontend | Brand string in the UI.                                                                |
+| `VITE_API_BASE_URL`                        | frontend | Where the SPA calls the API. Defaults to localhost:4000.                               |
+| `STORAGE_DRIVER` / `S3_*`                  | backend  | Image storage. Local is for development; production uses S3-compatible object storage. |
+| `CORS_ORIGIN`                              | backend  | Comma-separated allow list for SPA origins.                                            |
+| `SUPER_ADMIN_*` / `DEMO_CLIENT_*`          | backend  | Credentials the seeder uses. **Rotate them before exposing the app.**                  |
 
 ### 3. Start MongoDB
 
@@ -245,6 +246,7 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
     billing-architecture.md         # Transactions and billing history (Phase 12)
     dashboard-analytics.md          # Dashboard endpoints and aggregations (Phase 10)
     known-limitations.md            # Deferred features
+    media-storage.md                # Image upload/storage driver contract
     naming-conventions.md           # File, module, route, component, store, env naming
     production-readiness.md         # Pre-deploy checklist
     provider-architecture.md        # Campaign messaging adapter contract
@@ -299,6 +301,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
 - [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md) — response-limit configuration and account-settings API.
 - [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
+- [docs/media-storage.md](docs/media-storage.md) — image upload validation, local/S3 storage, and cleanup policy.
 
 ## Phase workflow
 

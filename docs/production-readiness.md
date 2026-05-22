@@ -37,6 +37,10 @@ deployment. Every item must be either checked off or explicitly waived
 - [ ] `APP_URL` and `FRONTEND_URL` point at the public, HTTPS-terminated
       domains. Public form URLs (`/f/:slug`) and campaign tracking URLs are
       generated from these values.
+- [ ] `STORAGE_DRIVER=s3` with a configured bucket, credentials, and optional
+      CDN base URL. Production startup refuses the local storage driver.
+- [ ] Image retention policy decided before enabling physical purge of
+      deleted media assets. See [docs/media-storage.md](media-storage.md).
 
 ## Frontend build
 

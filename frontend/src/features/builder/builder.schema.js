@@ -124,7 +124,7 @@ export const defaultVisibility = () => ({
   conditions: [],
 });
 
-const defaultSettings = () => ({ width: 'full', imageUrl: null });
+const defaultSettings = () => ({ width: 'full', imageUrl: null, mediaAssetId: null });
 
 /**
  * Returns a fresh field shaped like the backend's form schema. `existingKeys`
@@ -316,6 +316,10 @@ export const normalizeSchemaForApi = (schema) => {
           imageUrl:
             typeof settings.imageUrl === 'string' && settings.imageUrl.length > 0
               ? settings.imageUrl
+              : null,
+          mediaAssetId:
+            typeof settings.mediaAssetId === 'string' && settings.mediaAssetId.length > 0
+              ? settings.mediaAssetId
               : null,
         },
       };

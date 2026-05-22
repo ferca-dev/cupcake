@@ -247,7 +247,11 @@ export const useBuilderStore = defineStore('builder', {
           'imageUrl' in sanitized.settings
             ? sanitized.settings.imageUrl || null
             : updated.settings.imageUrl;
-        updated.settings = { width, imageUrl };
+        const mediaAssetId =
+          'mediaAssetId' in sanitized.settings
+            ? sanitized.settings.mediaAssetId || null
+            : (updated.settings.mediaAssetId ?? null);
+        updated.settings = { width, imageUrl, mediaAssetId };
       }
 
       const next = this.schema.fields.slice();
@@ -614,6 +618,7 @@ export const useBuilderStore = defineStore('builder', {
         settings: {
           width: FIELD_WIDTHS.includes(field.settings?.width) ? field.settings.width : 'full',
           imageUrl: field.settings?.imageUrl ?? null,
+          mediaAssetId: field.settings?.mediaAssetId ?? null,
         },
       }));
 

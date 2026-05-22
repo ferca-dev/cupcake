@@ -22,3 +22,9 @@ process.env.DEFAULT_SMS_TOKEN_COST = process.env.DEFAULT_SMS_TOKEN_COST ?? '2';
 process.env.DEFAULT_WHATSAPP_TOKEN_COST = process.env.DEFAULT_WHATSAPP_TOKEN_COST ?? '3';
 process.env.TOKEN_FAILED_SEND_POLICY = process.env.TOKEN_FAILED_SEND_POLICY ?? 'refund';
 process.env.TOKEN_PURCHASE_MODE = process.env.TOKEN_PURCHASE_MODE ?? 'manual';
+
+process.env.STORAGE_DRIVER = process.env.STORAGE_DRIVER ?? 'local';
+process.env.STORAGE_PUBLIC_BASE_URL =
+  process.env.STORAGE_PUBLIC_BASE_URL ?? 'http://localhost:4000/uploads';
+process.env.LOCAL_UPLOADS_DIR = process.env.LOCAL_UPLOADS_DIR ?? './tmp/test-uploads';
+process.env.MAX_IMAGE_UPLOAD_MB = process.env.MAX_IMAGE_UPLOAD_MB ?? '5';

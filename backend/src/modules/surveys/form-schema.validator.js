@@ -127,6 +127,12 @@ const fieldSettingsSchema = z
   .object({
     width: z.enum(['full', 'half', 'third', 'quarter']).default('full'),
     imageUrl: z.string().max(2000).nullable().optional(),
+    mediaAssetId: z
+      .string()
+      .trim()
+      .regex(/^[a-f0-9]{24}$/i, 'Media asset id must be a MongoDB ObjectId')
+      .nullable()
+      .optional(),
   })
   .strict()
   .default({});

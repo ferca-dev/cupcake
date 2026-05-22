@@ -216,6 +216,10 @@ export default {
       statusChanged: 'Estado actualizado correctamente.',
       updateError: 'No pudimos actualizar el cliente.',
       saveChanges: 'Guardar cambios',
+      logoUrlField: 'URL del logotipo',
+      primaryColorField: 'Color primario',
+      uploadLogo: 'Subir logotipo',
+      logoUploadError: 'No pudimos subir el logotipo.',
     },
     create: {
       title: 'Crear nuevo cliente',
@@ -575,7 +579,8 @@ export default {
     },
     packages: {
       title: 'Comprar más tokens',
-      subtitle: 'Elige un paquete y envía una solicitud de compra. Un super administrador la revisará.',
+      subtitle:
+        'Elige un paquete y envía una solicitud de compra. Un super administrador la revisará.',
       tokens: '{tokens} tokens',
       request: 'Solicitar',
       empty: 'Aún no hay paquetes disponibles.',
@@ -1048,6 +1053,9 @@ export default {
         width: 'Ancho',
         staticText: 'Contenido',
         imageUrl: 'URL de la imagen',
+        uploadImage: 'Subir imagen',
+        clearImage: 'Quitar imagen',
+        imageUploadError: 'No se pudo subir la imagen.',
       },
       options: {
         title: 'Opciones',

@@ -50,6 +50,7 @@ Desktop.ini
 # Runtime / temporary
 tmp/
 temp/
+uploads/
 *.pid
 *.seed
 *.pid.lock

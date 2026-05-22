@@ -1,5 +1,6 @@
 import express from 'express';
 import compression from 'compression';
+import path from 'node:path';
 
 import { loadEnv } from './config/env.js';
 import { createHelmetMiddleware, createCorsMiddleware } from './config/security.js';
@@ -29,6 +30,17 @@ export const createApp = () => {
   app.use(createHelmetMiddleware());
   app.use(createCorsMiddleware());
   app.use(compression());
+
+  if (env.STORAGE_DRIVER === 'local') {
+    const uploadsPath = new URL(env.STORAGE_PUBLIC_BASE_URL).pathname || '/uploads';
+    app.use(
+      uploadsPath,
+      express.static(path.resolve(env.LOCAL_UPLOADS_DIR), {
+        immutable: true,
+        maxAge: env.isProduction ? '1y' : 0,
+      }),
+    );
+  }
 
   app.use(express.json({ limit: env.REQUEST_BODY_LIMIT }));
   app.use(express.urlencoded({ extended: true, limit: env.REQUEST_BODY_LIMIT }));

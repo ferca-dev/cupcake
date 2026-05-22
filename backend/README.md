@@ -38,39 +38,49 @@ Run any script via the workspace from the repo root with `pnpm --filter ./backen
 
 All variables are validated at startup by `src/config/env.js`. The server **fails fast** with a readable error when a required variable is missing or invalid.
 
-| Variable                               | Required    | Default                 | Purpose                                                                             |
-| -------------------------------------- | ----------- | ----------------------- | ----------------------------------------------------------------------------------- |
-| `APP_NAME`                             | no          | `Cupcake`               | Runtime product name (do not hardcode).                                             |
-| `APP_ENV`                              | no          | `development`           | One of `development`, `test`, `staging`, `production`.                              |
-| `APP_PORT`                             | no          | `4000`                  | HTTP port to listen on (0 lets the OS pick).                                        |
-| `APP_URL`                              | no          | `http://localhost:4000` | Public URL of the API.                                                              |
-| `FRONTEND_URL`                         | no          | `http://localhost:5173` | Public URL of the SPA.                                                              |
-| `MONGODB_URI`                          | **yes**     | —                       | MongoDB connection string.                                                          |
-| `JWT_ACCESS_SECRET`                    | **yes**     | —                       | Access-token signing secret (≥ 16 chars).                                           |
-| `JWT_REFRESH_SECRET`                   | **yes**     | —                       | Refresh-token signing secret (≥ 16 chars).                                          |
-| `JWT_ACCESS_EXPIRES_IN`                | no          | `15m`                   | Access-token lifetime.                                                              |
-| `JWT_REFRESH_EXPIRES_IN`               | no          | `7d`                    | Refresh-token lifetime.                                                             |
-| `SUPER_ADMIN_*`                        | no          | see `.env.example`      | Seeder defaults (Phase 02+).                                                        |
-| `DEMO_CLIENT_*`                        | no          | see `.env.example`      | Seeder defaults (Phase 02+).                                                        |
-| `DEMO_TENANT_NAME`                     | no          | `Demo Company`          | Seeder default (Phase 02+).                                                         |
-| `EMAIL_PROVIDER`                       | no          | `mock`                  | Email channel provider (`mock` or `sendgrid`).                                      |
-| `SMS_PROVIDER`                         | no          | `mock`                  | SMS channel provider (`mock` or `twilio`).                                          |
-| `WHATSAPP_PROVIDER`                    | no          | `mock`                  | WhatsApp channel provider (`mock` or `twilio`).                                     |
-| `TWILIO_ACCOUNT_SID`                   | conditional | —                       | Required when SMS or WhatsApp use `twilio`.                                         |
-| `TWILIO_AUTH_TOKEN`                    | conditional | —                       | Required when SMS or WhatsApp use `twilio`.                                         |
-| `TWILIO_MESSAGING_SERVICE_SID`         | no          | —                       | Optional Twilio Messaging Service.                                                  |
-| `TWILIO_SMS_FROM`                      | conditional | —                       | Required for `SMS_PROVIDER=twilio` if no service SID.                               |
-| `TWILIO_WHATSAPP_FROM`                 | conditional | —                       | Required for `WHATSAPP_PROVIDER=twilio` if no service SID. Format `whatsapp:+1...`. |
-| `TWILIO_STATUS_CALLBACK_URL`           | no          | —                       | Public URL of `/api/v1/webhooks/twilio/messages`.                                   |
-| `TWILIO_SENDGRID_API_KEY`              | conditional | —                       | Required when `EMAIL_PROVIDER=sendgrid`.                                            |
-| `TWILIO_SENDGRID_FROM_EMAIL`           | conditional | —                       | Required when `EMAIL_PROVIDER=sendgrid`.                                            |
-| `TWILIO_SENDGRID_FROM_NAME`            | no          | `Cupcake`               | Friendly sender name for email.                                                     |
-| `TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET` | no          | —                       | Reserved for SendGrid webhook signature verification.                               |
-| `CORS_ORIGIN`                          | no          | `http://localhost:5173` | Comma-separated allow list. `*` allows any.                                         |
-| `LOG_LEVEL`                            | no          | `info`                  | Pino log level.                                                                     |
-| `REQUEST_BODY_LIMIT`                   | no          | `100kb`                 | Maximum request body size.                                                          |
-| `RATE_LIMIT_WINDOW_MS`                 | no          | `900000`                | Global rate-limit window (15 min).                                                  |
-| `RATE_LIMIT_MAX`                       | no          | `300`                   | Global rate-limit request count per window.                                         |
+| Variable                               | Required    | Default                         | Purpose                                                                             |
+| -------------------------------------- | ----------- | ------------------------------- | ----------------------------------------------------------------------------------- |
+| `APP_NAME`                             | no          | `Cupcake`                       | Runtime product name (do not hardcode).                                             |
+| `APP_ENV`                              | no          | `development`                   | One of `development`, `test`, `staging`, `production`.                              |
+| `APP_PORT`                             | no          | `4000`                          | HTTP port to listen on (0 lets the OS pick).                                        |
+| `APP_URL`                              | no          | `http://localhost:4000`         | Public URL of the API.                                                              |
+| `FRONTEND_URL`                         | no          | `http://localhost:5173`         | Public URL of the SPA.                                                              |
+| `MONGODB_URI`                          | **yes**     | —                               | MongoDB connection string.                                                          |
+| `JWT_ACCESS_SECRET`                    | **yes**     | —                               | Access-token signing secret (≥ 16 chars).                                           |
+| `JWT_REFRESH_SECRET`                   | **yes**     | —                               | Refresh-token signing secret (≥ 16 chars).                                          |
+| `JWT_ACCESS_EXPIRES_IN`                | no          | `15m`                           | Access-token lifetime.                                                              |
+| `JWT_REFRESH_EXPIRES_IN`               | no          | `7d`                            | Refresh-token lifetime.                                                             |
+| `SUPER_ADMIN_*`                        | no          | see `.env.example`              | Seeder defaults (Phase 02+).                                                        |
+| `DEMO_CLIENT_*`                        | no          | see `.env.example`              | Seeder defaults (Phase 02+).                                                        |
+| `DEMO_TENANT_NAME`                     | no          | `Demo Company`                  | Seeder default (Phase 02+).                                                         |
+| `EMAIL_PROVIDER`                       | no          | `mock`                          | Email channel provider (`mock` or `sendgrid`).                                      |
+| `SMS_PROVIDER`                         | no          | `mock`                          | SMS channel provider (`mock` or `twilio`).                                          |
+| `WHATSAPP_PROVIDER`                    | no          | `mock`                          | WhatsApp channel provider (`mock` or `twilio`).                                     |
+| `TWILIO_ACCOUNT_SID`                   | conditional | —                               | Required when SMS or WhatsApp use `twilio`.                                         |
+| `TWILIO_AUTH_TOKEN`                    | conditional | —                               | Required when SMS or WhatsApp use `twilio`.                                         |
+| `TWILIO_MESSAGING_SERVICE_SID`         | no          | —                               | Optional Twilio Messaging Service.                                                  |
+| `TWILIO_SMS_FROM`                      | conditional | —                               | Required for `SMS_PROVIDER=twilio` if no service SID.                               |
+| `TWILIO_WHATSAPP_FROM`                 | conditional | —                               | Required for `WHATSAPP_PROVIDER=twilio` if no service SID. Format `whatsapp:+1...`. |
+| `TWILIO_STATUS_CALLBACK_URL`           | no          | —                               | Public URL of `/api/v1/webhooks/twilio/messages`.                                   |
+| `TWILIO_SENDGRID_API_KEY`              | conditional | —                               | Required when `EMAIL_PROVIDER=sendgrid`.                                            |
+| `TWILIO_SENDGRID_FROM_EMAIL`           | conditional | —                               | Required when `EMAIL_PROVIDER=sendgrid`.                                            |
+| `TWILIO_SENDGRID_FROM_NAME`            | no          | `Cupcake`                       | Friendly sender name for email.                                                     |
+| `TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET` | no          | —                               | Reserved for SendGrid webhook signature verification.                               |
+| `STORAGE_DRIVER`                       | no          | `local`                         | Image storage driver: `local` for development/test, `s3` for production.            |
+| `STORAGE_PUBLIC_BASE_URL`              | no          | `http://localhost:4000/uploads` | Public base URL for local uploads.                                                  |
+| `LOCAL_UPLOADS_DIR`                    | no          | `./uploads`                     | Local upload directory. Ignored by Git; not valid for production.                   |
+| `MAX_IMAGE_UPLOAD_MB`                  | no          | `5`                             | Maximum accepted PNG/JPEG/WebP upload size.                                         |
+| `S3_ENDPOINT`                          | conditional | —                               | S3-compatible endpoint for R2, Spaces, MinIO, etc.                                  |
+| `S3_REGION`                            | conditional | —                               | Required when `STORAGE_DRIVER=s3`.                                                  |
+| `S3_BUCKET`                            | conditional | —                               | Required when `STORAGE_DRIVER=s3`.                                                  |
+| `S3_ACCESS_KEY_ID`                     | conditional | —                               | Required when `STORAGE_DRIVER=s3`.                                                  |
+| `S3_SECRET_ACCESS_KEY`                 | conditional | —                               | Required when `STORAGE_DRIVER=s3`.                                                  |
+| `S3_PUBLIC_BASE_URL`                   | no          | —                               | Optional public CDN/object base URL; signed URLs are used when empty.               |
+| `CORS_ORIGIN`                          | no          | `http://localhost:5173`         | Comma-separated allow list. `*` allows any.                                         |
+| `LOG_LEVEL`                            | no          | `info`                          | Pino log level.                                                                     |
+| `REQUEST_BODY_LIMIT`                   | no          | `100kb`                         | Maximum request body size.                                                          |
+| `RATE_LIMIT_WINDOW_MS`                 | no          | `900000`                        | Global rate-limit window (15 min).                                                  |
+| `RATE_LIMIT_MAX`                       | no          | `300`                           | Global rate-limit request count per window.                                         |
 
 The full template lives in [`.env.example`](./.env.example).
 
@@ -540,6 +550,25 @@ validator (`form-schema.validator.js`) is used for templates and
 surveys, so a template can never store a schema that would fail to
 publish later.
 
+## Media storage
+
+Image uploads live under `/api/v1/media/images`, require authentication, and
+are always tenant-scoped. Tenant users operate on their own tenant; super
+admins must pass `X-Impersonate-Tenant`.
+
+| Method | Path                           | Description                                                                   |
+| ------ | ------------------------------ | ----------------------------------------------------------------------------- |
+| POST   | `/api/v1/media/images`         | Multipart upload using field `image`; optional `purpose`.                     |
+| GET    | `/api/v1/media/images`         | List tenant images with `page`, `limit`, `purpose`, `status`, `sort`.         |
+| GET    | `/api/v1/media/images/:id`     | Return metadata for one tenant-owned image.                                   |
+| GET    | `/api/v1/media/images/:id/url` | Return a public URL or short-lived signed URL depending on storage settings.  |
+| DELETE | `/api/v1/media/images/:id`     | Mark the image deleted; physical purge is deferred to avoid breaking surveys. |
+
+The backend validates PNG/JPEG/WebP binary type, extension, size, and
+dimensions. Local development writes files under the ignored upload directory;
+production must use the S3-compatible driver. Full details are in
+[`docs/media-storage.md`](../docs/media-storage.md).
+
 ## Endpoints implemented in Phase 15
 
 Phase 15 makes campaign delivery production-ready by adding real provider
@@ -579,16 +608,16 @@ Phase 20 adds per-survey statistical reports. All routes live under
 the `responses.view` permission. Super admins must impersonate a tenant via
 `X-Impersonate-Tenant` — global cross-tenant reads are not exposed here.
 
-| Method | Path                                | Description                                                                                          |
-| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| GET    | `/api/v1/surveys/:id/reports/overview`  | Funnel totals, completion/response rates, duration stats, first/last response.                       |
-| GET    | `/api/v1/surveys/:id/reports/channels`  | Per-channel funnel (email, SMS, WhatsApp, public link) with skipped reasons and responses.           |
-| GET    | `/api/v1/surveys/:id/reports/questions` | Per-question response/skip counts, option distributions, numeric stats, NPS, rating breakdowns.      |
-| GET    | `/api/v1/surveys/:id/reports/trends`    | Daily response totals plus per-channel breakdown.                                                    |
-| GET    | `/api/v1/surveys/:id/reports/drop-off`  | Page-level and field-level reach counts derived from the published schema.                           |
-| GET    | `/api/v1/surveys/:id/reports/timing`    | Average, median, min, max, p25/p75, trimmed mean plus duration / hourly / weekday distributions.     |
-| GET    | `/api/v1/surveys/:id/reports/versions`  | Each version with response counts and a `isCurrentlyPublished` flag.                                 |
-| GET    | `/api/v1/surveys/:id/reports/export`    | CSV (default) or JSON download of raw responses (default) or aggregate question summaries.           |
+| Method | Path                                    | Description                                                                                      |
+| ------ | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| GET    | `/api/v1/surveys/:id/reports/overview`  | Funnel totals, completion/response rates, duration stats, first/last response.                   |
+| GET    | `/api/v1/surveys/:id/reports/channels`  | Per-channel funnel (email, SMS, WhatsApp, public link) with skipped reasons and responses.       |
+| GET    | `/api/v1/surveys/:id/reports/questions` | Per-question response/skip counts, option distributions, numeric stats, NPS, rating breakdowns.  |
+| GET    | `/api/v1/surveys/:id/reports/trends`    | Daily response totals plus per-channel breakdown.                                                |
+| GET    | `/api/v1/surveys/:id/reports/drop-off`  | Page-level and field-level reach counts derived from the published schema.                       |
+| GET    | `/api/v1/surveys/:id/reports/timing`    | Average, median, min, max, p25/p75, trimmed mean plus duration / hourly / weekday distributions. |
+| GET    | `/api/v1/surveys/:id/reports/versions`  | Each version with response counts and a `isCurrentlyPublished` flag.                             |
+| GET    | `/api/v1/surveys/:id/reports/export`    | CSV (default) or JSON download of raw responses (default) or aggregate question summaries.       |
 
 Every endpoint accepts the same filter set: `from`, `to`, `channel`,
 `campaignId`, `surveyVersionId`, `completionStatus`. Aggregations are scoped
