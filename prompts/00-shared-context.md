@@ -131,6 +131,25 @@ Rules:
 - Editing a published survey must not mutate historical published schemas.
 - Duplicating any survey creates a new `draft` survey.
 
+## Survey Response Limit Rules
+
+Surveys must support configurable response limits:
+
+- `unlimited`: respondents may submit multiple responses unless other rules prevent it.
+- `one_per_contact`: a campaign-linked contact or recipient token may submit once.
+- `one_per_device`: one response per browser/device key.
+- `one_per_ip`: one response per IP address.
+
+Rules:
+
+- Response limits are configured per survey and copied into published versions.
+- Backend validation is authoritative.
+- Device-based limits should use a generated anonymous device key stored client-side and sent to the backend. Hash persisted device identifiers server-side.
+- IP-based limits must respect `collectIp`; if IP limits are enabled, the setting must clearly require IP collection.
+- Token-linked campaign responses must still be associated with `campaignRecipientId` when available.
+- Return clear public form errors when a response limit has already been reached.
+- Avoid invasive fingerprinting. Do not collect hardware/browser entropy beyond a generated device key unless a later compliance review explicitly approves it.
+
 ## Core Data Model Reference
 
 Use these shapes as the baseline for MongoDB/Mongoose models. Add implementation-specific fields only when they support a documented requirement.
@@ -531,6 +550,61 @@ Skipped reasons:
 - `contact_archived`
 - `duplicate_recipient`
 
+## Campaign Delivery Rules
+
+- A campaign sends exactly one survey.
+- A campaign must reference `surveyId` and the immutable `surveyVersionId` that will be sent.
+- Campaigns can target contacts, groups, or both.
+- Only published surveys with a published version can be sent.
+- Generated delivery links must point to the public form route and include a submission token when the campaign recipient is known.
+- Campaign reports must be based on recipient records, not only provider responses.
+- Mock providers remain available for local development and tests.
+- Real provider implementations must live behind provider interfaces and factories.
+
+## Twilio Provider Rules
+
+Twilio will be used for SMS and WhatsApp. Email must be prepared through Twilio SendGrid.
+
+Provider requirements:
+
+- `TwilioSmsProvider` sends SMS through Twilio.
+- `TwilioWhatsAppProvider` sends WhatsApp messages through Twilio.
+- `TwilioSendGridEmailProvider` sends email through Twilio SendGrid.
+- Provider selection is environment-driven.
+- Provider code must validate required environment variables at startup or provider initialization.
+- Provider responses must be normalized into the campaign recipient status model.
+- Webhook/status callback routes may be prepared, but must be clearly documented if not fully active.
+- Never log Twilio auth tokens, SendGrid API keys, message bodies containing sensitive respondent data, or full recipient lists.
+
+## Account Settings Rules
+
+The application must include a settings area for authenticated users.
+
+Minimum settings:
+
+- Profile data: name, email display, phone, WhatsApp phone, timezone.
+- Password change with current password verification.
+- Language preference.
+- Basic notification/channel preferences if the data model already supports them.
+- Account/tenant display information for client admins where appropriate.
+
+Rules:
+
+- Email changes should be prepared for verification even if real email verification is deferred.
+- Password changes must revoke or rotate active refresh tokens according to the auth strategy.
+- Language preference must update the frontend locale and persist server-side.
+- User-facing settings labels must be i18n-ready.
+
+## Navigation and Responsive UI Rules
+
+- The dashboard shell must include a collapsible sidenav.
+- The top navigation must remain visible using sticky positioning.
+- Data tables must support horizontal and vertical scrolling.
+- Data table headers must remain fixed while scrolling vertically.
+- Large desktop screens must use space intentionally instead of stretching narrow mobile layouts.
+- Mobile behavior must remain intact after desktop responsiveness changes.
+- Survey lists must include an action or column to open the public survey in a new browser tab when a public slug is available.
+
 ## API Response Format
 
 Success:
@@ -581,6 +655,19 @@ DEMO_TENANT_NAME="Demo Company"
 EMAIL_PROVIDER="mock"
 SMS_PROVIDER="mock"
 WHATSAPP_PROVIDER="mock"
+
+TWILIO_ACCOUNT_SID=""
+TWILIO_AUTH_TOKEN=""
+TWILIO_MESSAGING_SERVICE_SID=""
+TWILIO_SMS_FROM=""
+TWILIO_WHATSAPP_FROM="whatsapp:+10000000000"
+TWILIO_STATUS_CALLBACK_URL=""
+
+TWILIO_SENDGRID_API_KEY=""
+TWILIO_SENDGRID_FROM_EMAIL="no-reply@cupcake.local"
+TWILIO_SENDGRID_FROM_NAME="Cupcake"
+TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET=""
+
 CORS_ORIGIN="http://localhost:5173"
 ```
 

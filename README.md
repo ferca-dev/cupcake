@@ -2,11 +2,11 @@
 
 Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and analyzing surveys and online forms. Tenants build surveys with a visual drag-and-drop editor, distribute them through email, SMS, and WhatsApp, collect public responses via unique slugs, and analyze results in dashboards.
 
-> All source code, comments, and developer-facing documentation in this repository are written in English. User-facing strings are centralized or prepared for future internationalization.
+> All source code, comments, and developer-facing documentation in this repository are written in English. User-facing strings are centralized for future internationalization (English and Spanish ship today).
 
 ## Status
 
-Phase 14 — hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin) is feature-complete for the closed beta. Phase 14 focused on production fitness rather than new features: targeted MongoDB indexes for high-traffic queries, rate-limit coverage on every auth endpoint, refresh-token reuse coverage, English documentation, troubleshooting notes, and a published [production-readiness checklist](docs/production-readiness.md). Deferred features (real password-reset emails, bulk contact import, real messaging/payment providers) are documented openly in [docs/known-limitations.md](docs/known-limitations.md). Earlier phase contracts remain valid: the admin panel ([docs/admin-panel.md](docs/admin-panel.md)), campaign sending ([docs/provider-architecture.md](docs/provider-architecture.md)), templates ([docs/templates.md](docs/templates.md)), dashboard ([docs/dashboard-analytics.md](docs/dashboard-analytics.md)), and billing history ([docs/billing-architecture.md](docs/billing-architecture.md)).
+Phase 14 — hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin panel) is feature-complete for the closed beta. Phase 14 focused on production fitness: targeted MongoDB indexes, rate-limit coverage on every auth endpoint, refresh-token reuse coverage, English documentation, a troubleshooting guide, and a published [production-readiness checklist](docs/production-readiness.md). Deferred features (real password-reset emails, bulk contact import, real messaging/payment providers) are documented openly in [docs/known-limitations.md](docs/known-limitations.md).
 
 ## Stack
 
@@ -25,12 +25,12 @@ See [docs/architecture-decisions.md](docs/architecture-decisions.md) for the rea
 
 ## Prerequisites
 
-- **Node.js** matching `.nvmrc` (Node 24, the current Active LTS as of project start). With `nvm`: `nvm use`.
-- **pnpm** version 10 or later. Install via `corepack enable && corepack prepare pnpm@10.25.0 --activate` or `npm install -g pnpm`.
-- **Docker Desktop** (or Docker Engine + Compose v2) for the local MongoDB container.
+- **Node.js** matching `.nvmrc` (Node 24, the current Active LTS). With `nvm`: `nvm use`.
+- **pnpm** 10+. Install via `corepack enable && corepack prepare pnpm@10.25.0 --activate`, or `npm install -g pnpm`.
+- **Docker Desktop** (or Docker Engine + Compose v2) for the local MongoDB container. Optional if you already run Mongo elsewhere.
 - **Git**.
 
-Default ports used by the project:
+Default ports:
 
 | Service  | Port    |
 | -------- | ------- |
@@ -38,42 +38,161 @@ Default ports used by the project:
 | Frontend | `5173`  |
 | MongoDB  | `27017` |
 
-## Local setup
+## Quickstart
+
+From a fresh clone to a logged-in browser in five commands:
 
 ```bash
-# 1. Install root dev dependencies and all workspace packages.
+# 1. Install dependencies for the whole workspace.
 pnpm install
 
-# 2. Copy environment templates (do this for each workspace package once it exists).
+# 2. Create environment files from the templates.
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 
-# 3. Start local MongoDB in the background.
+# 3. Start MongoDB (Docker required).
 pnpm db:up
 
-# 4. Start the backend (Phase 01+). Frontend is added in Phase 03.
-pnpm dev:backend
-# or, once the frontend exists, run both in parallel:
+# 4. Seed demo data (idempotent — safe to re-run).
+pnpm --filter ./backend run seed
+
+# 5. Run backend + frontend in parallel.
 pnpm dev
 ```
 
-Stop infrastructure with `pnpm db:down`. Reset the local database (drops the named volume) with `pnpm db:reset`.
+While `pnpm dev` is running:
 
-MongoDB connection string for local development:
+| Service        | URL                                 |
+| -------------- | ----------------------------------- |
+| Frontend (SPA) | http://localhost:5173               |
+| Backend API    | http://localhost:4000/api/v1        |
+| Health check   | http://localhost:4000/api/v1/health |
+| Public form    | http://localhost:5173/f/`<slug>`    |
 
+Open http://localhost:5173 and sign in with one of the [seeded accounts](#default-seeded-accounts) below. If anything fails, see [docs/troubleshooting.md](docs/troubleshooting.md).
+
+## Detailed setup
+
+Each Quickstart step explained.
+
+### 1. Install dependencies
+
+```bash
+pnpm install
 ```
-mongodb://localhost:27017/cupcake
+
+pnpm uses a content-addressable store at `node_modules/.pnpm/` shared across the workspace. The per-package `backend/node_modules` and `frontend/node_modules` directories contain only symlinks — there is no per-package `pnpm install`.
+
+### 2. Configure environment variables
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-Verify the backend by hitting the health endpoint:
+The backend validates every variable on boot via Zod and **fails fast** with a readable error if anything is missing or malformed. The defaults in `.env.example` are valid for local development. Never commit a populated `.env`. Full reference: [backend/README.md](backend/README.md#environment-variables).
+
+The variables to know first:
+
+| Variable                                   | Where    | Why it matters                                                        |
+| ------------------------------------------ | -------- | --------------------------------------------------------------------- |
+| `MONGODB_URI`                              | backend  | Mongo connection string. Defaults to the Docker container.            |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | backend  | Token signing. Random ≥16-char values required in any non-local env.  |
+| `APP_NAME`                                 | backend  | Brand string at runtime. Never hardcode "Cupcake".                    |
+| `VITE_APP_NAME`                            | frontend | Brand string in the UI.                                               |
+| `VITE_API_BASE_URL`                        | frontend | Where the SPA calls the API. Defaults to localhost:4000.              |
+| `CORS_ORIGIN`                              | backend  | Comma-separated allow list for SPA origins.                           |
+| `SUPER_ADMIN_*` / `DEMO_CLIENT_*`          | backend  | Credentials the seeder uses. **Rotate them before exposing the app.** |
+
+### 3. Start MongoDB
+
+```bash
+pnpm db:up           # start the bundled Mongo container
+pnpm db:logs         # tail container output
+pnpm db:down         # stop the container, keep the volume
+pnpm db:reset        # stop, drop the volume, start fresh — destroys local data
+```
+
+If you already have a Mongo running on `localhost:27017`, you can skip Docker and point `MONGODB_URI` at it instead.
+
+### 4. Seed demo data
+
+```bash
+pnpm --filter ./backend run seed
+```
+
+The seeder is **idempotent**: re-running it never duplicates records. It creates:
+
+- One super admin and one demo client admin.
+- A demo tenant (workspace) owned by the client admin.
+- Five demo contacts mixing complete and intentionally incomplete channels.
+- Three contact groups.
+- System templates (NPS, CSAT, etc.).
+- One draft survey and one published survey (with a `survey_versions` record).
+- A demo campaign and demo responses.
+- Demo transactions for the billing history view.
+
+### 5. Run the servers
+
+```bash
+pnpm dev             # backend + frontend in parallel
+pnpm dev:backend     # backend only (port 4000)
+pnpm dev:frontend    # frontend only (port 5173)
+```
+
+`Ctrl+C` stops the running script. MongoDB keeps running until `pnpm db:down`.
+
+Verify the backend with:
 
 ```bash
 curl http://localhost:4000/api/v1/health
 ```
 
-It returns the shared success envelope with the app name, environment, uptime, and the live database connection state. See [backend/README.md](backend/README.md) for the full backend reference, scripts, and project layout.
+It returns the shared success envelope with the app name, environment, uptime, and the live database connection state.
 
-## Root scripts
+## Default seeded accounts
+
+The seeder reads `backend/.env` and creates these users. **Rotate the passwords before exposing the instance to anyone else.**
+
+| Role         | Email                  | Password       | Access                                                   |
+| ------------ | ---------------------- | -------------- | -------------------------------------------------------- |
+| Super admin  | `admin@cupcake.local`  | `ChangeMe123!` | Admin panel, every tenant, platform-wide metrics.        |
+| Client admin | `client@cupcake.local` | `ChangeMe123!` | Demo tenant: surveys, contacts, campaigns, billing view. |
+
+The `Demo Company` workspace is owned by the client admin.
+
+## Using the application
+
+Typical workflow once you have signed in:
+
+1. **Dashboard** — http://localhost:5173. The client admin lands on the workspace dashboard with live KPIs. The super admin lands on the platform-wide overview and can drill into any tenant from the admin panel.
+2. **Surveys** — sidebar → "Surveys". The drag-and-drop builder lets you add fields, configure validation, and define conditional logic. Drafts can be edited freely; publishing snapshots the schema into an immutable `survey_versions` record.
+3. **Publish a survey** — the "Publish" button validates the schema and exposes the public form at `/f/<slug>` (e.g. http://localhost:5173/f/customer-feedback). Anyone with the link can answer it, no authentication required.
+4. **Contacts and groups** — under "Contacts". Each contact needs at least one of email, phone, or WhatsApp to be reachable. Group contacts to target several at once.
+5. **Campaigns** — sidebar → "Campaigns". Pick a published survey, target contacts/groups, choose channels (email / SMS / WhatsApp). Bulk sends are tolerant: unreachable recipients are marked `skipped` with a clear reason, the rest are sent. Only the `mock` provider is wired today — see [docs/known-limitations.md](docs/known-limitations.md).
+6. **Public responses** — open the form URL in an incognito window, fill it in, submit. The response shows up in the survey's stats and on the dashboard.
+7. **Templates** — start a new survey from a pre-built schema (NPS, customer satisfaction, etc.).
+8. **Billing history** — past invoices, refunds, and credits for the workspace.
+9. **Admin panel** (super admin only) — "Admin panel" → "Clients". Create, edit, suspend, or cancel tenant workspaces. Suspending a tenant immediately revokes refresh tokens and blocks already-issued access tokens.
+
+A step-by-step smoke test that exercises every feature lives in [docs/troubleshooting.md](docs/troubleshooting.md#first-deploy-smoke-test).
+
+## Running tests and quality checks
+
+```bash
+pnpm test              # all workspaces
+pnpm test:backend      # backend only (Vitest + supertest + in-memory Mongo)
+pnpm test:frontend     # frontend only (Vitest + jsdom)
+pnpm lint              # ESLint across both workspaces
+pnpm format:check      # verify Prettier formatting
+pnpm format            # apply Prettier
+```
+
+Tests do not require Docker. The backend suite uses `mongodb-memory-server`, which downloads the right Mongo binary on first run and caches it under `~/.cache/mongodb-binaries/`.
+
+Current coverage: 195 backend tests, 104 frontend tests.
+
+## Workspace scripts
 
 The root `package.json` exposes workspace-wide commands. Each command uses `--if-present`, so it is safe to run before all workspace packages are scaffolded.
 
@@ -101,52 +220,69 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
   .editorconfig                     # Cross-editor formatting baseline
   .gitignore
   .nvmrc                            # Node 24 (current Active LTS)
-  .prettierrc.json                  # Prettier configuration
+  .prettierrc.json
   .prettierignore
   .eslintignore
   docker-compose.yml                # Local MongoDB
   package.json                      # Root workspace scripts and devDependencies
-  pnpm-workspace.yaml               # pnpm workspace definition
+  pnpm-workspace.yaml
   README.md                         # This file
-  backend/                          # Express + Mongoose API (Phase 01+)
-    .env.example                    # Required backend environment variables
-    README.md                       # Backend-specific reference
-    src/                            # app.js, server.js, config/, common/, modules/, routes/, tests/
-  frontend/                         # Vue 3 + Vite SPA (Phase 03+)
-    .env.example                    # Required frontend environment variables
-    README.md                       # Frontend-specific reference
-    index.html                      # Vite entry HTML
-    vite.config.js                  # Dev server + build config
-    vitest.config.js                # Unit-test config
+  backend/                          # Express + Mongoose API
+    .env.example
+    README.md                       # Backend reference: env vars, endpoints, modules
+    src/                            # app.js, server.js, config/, common/, modules/, routes/, seeders/, tests/
+  frontend/                         # Vue 3 + Vite SPA
+    .env.example
+    README.md                       # Frontend reference
+    index.html
+    vite.config.js
+    vitest.config.js
     src/                            # main.js, App.vue, router/, stores/, services/,
-                                    # layouts/, views/, components/, styles/, i18n/, tests/
+                                    # layouts/, views/, components/, features/, styles/, i18n/, tests/
   docs/
+    admin-panel.md                  # Admin panel contract (Phase 13)
     architecture-decisions.md       # ADRs for stack and tooling choices
+    billing-architecture.md         # Transactions and billing history (Phase 12)
+    dashboard-analytics.md          # Dashboard endpoints and aggregations (Phase 10)
+    known-limitations.md            # Deferred features
     naming-conventions.md           # File, module, route, component, store, env naming
-    provider-architecture.md        # Campaign messaging provider contract
+    production-readiness.md         # Pre-deploy checklist
+    provider-architecture.md        # Campaign messaging adapter contract
+    templates.md                    # Templates module (Phase 11)
+    troubleshooting.md              # Local issues, env, seeders, smoke test
   prompts/                          # Phase prompts and shared context
   .github/workflows/                # CI workflows
 ```
 
-## Environment variables
+## API response envelope
 
-Backend (`backend/.env.example`) and frontend (`frontend/.env.example`) are kept separate. Always commit the `*.env.example` templates; never commit a populated `.env`.
+Success:
 
-The shared product name is configurable:
+```json
+{ "success": true, "data": {}, "message": "Operation completed successfully" }
+```
 
-- Backend reads `APP_NAME`.
-- Frontend reads `VITE_APP_NAME`.
+Error:
 
-Source code MUST NOT hardcode `Cupcake` where the runtime app name is intended. The default value lives only in environment defaults or documented examples.
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid payload",
+    "details": []
+  }
+}
+```
 
-See [prompts/00-shared-context.md](prompts/00-shared-context.md) for the full list of required environment variables.
+Stack traces are appended to `error.details` outside `APP_ENV=production`. The full route map is exposed at `GET /api/v1` and detailed in [backend/README.md](backend/README.md).
 
 ## Naming conventions
 
 The full reference lives in [docs/naming-conventions.md](docs/naming-conventions.md). Summary:
 
 - **Files**: `kebab-case` for general files (`survey-service.js`), `PascalCase` for Vue components (`SurveyBuilder.vue`), `kebab-case.spec.js` or `*.test.js` for tests.
-- **Backend modules**: one directory per domain under `backend/src/modules/<domain>/` containing `<domain>.routes.js`, `<domain>.controller.js`, `<domain>.service.js`, `<domain>.repository.js`, `<domain>.model.js`, `<domain>.validation.js`. Cross-cutting helpers live under `backend/src/common/` (errors, middlewares, responses, utils, constants).
+- **Backend modules**: one directory per domain under `backend/src/modules/<domain>/` containing `<domain>.routes.js`, `<domain>.controller.js`, `<domain>.service.js`, `<domain>.repository.js`, `<domain>.model.js`, `<domain>.validation.js`. Cross-cutting helpers live under `backend/src/common/`.
 - **Backend routes**: REST under `/api/v1/<resource>` with kebab-case segments (`/api/v1/contact-groups`).
 - **Frontend features**: directories under `frontend/src/features/<feature>/` with `views/`, `components/`, `stores/`, `services/`, and `composables/` subfolders as needed.
 - **Vue components**: PascalCase, multi-word (`SurveyCard.vue`, not `Card.vue`).
@@ -154,19 +290,25 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - **Frontend services**: file `<resource>-service.js` exporting a single object with one method per endpoint.
 - **Environment variables**: `SCREAMING_SNAKE_CASE`. Frontend variables exposed to the client MUST be prefixed `VITE_`.
 
+## Troubleshooting and operational docs
+
+- [docs/troubleshooting.md](docs/troubleshooting.md) — common local issues, seeder, env, and first-deploy smoke test.
+- [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 14.
+- [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
+
 ## Phase workflow
 
-Implementation is broken into numbered phases under [prompts/](prompts/). To execute a phase:
+Implementation was broken into numbered phases under [prompts/](prompts/). To execute or re-execute a phase:
 
 1. Open `prompts/00-shared-context.md` and the target phase file (e.g. `prompts/phase-01-backend-foundation.md`).
-2. Run the phase top to bottom, in order, satisfying every task and verification check.
+2. Run the phase top to bottom, satisfying every task and verification check.
 3. Do not start the next phase until the current phase Definition of Done is verified.
-4. If a phase reveals that a previous phase missed infrastructure or a cross-cutting concern, fix the earlier foundation in the same branch before continuing. Do not work around missing architecture with duplicated code.
-5. Keep source code, code comments, README files, API docs, inline docs, seed labels, and developer-facing documentation in English.
+4. If a phase reveals that an earlier phase missed infrastructure, fix the earlier foundation in the same branch — do not work around missing architecture with duplicated code.
+5. Keep code, comments, READMEs, API docs, seed labels, and developer docs in English.
 
 Phase index:
 
-- `00` — Project planning and repository setup (this phase).
+- `00` — Project planning and repository setup.
 - `01` — Backend foundation.
 - `02` — Auth, users, and tenants.
 - `03` — Frontend foundation.
@@ -182,15 +324,9 @@ Phase index:
 - `13` — Admin panel.
 - `14` — Hardening.
 
-## Troubleshooting and operational docs
-
-- [docs/troubleshooting.md](docs/troubleshooting.md) — common local issues, seeder, env, and first-deploy smoke test.
-- [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 14.
-- [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
-
 ## Continuous integration
 
-A minimal GitHub Actions workflow is defined at [.github/workflows/ci.yml](.github/workflows/ci.yml). It installs dependencies with pnpm, runs `pnpm format:check`, `pnpm lint`, and `pnpm test`. Because most workspace scripts use `--if-present`, the workflow is forward-compatible: it does nothing until packages add the matching scripts.
+A minimal GitHub Actions workflow is defined at [.github/workflows/ci.yml](.github/workflows/ci.yml). It installs dependencies with pnpm and runs `pnpm format:check`, `pnpm lint`, and `pnpm test`. Because most workspace scripts use `--if-present`, the workflow is forward-compatible.
 
 ## License
 

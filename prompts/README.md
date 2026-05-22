@@ -28,6 +28,10 @@ This folder splits the original `promt.md` master prompt into execution-ready ph
 - `phase-12-transactions-and-billing-history.md`: transaction model, API, demo data, and billing history UI.
 - `phase-13-admin-panel.md`: super admin tenant management, global metrics, audit visibility, and guarded admin routes.
 - `phase-14-hardening.md`: tests, security review, indexes, accessibility, responsive checks, docs, and production readiness.
+- `phase-15-campaign-delivery-and-twilio-providers.md`: enforce campaign-to-survey delivery, add Twilio SMS/WhatsApp providers, and add Twilio SendGrid email provider.
+- `phase-16-response-rules-and-account-settings.md`: add one-response limits by device or IP and create account/settings screens for profile, password, language, and preferences.
+- `phase-17-navigation-and-responsive-data-grids.md`: add collapsible sidenav, sticky top nav, public survey open action, large-screen responsiveness, and fixed-header responsive tables.
+- `phase-18-final-post-delivery-hardening.md`: final verification pass after Twilio delivery, response limits, settings, navigation, and responsive table work.
 
 ## Execution rule
 
