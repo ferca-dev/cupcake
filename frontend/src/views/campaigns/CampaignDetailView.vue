@@ -169,6 +169,7 @@ const skippedReasonsEntries = computed(() => {
           :rows="recipients"
           row-key="id"
           :empty="t('campaigns.detail.recipientsEmpty')"
+          max-height="60vh"
         >
           <template #cell:channel="{ row }">
             <AppBadge variant="info">
@@ -200,6 +201,7 @@ const skippedReasonsEntries = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: var(--layout-content-max-width);
 }
 
 .campaign-detail__header {

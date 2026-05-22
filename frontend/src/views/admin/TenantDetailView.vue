@@ -252,6 +252,7 @@ onMounted(refresh);
           :rows="users"
           row-key="id"
           :empty="t('adminPanel.detail.noUsers')"
+          max-height="60vh"
         >
           <template #cell:status="{ row }">
             <AppBadge :variant="row.status === 'active' ? 'success' : 'neutral'">

@@ -206,6 +206,7 @@ const isReady = (info) => Boolean(info?.ready);
         :rows="rows"
         row-key="id"
         :empty="t('contacts.list.empty')"
+        max-height="65vh"
       >
         <template #cell:fullName="{ row }">
           <strong>{{
@@ -278,6 +279,7 @@ const isReady = (info) => Boolean(info?.ready);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: var(--layout-content-max-width);
 }
 
 .contacts__header {

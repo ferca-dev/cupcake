@@ -179,6 +179,7 @@ const statusVariant = (status) => (status === 'active' ? 'success' : 'neutral');
         :rows="store.groups"
         row-key="id"
         :empty="t('contactGroups.list.empty')"
+        max-height="65vh"
       >
         <template #cell:name="{ row }">
           <strong>{{ row.name }}</strong>
@@ -287,6 +288,7 @@ const statusVariant = (status) => (status === 'active' ? 'success' : 'neutral');
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: var(--layout-content-max-width);
 }
 
 .groups__header {

@@ -93,9 +93,15 @@
 
   /* Layout */
   --layout-max-width: 80rem;
+  --layout-content-max-width: 110rem;
   --layout-gap: var(--space-5);
   --layout-topbar-height: 4rem;
   --layout-sidebar-width: 16rem;
+  --layout-sidebar-collapsed-width: 4.5rem;
+  --layout-z-topbar: 40;
+  --layout-z-sidebar: 20;
+  --layout-z-dropdown: 30;
+  --layout-z-modal: 60;
 }
 
 /*

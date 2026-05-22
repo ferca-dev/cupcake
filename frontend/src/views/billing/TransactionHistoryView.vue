@@ -180,6 +180,7 @@ const isSuperAdmin = computed(() => Boolean(auth.isSuperAdmin));
         :rows="store.items"
         row-key="id"
         :empty="t('billing.transactions.empty')"
+        max-height="65vh"
       >
         <template #cell:createdAt="{ row }">
           <div>{{ formatDate(row.paidAt ?? row.createdAt) }}</div>
@@ -220,6 +221,7 @@ const isSuperAdmin = computed(() => Boolean(auth.isSuperAdmin));
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: var(--layout-content-max-width);
 }
 
 .transactions__header {

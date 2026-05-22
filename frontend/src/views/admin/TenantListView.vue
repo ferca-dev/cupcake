@@ -130,6 +130,7 @@ onMounted(() => refresh());
       :rows="items"
       row-key="id"
       :empty="t('adminPanel.tenants.empty')"
+      max-height="65vh"
     >
       <template #cell:status="{ row }">
         <AppBadge :variant="statusVariant(row.status)">
@@ -157,7 +158,7 @@ onMounted(() => refresh());
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 90rem;
+  max-width: var(--layout-content-max-width);
 }
 
 .tenants-list__header {

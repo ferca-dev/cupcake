@@ -253,6 +253,9 @@ export default {
   layout: {
     skipToContent: 'Saltar al contenido principal',
     toggleNav: 'Mostrar u ocultar el menú',
+    collapseNav: 'Contraer navegación',
+    expandNav: 'Expandir navegación',
+    primaryNav: 'Navegación principal',
     dashboardHome: 'Panel principal',
   },
   roles: {
@@ -321,11 +324,18 @@ export default {
       allSurveys: 'Todas las encuestas',
       empty: 'Aún no hay encuestas. Pulsa "Nueva encuesta" para empezar.',
       open: 'Abrir',
+      openPublic: 'Abrir formulario público',
+      openPublicAria: 'Abrir el formulario público de "{title}" en una nueva pestaña',
+      publicLinkUnavailable: 'Enlace público no disponible',
+      publicLinkUnavailableHint: 'Publica la encuesta para obtener un enlace compartible.',
+      copyPublicLink: 'Copiar enlace público',
+      copyPublicLinkSuccess: 'Enlace público copiado al portapapeles.',
       columns: {
         title: 'Título',
         slug: 'Slug',
         status: 'Estado',
         updated: 'Actualizada',
+        public: 'Enlace público',
         actions: 'Acciones',
       },
       modal: {

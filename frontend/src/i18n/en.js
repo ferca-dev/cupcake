@@ -252,6 +252,9 @@ export default {
   layout: {
     skipToContent: 'Skip to main content',
     toggleNav: 'Toggle navigation menu',
+    collapseNav: 'Collapse navigation',
+    expandNav: 'Expand navigation',
+    primaryNav: 'Primary navigation',
     dashboardHome: 'Dashboard',
   },
   roles: {
@@ -320,11 +323,18 @@ export default {
       allSurveys: 'All surveys',
       empty: 'No surveys yet. Click "New survey" to start.',
       open: 'Open',
+      openPublic: 'Open public form',
+      openPublicAria: 'Open public form for "{title}" in a new tab',
+      publicLinkUnavailable: 'Public link unavailable',
+      publicLinkUnavailableHint: 'Publish the survey to get a shareable URL.',
+      copyPublicLink: 'Copy public link',
+      copyPublicLinkSuccess: 'Public link copied to your clipboard.',
       columns: {
         title: 'Title',
         slug: 'Slug',
         status: 'Status',
         updated: 'Updated',
+        public: 'Public link',
         actions: 'Actions',
       },
       modal: {

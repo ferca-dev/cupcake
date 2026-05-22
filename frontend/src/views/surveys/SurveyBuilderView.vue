@@ -439,8 +439,14 @@ watch(lastError, (value) => {
 .survey-builder__workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: 16rem 1fr 22rem;
+  grid-template-columns: 16rem minmax(0, 1fr) 22rem;
   min-height: 0;
+}
+
+@media (min-width: 1600px) {
+  .survey-builder__workspace {
+    grid-template-columns: 18rem minmax(0, 1fr) 26rem;
+  }
 }
 
 .survey-builder__workspace.is-loading {

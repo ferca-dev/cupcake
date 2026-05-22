@@ -296,6 +296,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  max-width: 80rem;
 }
 
 .settings-view__header h1 {
@@ -322,6 +323,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: 38rem;
 }
 
 .settings-view__actions {

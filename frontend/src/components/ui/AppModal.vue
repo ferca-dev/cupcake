@@ -97,7 +97,7 @@ const onBackdrop = () => {
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  z-index: 50;
+  z-index: var(--layout-z-modal, 60);
 }
 
 .app-modal__dialog {

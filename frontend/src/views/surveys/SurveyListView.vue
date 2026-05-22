@@ -2,12 +2,15 @@
 // Surveys list view. Provides the entry point into the builder: it lists
 // drafts and published surveys for the current tenant and exposes a "New
 // survey" modal that creates a blank draft and routes into the builder.
+// Each row also exposes a safe public-open action when the survey has a slug
+// and is in a public-facing status (published or paused).
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { surveyService } from '../../services/survey.service.js';
 import { useBuilderStore } from '../../stores/builder.store.js';
 import { useI18n } from '../../i18n/index.js';
+import { buildPublicSurveyUrl } from '../../config/env.js';
 import {
   AppAlert,
   AppBadge,
@@ -34,14 +37,25 @@ const createError = ref(null);
 const isCreating = ref(false);
 
 const columns = [
-  { key: 'title', label: t('surveys.list.columns.title') },
-  { key: 'slug', label: t('surveys.list.columns.slug') },
-  { key: 'status', label: t('surveys.list.columns.status') },
-  { key: 'updatedAt', label: t('surveys.list.columns.updated') },
-  { key: 'actions', label: t('surveys.list.columns.actions'), align: 'right' },
+  { key: 'title', label: t('surveys.list.columns.title'), minWidth: '14rem' },
+  { key: 'slug', label: t('surveys.list.columns.slug'), minWidth: '10rem' },
+  { key: 'status', label: t('surveys.list.columns.status'), minWidth: '6rem' },
+  { key: 'updatedAt', label: t('surveys.list.columns.updated'), minWidth: '10rem' },
+  { key: 'public', label: t('surveys.list.columns.public'), minWidth: '11rem' },
+  {
+    key: 'actions',
+    label: t('surveys.list.columns.actions'),
+    align: 'right',
+    minWidth: '8rem',
+  },
 ];
 
-const rows = computed(() => items.value.map((item) => ({ ...item })));
+const rows = computed(() =>
+  items.value.map((item) => ({
+    ...item,
+    publicUrl: buildPublicSurveyUrl(item.slug, { status: item.status }),
+  })),
+);
 
 const refresh = async () => {
   isLoading.value = true;
@@ -121,6 +135,16 @@ const statusVariant = (status) => {
       return 'info';
   }
 };
+
+const copyPublicLink = async (url) => {
+  if (!url || typeof navigator === 'undefined') return;
+  try {
+    await navigator.clipboard?.writeText(url);
+  } catch {
+    // Clipboard may be blocked (e.g. insecure context). Silently ignore —
+    // the user still has the visible link target in the open action.
+  }
+};
 </script>
 
 <template>
@@ -144,12 +168,52 @@ const statusVariant = (status) => {
         :rows="rows"
         row-key="id"
         :empty="t('surveys.list.empty')"
+        max-height="70vh"
       >
         <template #cell:status="{ row }">
           <AppBadge :variant="statusVariant(row.status)">{{ row.status }}</AppBadge>
         </template>
         <template #cell:updatedAt="{ row }">
           {{ formatDate(row.updatedAt) }}
+        </template>
+        <template #cell:public="{ row }">
+          <div v-if="row.publicUrl" class="surveys-list__public">
+            <a
+              class="surveys-list__public-link"
+              :href="row.publicUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              :aria-label="t('surveys.list.openPublicAria', { title: row.title })"
+              data-testid="open-public-form"
+            >
+              {{ t('surveys.list.openPublic') }}
+              <span aria-hidden="true">↗</span>
+            </a>
+            <button
+              type="button"
+              class="surveys-list__copy"
+              :title="t('surveys.list.copyPublicLink')"
+              :aria-label="t('surveys.list.copyPublicLink')"
+              @click="copyPublicLink(row.publicUrl)"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M9 9h9v12H9zM5 4h9v3H8a3 3 0 0 0-3 3v8"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  fill="none"
+                />
+              </svg>
+            </button>
+          </div>
+          <span
+            v-else
+            class="surveys-list__public-disabled"
+            :title="t('surveys.list.publicLinkUnavailableHint')"
+            data-testid="public-link-unavailable"
+          >
+            {{ t('surveys.list.publicLinkUnavailable') }}
+          </span>
         </template>
         <template #cell:actions="{ row }">
           <AppButton size="sm" variant="secondary" @click="editSurvey(row.id)">
@@ -196,6 +260,7 @@ const statusVariant = (status) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: var(--layout-content-max-width);
 }
 
 .surveys-list__header {
@@ -203,6 +268,7 @@ const statusVariant = (status) => {
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-4);
+  flex-wrap: wrap;
 }
 
 .surveys-list__header h2 {
@@ -218,5 +284,66 @@ const statusVariant = (status) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.surveys-list__public {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.surveys-list__public-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-primary-700);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
+.surveys-list__public-link:hover {
+  background: var(--color-primary-50);
+  text-decoration: underline;
+}
+
+.surveys-list__public-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.surveys-list__copy {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.surveys-list__copy svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.surveys-list__copy:hover,
+.surveys-list__copy:focus-visible {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.surveys-list__copy:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.surveys-list__public-disabled {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-sm);
+  font-style: italic;
 }
 </style>

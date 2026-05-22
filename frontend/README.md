@@ -37,10 +37,11 @@ Run any script from the repo root via `pnpm --filter ./frontend run <script>` or
 
 The frontend reads only the variables listed below. They are exposed through `src/config/env.js`; views and services must import from there instead of reading `import.meta.env` directly.
 
-| Variable            | Required | Default                        | Purpose                                 |
-| ------------------- | -------- | ------------------------------ | --------------------------------------- |
-| `VITE_APP_NAME`     | no       | `Cupcake`                      | Runtime product name (do not hardcode). |
-| `VITE_API_BASE_URL` | no       | `http://localhost:4000/api/v1` | Base URL for every backend API request. |
+| Variable                   | Required | Default                                              | Purpose                                                                                                            |
+| -------------------------- | -------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `VITE_APP_NAME`            | no       | `Cupcake`                                            | Runtime product name (do not hardcode).                                                                            |
+| `VITE_API_BASE_URL`        | no       | `http://localhost:4000/api/v1`                       | Base URL for every backend API request.                                                                            |
+| `VITE_PUBLIC_FORM_BASE_URL`| no       | `window.location.origin` (or `http://localhost:5173`) | Public form origin used to build shareable survey links (`/f/:slug`). Set this when the public form is hosted on a different domain than the dashboard. |
 
 The full template lives in [`.env.example`](./.env.example).
 
@@ -211,6 +212,46 @@ import { AppButton, AppCard, AppAlert } from '@/components/ui';
 
 Props are documented inline at the top of each component file. Components rely on the theme tokens, so visual changes propagate from `theme.css`.
 
+#### Responsive data tables
+
+`AppTable` is the single table component every feature view consumes. It wraps a native `<table>` inside a scroll container so wide column sets scroll horizontally without breaking layout, long lists scroll vertically inside a bounded body (set via the `max-height` prop), and the header row stays pinned to the top while the body scrolls. It also exposes a unified loading, empty, and error state so feature views never roll their own placeholder rows.
+
+```vue
+<AppTable
+  :columns="[{ key: 'name', label: 'Name' }, { key: 'actions', label: '', sticky: 'right' }]"
+  :rows="rows"
+  :loading="isLoading"
+  :error="errorMessage"
+  empty="No contacts yet."
+  max-height="65vh"
+>
+  <template #cell:actions="{ row }">
+    <AppButton size="sm" @click="open(row)">Open</AppButton>
+  </template>
+</AppTable>
+```
+
+Column options: `key`, `label`, `align`, `width`, `minWidth`, and `sticky: 'left' | 'right'` for action columns that should remain reachable during horizontal scrolling. Override any cell with the `#cell:<key>` scoped slot; the slot receives `{ row, value }`.
+
+### Authenticated shell
+
+`DashboardLayout` provides the topbar + sidebar chrome that hosts every authenticated view.
+
+- The topbar uses `position: sticky` so it stays visible while users scroll long pages and data tables. The z-index hierarchy is centralised in `theme.css` (`--layout-z-topbar`, `--layout-z-sidebar`, `--layout-z-dropdown`, `--layout-z-modal`) so modals and table headers stack predictably above the topbar.
+- The sidebar is collapsible. The dedicated collapse toggle (desktop only) shrinks the nav to icon-only, and the preference persists in `localStorage` under `cupcake.layout.sidebarCollapsed`. The collapsed state never affects route resolution or active-route highlighting.
+- On mobile (≤768px) the sidebar slides in over the content via the existing hamburger button; the desktop collapse toggle is hidden.
+- Nav items honour the existing role/permission guards, so only the routes the user can reach are rendered.
+
+### Public survey links
+
+Authenticated views build shareable public form URLs via `buildPublicSurveyUrl(slug, { status })` from `src/config/env.js`. The helper:
+
+- Reads `VITE_PUBLIC_FORM_BASE_URL` and falls back to `window.location.origin`.
+- Validates the slug against the same lowercase/`-` pattern the backend enforces.
+- Returns `null` for surveys that should not expose a public link (`draft`/`archived` or missing slug), so call sites can render a disabled "unavailable" state instead of a broken URL.
+
+The surveys list uses this helper to render a "Open public form" action that opens the survey in a new tab with `target="_blank"` and `rel="noopener noreferrer"`.
+
 ## Testing
 
 Vitest runs the suite under `src/tests/`. The setup file clears Pinia/localStorage/global mocks between tests. The current coverage includes:
@@ -218,6 +259,10 @@ Vitest runs the suite under `src/tests/`. The setup file clears Pinia/localStora
 - `auth.store.test.js` — login, logout, transparent refresh, persistence.
 - `guards.test.js` — auth + role + permission resolution.
 - `components/AppButton.test.js` — UI primitive behaviour.
+- `components/AppTable.test.js` — responsive table empty/loading/error states, max-height scroll, sticky column markers, and scoped cell slots.
+- `components/DashboardLayout.test.js` — sidebar collapse toggle, localStorage persistence, restoration on mount, and super-admin nav links.
+- `components/SurveyListView.test.js` — public-open survey action wires the configured base URL with `target="_blank"` and disables the action for drafts.
+- `config-env.test.js` — `buildPublicSurveyUrl` slug validation, status gating, and base URL handling.
 - `builder.schema.test.js` — id/key generation, validator rules, schema normalisation.
 - `builder.store.test.js` — add/remove/duplicate/reorder/option actions, validation gate, save and publish round-trips against a mocked `fetch`.
 - `public-form-answers.test.js` — public-form `buildInitialAnswers`, `validateAnswers`, and `serializeAnswers` helpers.
