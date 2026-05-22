@@ -96,7 +96,7 @@ Error:
 - Do not start the next phase until the current phase Definition of Done is satisfied.
 - If a later phase reveals a missing foundation from an earlier phase, fix the foundation in the same branch instead of working around it.
 
-## Final architecture (post Phase 14)
+## Final architecture (post Phase 17)
 
 Backend modules live under `backend/src/modules/`: `auth`, `users`, `tenants`,
 `surveys`, `responses`, `contacts`, `campaigns`, `public-forms`, `templates`,
@@ -112,10 +112,33 @@ through `apiClient.js` for refresh-token-aware fetch. Layouts live in
 `frontend/src/layouts/`, route guards in `frontend/src/router/guards.js`, and
 all user-facing strings in `frontend/src/i18n/{en,es}.js`.
 
+## Phase 15–17 surfaces
+
+- Campaign delivery is provider-agnostic. The `provider.factory` resolves
+  `EMAIL_PROVIDER`, `SMS_PROVIDER`, `WHATSAPP_PROVIDER` to mock or Twilio /
+  Twilio SendGrid adapters. Real adapters fail fast at construction time when
+  the required credentials are missing. Provider responses are normalised
+  into the recipient status model. See
+  [docs/provider-architecture.md](docs/provider-architecture.md).
+- Per-survey response limits live on `survey.settings.responseLimit` and are
+  copied into `survey_versions.settings` at publish time so already-published
+  surveys cannot be loosened by editing the live draft. Backend enforcement
+  is authoritative via partial-unique indexes on `responses.metadata.*Hash`.
+  See [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md).
+- Authenticated account settings live under `/api/v1/settings/*`. Password
+  changes revoke active refresh tokens; locale preference is exposed through
+  `/auth/me` and applied by the frontend i18n runtime.
+- The dashboard shell uses a collapsible sticky sidenav, a sticky topbar, and
+  the shared `AppTable` component for responsive horizontal/vertical
+  scrolling with sticky headers.
+
 ## Deferred features
 
-Intentionally deferred past Phase 14 and documented in
+Intentionally deferred past Phase 18 and documented in
 [docs/known-limitations.md](docs/known-limitations.md): password reset by
-email, bulk contact import, real email/SMS/WhatsApp providers (mock only),
-real payments, in-product user management UI. Each surface returns a stable
-"temporarily unavailable" response — never a silent success.
+email, bulk contact import, real payment-provider integration, in-product
+user management UI, webhook signature verification for the Twilio/SendGrid
+callback routes, an email-verification flow for staged email changes, and
+calling-session preservation on password change. Each surface either returns
+a stable "temporarily unavailable" response or stays inert until its
+configuration is provided — never a silent success.

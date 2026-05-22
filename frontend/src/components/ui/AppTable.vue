@@ -42,9 +42,7 @@ const errorMessage = computed(() => {
 
 const showLoadingState = computed(() => props.loading && !props.rows.length);
 const showErrorState = computed(() => !props.loading && Boolean(props.error) && !props.rows.length);
-const showEmptyState = computed(
-  () => !props.loading && !props.error && props.rows.length === 0,
-);
+const showEmptyState = computed(() => !props.loading && !props.error && props.rows.length === 0);
 
 const valueAt = (row, key) =>
   key.split('.').reduce((acc, segment) => {

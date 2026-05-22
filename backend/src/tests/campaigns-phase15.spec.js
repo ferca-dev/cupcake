@@ -435,6 +435,71 @@ describe('Campaign send uses the selected real providers', () => {
     expect(recipient.providerMessageId).toBe('unit-msg-1');
   });
 
+  it('composes recipient publicUrl from the configured FRONTEND_URL', async () => {
+    const { tenant, user } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
+    const { survey } = await buildPublishedSurvey({
+      tenantId: tenant._id,
+      ownerId: user._id,
+    });
+    await Contact.create({
+      tenantId: tenant._id,
+      fullName: 'URL Recipient',
+      email: 'urls@example.com',
+      status: 'active',
+    });
+
+    const fakeProvider = {
+      getProviderName: () => 'unit-test-email',
+      validateRecipient: (contact) => ({
+        ready: true,
+        reason: null,
+        recipient: contact.email,
+      }),
+      send: vi.fn().mockResolvedValue({
+        success: true,
+        provider: 'unit-test-email',
+        providerMessageId: 'msg-url',
+        reason: null,
+      }),
+    };
+
+    const { sendCampaign, createCampaign } =
+      await import('../modules/campaigns/campaign.service.js');
+    const campaign = await createCampaign({
+      tenantId: tenant._id.toString(),
+      actor: { id: user._id.toString() },
+      payload: {
+        name: 'URL composition',
+        surveyId: survey._id.toString(),
+        channels: ['email'],
+        target: {
+          contactIds: (await Contact.find({ tenantId: tenant._id })).map((c) => c._id.toString()),
+        },
+      },
+    });
+
+    // Inject a non-default FRONTEND_URL to prove the campaign service does
+    // not hardcode a host or accidentally fall back to APP_URL.
+    const customEnv = { ...loadEnv(), FRONTEND_URL: 'https://forms.example.com/' };
+    await sendCampaign({
+      id: campaign.id,
+      tenantId: tenant._id.toString(),
+      actor: { id: user._id.toString() },
+      providers: { email: fakeProvider, sms: fakeProvider, whatsapp: fakeProvider },
+      env: customEnv,
+    });
+
+    const payload = fakeProvider.send.mock.calls[0][0];
+    expect(payload.publicUrl).toMatch(
+      /^https:\/\/forms\.example\.com\/f\/customer-pulse\/r\/[A-Za-z0-9_-]+$/,
+    );
+    const stored = await CampaignRecipient.findOne({ campaignId: campaign.id });
+    expect(stored.publicUrl).toBe(payload.publicUrl);
+  });
+
   it('records normalized failure reasons returned by a provider', async () => {
     const { tenant, user } = await createTenantWithAdmin({
       tenantName: 'Acme',

@@ -196,11 +196,7 @@ const sidebarLabel = computed(() =>
         @click="toggleSidebarCollapse"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path
-            v-if="isSidebarCollapsed"
-            d="M5 5h3v14H5zM10 12l6-5v10z"
-            fill="currentColor"
-          />
+          <path v-if="isSidebarCollapsed" d="M5 5h3v14H5zM10 12l6-5v10z" fill="currentColor" />
           <path v-else d="M16 5h3v14h-3zM14 12 8 7v10z" fill="currentColor" />
         </svg>
       </button>

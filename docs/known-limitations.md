@@ -1,10 +1,9 @@
 # Known Limitations
 
-Cupcake completed its hardening phase (Phase 14) with the explicit decision to
-ship a small set of deferred features rather than hide them behind silent
-fallbacks. Each item below is intentionally incomplete, returns a stable but
-non-pretending API surface, and is tracked here so future work has an explicit
-starting point.
+Cupcake reached its final post-delivery hardening pass (Phase 18) with a small
+set of intentionally deferred features. Each item below is intentionally
+incomplete, returns a stable but non-pretending API surface, and is tracked
+here so future work has an explicit starting point.
 
 If a future change implements one of these, remove the entry from this file in
 the same pull request.
@@ -42,18 +41,24 @@ unavailable`. No password can be changed through this code path.
 - **Workaround**: contacts can be created one by one through the UI or via
   `POST /api/v1/contacts`.
 
-## Real messaging providers
+## Messaging provider follow-ups
 
 - **Modules**: `EMAIL_PROVIDER`, `SMS_PROVIDER`, `WHATSAPP_PROVIDER` (env vars).
-- **Behaviour today**: only the `mock` provider is wired. It logs the
-  outbound message, marks recipients as `sent`, and never contacts a real
-  upstream provider.
-- **Why deferred**: real providers require contracts, credentials, and
-  domain-specific compliance (DKIM/SPF/DMARC for email, sender registration
-  for SMS, Meta business account for WhatsApp). The adapter contract in
-  [docs/provider-architecture.md](provider-architecture.md) is already shaped
-  so a real provider can be plugged in without touching the campaign service.
-- **Workaround**: dev/test only; do not run a production send.
+- **Status today**: real adapters for Twilio SMS, Twilio WhatsApp, and Twilio
+  SendGrid email ship and are selected by environment variables. Provider
+  initialisation fails fast at startup when a real provider is selected
+  without the required credentials. Mock providers remain the default for
+  local development and tests.
+- **Deferred items**: signature verification for the public webhook routes
+  (`/api/v1/webhooks/twilio/messages` and `/api/v1/webhooks/sendgrid/events`)
+  is wired but disabled — the events update recipient documents but never
+  validate `X-Twilio-Signature` or `X-Twilio-Email-Event-Webhook-Signature`.
+  Production deployments must enable verification (and front the routes with
+  HTTPS plus the public webhook host) before exposing them. The webhook
+  secret env vars (`TWILIO_STATUS_CALLBACK_URL`,
+  `TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET`) exist for that work.
+- **Workaround**: keep `*_PROVIDER=mock` in any environment where real
+  delivery is not yet contracted.
 
 ## Real payments
 
@@ -78,3 +83,28 @@ unavailable`. No password can be changed through this code path.
   and is intentionally batched with it.
 - **Workaround**: super admins can create additional users by inserting them
   in MongoDB and assigning a `tenantId`.
+
+## Email verification for staged email changes
+
+- **Surface**: `PUT /api/v1/settings/profile` accepts an email change but
+  never overwrites `users.email` directly.
+- **Behaviour today**: the requested address is stored in
+  `users.pendingEmail`. No verification mail is sent. A super admin must
+  promote `pendingEmail` to `email` in MongoDB once ownership is confirmed
+  out of band.
+- **Why deferred**: a real email-verification token flow shares
+  infrastructure with the deferred password reset flow above.
+- **Workaround**: keep using the original email until the reset/verification
+  flow ships.
+
+## Password-change session preservation
+
+- **Surface**: `PUT /api/v1/settings/password`.
+- **Behaviour today**: a successful password change revokes every active
+  refresh token for the user, including the calling session. The user is
+  signed out everywhere and must log in again with the new password.
+- **Why deferred**: the service already accepts an `exemptRefreshTokenId`
+  argument so a future request handler can preserve the current session, but
+  the controller does not yet plumb the calling refresh-token id through.
+- **Workaround**: expect a re-login prompt immediately after a password
+  change. Other sessions are revoked, which is the intended security trade.

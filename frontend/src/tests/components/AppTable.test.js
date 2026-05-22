@@ -17,10 +17,7 @@ describe('AppTable', () => {
       },
     });
     expect(wrapper.findAll('th').map((th) => th.text())).toEqual(['Name', 'Email']);
-    expect(wrapper.findAll('tbody td').map((td) => td.text())).toEqual([
-      'Ada',
-      'ada@example.com',
-    ]);
+    expect(wrapper.findAll('tbody td').map((td) => td.text())).toEqual(['Ada', 'ada@example.com']);
   });
 
   it('renders the empty state when there are no rows', () => {

@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 14 — hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin panel) is feature-complete for the closed beta. Phase 14 focused on production fitness: targeted MongoDB indexes, rate-limit coverage on every auth endpoint, refresh-token reuse coverage, English documentation, a troubleshooting guide, and a published [production-readiness checklist](docs/production-readiness.md). Deferred features (real password-reset emails, bulk contact import, real messaging/payment providers) are documented openly in [docs/known-limitations.md](docs/known-limitations.md).
+Phase 18 — final post-delivery hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin panel) is feature-complete for the closed beta. Phases 15–17 added the campaign delivery surface backed by Twilio SMS/WhatsApp and Twilio SendGrid email (with environment-driven provider selection), per-survey response limits enforced from the published snapshot, the authenticated account-settings area, and the responsive dashboard shell with a collapsible sticky sidenav and sticky-header data grids. Phase 18 ran the final quality pass: full backend and frontend test runs, provider-config regression tests, prettier formatting parity, and documentation alignment with the current behaviour. Deferred features (real password-reset emails, bulk contact import, payment-provider integration) are documented openly in [docs/known-limitations.md](docs/known-limitations.md).
 
 ## Stack
 
@@ -169,7 +169,7 @@ Typical workflow once you have signed in:
 2. **Surveys** — sidebar → "Surveys". The drag-and-drop builder lets you add fields, configure validation, and define conditional logic. Drafts can be edited freely; publishing snapshots the schema into an immutable `survey_versions` record.
 3. **Publish a survey** — the "Publish" button validates the schema and exposes the public form at `/f/<slug>` (e.g. http://localhost:5173/f/customer-feedback). Anyone with the link can answer it, no authentication required.
 4. **Contacts and groups** — under "Contacts". Each contact needs at least one of email, phone, or WhatsApp to be reachable. Group contacts to target several at once.
-5. **Campaigns** — sidebar → "Campaigns". Pick a published survey, target contacts/groups, choose channels (email / SMS / WhatsApp). Bulk sends are tolerant: unreachable recipients are marked `skipped` with a clear reason, the rest are sent. Only the `mock` provider is wired today — see [docs/known-limitations.md](docs/known-limitations.md).
+5. **Campaigns** — sidebar → "Campaigns". Pick a published survey, target contacts/groups, choose channels (email / SMS / WhatsApp). Bulk sends are tolerant: unreachable recipients are marked `skipped` with a clear reason, the rest are sent. The default `mock` provider runs offline; set `EMAIL_PROVIDER=sendgrid`, `SMS_PROVIDER=twilio`, and/or `WHATSAPP_PROVIDER=twilio` plus the matching credentials to switch to real delivery — see [docs/provider-architecture.md](docs/provider-architecture.md).
 6. **Public responses** — open the form URL in an incognito window, fill it in, submit. The response shows up in the survey's stats and on the dashboard.
 7. **Templates** — start a new survey from a pre-built schema (NPS, customer satisfaction, etc.).
 8. **Billing history** — past invoices, refunds, and credits for the workspace.
@@ -190,7 +190,7 @@ pnpm format            # apply Prettier
 
 Tests do not require Docker. The backend suite uses `mongodb-memory-server`, which downloads the right Mongo binary on first run and caches it under `~/.cache/mongodb-binaries/`.
 
-Current coverage: 195 backend tests, 104 frontend tests.
+Current coverage: 240 backend tests, 130 frontend tests.
 
 ## Workspace scripts
 
@@ -326,6 +326,8 @@ Phase index:
 - `14` — Hardening.
 - `15` — Campaign delivery and Twilio providers.
 - `16` — Response limits and account settings.
+- `17` — Navigation and responsive data grids.
+- `18` — Final post-delivery hardening.
 
 ## Continuous integration
 

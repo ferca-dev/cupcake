@@ -10,9 +10,7 @@ describe('buildPublicSurveyUrl', () => {
   });
 
   it('lowercases slugs and trims whitespace', () => {
-    expect(buildPublicSurveyUrl(' Lead-Capture ')).toBe(
-      `${PUBLIC_FORM_BASE_URL}/f/lead-capture`,
-    );
+    expect(buildPublicSurveyUrl(' Lead-Capture ')).toBe(`${PUBLIC_FORM_BASE_URL}/f/lead-capture`);
   });
 
   it('returns null when no slug is provided', () => {

@@ -12,18 +12,23 @@ const buildRouter = () => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/app', component: DashboardLayout, name: 'shell', children: [
-        { path: '', name: 'dashboard.home', component: Empty },
-        { path: 'surveys', name: 'surveys.list', component: Empty },
-        { path: 'templates', name: 'templates.list', component: Empty },
-        { path: 'contacts', name: 'contacts.list', component: Empty },
-        { path: 'contact-groups', name: 'contact-groups.list', component: Empty },
-        { path: 'campaigns', name: 'campaigns.list', component: Empty },
-        { path: 'billing/transactions', name: 'billing.transactions', component: Empty },
-        { path: 'settings', name: 'settings.account', component: Empty },
-        { path: 'admin', name: 'admin.home', component: Empty },
-        { path: 'admin/tenants', name: 'admin.tenants.list', component: Empty },
-      ] },
+      {
+        path: '/app',
+        component: DashboardLayout,
+        name: 'shell',
+        children: [
+          { path: '', name: 'dashboard.home', component: Empty },
+          { path: 'surveys', name: 'surveys.list', component: Empty },
+          { path: 'templates', name: 'templates.list', component: Empty },
+          { path: 'contacts', name: 'contacts.list', component: Empty },
+          { path: 'contact-groups', name: 'contact-groups.list', component: Empty },
+          { path: 'campaigns', name: 'campaigns.list', component: Empty },
+          { path: 'billing/transactions', name: 'billing.transactions', component: Empty },
+          { path: 'settings', name: 'settings.account', component: Empty },
+          { path: 'admin', name: 'admin.home', component: Empty },
+          { path: 'admin/tenants', name: 'admin.tenants.list', component: Empty },
+        ],
+      },
       { path: '/auth/login', name: 'auth.login', component: Empty },
     ],
   });
@@ -85,13 +90,15 @@ describe('DashboardLayout', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     mediaState = { matches: true };
-    window.matchMedia = window.matchMedia || (() => ({
-      matches: true,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
-    }));
+    window.matchMedia =
+      window.matchMedia ||
+      (() => ({
+        matches: true,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+      }));
   });
 
   afterEach(() => {

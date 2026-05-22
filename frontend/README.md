@@ -37,11 +37,11 @@ Run any script from the repo root via `pnpm --filter ./frontend run <script>` or
 
 The frontend reads only the variables listed below. They are exposed through `src/config/env.js`; views and services must import from there instead of reading `import.meta.env` directly.
 
-| Variable                   | Required | Default                                              | Purpose                                                                                                            |
-| -------------------------- | -------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `VITE_APP_NAME`            | no       | `Cupcake`                                            | Runtime product name (do not hardcode).                                                                            |
-| `VITE_API_BASE_URL`        | no       | `http://localhost:4000/api/v1`                       | Base URL for every backend API request.                                                                            |
-| `VITE_PUBLIC_FORM_BASE_URL`| no       | `window.location.origin` (or `http://localhost:5173`) | Public form origin used to build shareable survey links (`/f/:slug`). Set this when the public form is hosted on a different domain than the dashboard. |
+| Variable                    | Required | Default                                               | Purpose                                                                                                                                                 |
+| --------------------------- | -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_APP_NAME`             | no       | `Cupcake`                                             | Runtime product name (do not hardcode).                                                                                                                 |
+| `VITE_API_BASE_URL`         | no       | `http://localhost:4000/api/v1`                        | Base URL for every backend API request.                                                                                                                 |
+| `VITE_PUBLIC_FORM_BASE_URL` | no       | `window.location.origin` (or `http://localhost:5173`) | Public form origin used to build shareable survey links (`/f/:slug`). Set this when the public form is hosted on a different domain than the dashboard. |
 
 The full template lives in [`.env.example`](./.env.example).
 
@@ -218,7 +218,10 @@ Props are documented inline at the top of each component file. Components rely o
 
 ```vue
 <AppTable
-  :columns="[{ key: 'name', label: 'Name' }, { key: 'actions', label: '', sticky: 'right' }]"
+  :columns="[
+    { key: 'name', label: 'Name' },
+    { key: 'actions', label: '', sticky: 'right' },
+  ]"
   :rows="rows"
   :loading="isLoading"
   :error="errorMessage"
