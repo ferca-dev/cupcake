@@ -37,6 +37,8 @@ This folder splits the original `promt.md` master prompt into execution-ready ph
 - `phase-21-media-storage-for-images.md`: image/media storage abstraction to avoid filling the app server, including validation, upload flows, and provider-ready storage.
 - `phase-22-centered-fill-width-layout-system.md`: global layout rules so content is centered while using available width consistently across large and small screens.
 - `phase-23-post-billing-reports-media-layout-hardening.md`: final verification pass for token billing, survey reports, media storage, and layout changes.
+- `phase-24-mercado-pago-online-payments.md`: Mercado Pago online payments for token purchases, subscriptions, payment webhooks, reminders, receipts, and billing emails.
+- `phase-25-post-mercado-pago-payment-hardening.md`: final verification pass for Mercado Pago payments, subscriptions, token crediting, webhooks, and payment emails.
 
 ## Execution rule
 

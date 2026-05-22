@@ -572,6 +572,33 @@ providers remain the default for local development and the test suite. See
 [`docs/provider-architecture.md`](../docs/provider-architecture.md) for the
 full configuration matrix and webhook contract.
 
+## Endpoints implemented in Phase 20
+
+Phase 20 adds per-survey statistical reports. All routes live under
+`/api/v1/surveys/:id/reports/` and require an authenticated bearer token plus
+the `responses.view` permission. Super admins must impersonate a tenant via
+`X-Impersonate-Tenant` — global cross-tenant reads are not exposed here.
+
+| Method | Path                                | Description                                                                                          |
+| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/surveys/:id/reports/overview`  | Funnel totals, completion/response rates, duration stats, first/last response.                       |
+| GET    | `/api/v1/surveys/:id/reports/channels`  | Per-channel funnel (email, SMS, WhatsApp, public link) with skipped reasons and responses.           |
+| GET    | `/api/v1/surveys/:id/reports/questions` | Per-question response/skip counts, option distributions, numeric stats, NPS, rating breakdowns.      |
+| GET    | `/api/v1/surveys/:id/reports/trends`    | Daily response totals plus per-channel breakdown.                                                    |
+| GET    | `/api/v1/surveys/:id/reports/drop-off`  | Page-level and field-level reach counts derived from the published schema.                           |
+| GET    | `/api/v1/surveys/:id/reports/timing`    | Average, median, min, max, p25/p75, trimmed mean plus duration / hourly / weekday distributions.     |
+| GET    | `/api/v1/surveys/:id/reports/versions`  | Each version with response counts and a `isCurrentlyPublished` flag.                                 |
+| GET    | `/api/v1/surveys/:id/reports/export`    | CSV (default) or JSON download of raw responses (default) or aggregate question summaries.           |
+
+Every endpoint accepts the same filter set: `from`, `to`, `channel`,
+`campaignId`, `surveyVersionId`, `completionStatus`. Aggregations are scoped
+to `survey.tenantId` once `loadSurveyForReport` resolves the survey, and the
+controller refuses to serve reports for surveys belonging to other tenants
+(`404`). Empty surveys return zero-filled report shapes so the frontend can
+render the same component tree end-to-end. The full reference, including
+how published-version schemas are used to label historical answers, lives in
+[`docs/survey-reports.md`](../docs/survey-reports.md).
+
 ## Security middleware
 
 Mounted in `src/app.js` in this order:

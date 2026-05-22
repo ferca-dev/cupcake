@@ -114,6 +114,10 @@ const editSurvey = (surveyId) => {
   router.push({ name: 'surveys.builder', params: { id: surveyId } });
 };
 
+const openReports = (surveyId) => {
+  router.push({ name: 'surveys.reports', params: { id: surveyId } });
+};
+
 const formatDate = (value) => {
   if (!value) return '—';
   try {
@@ -216,9 +220,14 @@ const copyPublicLink = async (url) => {
           </span>
         </template>
         <template #cell:actions="{ row }">
-          <AppButton size="sm" variant="secondary" @click="editSurvey(row.id)">
-            {{ t('surveys.list.open') }}
-          </AppButton>
+          <div class="surveys-list__actions">
+            <AppButton size="sm" variant="secondary" @click="editSurvey(row.id)">
+              {{ t('surveys.list.open') }}
+            </AppButton>
+            <AppButton size="sm" variant="ghost" @click="openReports(row.id)">
+              {{ t('surveys.list.reports') }}
+            </AppButton>
+          </div>
         </template>
       </AppTable>
     </AppCard>
@@ -345,5 +354,11 @@ const copyPublicLink = async (url) => {
   color: var(--color-text-subtle);
   font-size: var(--font-size-sm);
   font-style: italic;
+}
+
+.surveys-list__actions {
+  display: inline-flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
 }
 </style>

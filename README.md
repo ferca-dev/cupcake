@@ -248,6 +248,8 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
     naming-conventions.md           # File, module, route, component, store, env naming
     production-readiness.md         # Pre-deploy checklist
     provider-architecture.md        # Campaign messaging adapter contract
+    response-limits-and-settings.md # Response-limit settings (Phase 16)
+    survey-reports.md               # Per-survey statistical reports (Phase 20)
     templates.md                    # Templates module (Phase 11)
     troubleshooting.md              # Local issues, env, seeders, smoke test
   prompts/                          # Phase prompts and shared context
@@ -296,6 +298,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 14.
 - [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
 - [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md) — response-limit configuration and account-settings API.
+- [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
 
 ## Phase workflow
 

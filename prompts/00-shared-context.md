@@ -611,6 +611,53 @@ Suggested token entities:
 - `tenant_send_limits`
 - `token_purchases`
 
+## Mercado Pago Online Payment Rules
+
+Cupcake must use Mercado Pago for online payments.
+
+Payment use cases:
+
+- One-time token package purchases.
+- Recurring subscriptions for plans or token allowances.
+- Subscription payment retries and failed-payment handling.
+- Payment confirmation emails.
+- Payment reminder emails.
+- Low-token balance and renewal reminder emails.
+
+Integration rules:
+
+- Use Mercado Pago Checkout Pro for one-time token package purchases unless a later phase documents a stronger reason for another Mercado Pago product.
+- Use Mercado Pago Subscriptions/Preapproval for recurring subscriptions.
+- Use Mercado Pago webhooks for payment, subscription, preapproval plan, and authorized payment events where supported.
+- Backend must be the source of truth for payment state, token crediting, and subscription status.
+- Never credit tokens from a frontend redirect alone.
+- Credit tokens only after a trusted backend confirmation, normally via webhook plus payment status verification through Mercado Pago API.
+- Webhook processing must be idempotent.
+- Payment records must store Mercado Pago IDs, status, external reference, tenant, package/subscription reference, amount, currency, and raw normalized metadata.
+- The `external_reference` or equivalent reference must map Mercado Pago events back to Cupcake tenant purchases or subscriptions.
+- Use official Mercado Pago SDKs or direct API calls documented by Mercado Pago.
+- Keep test/sandbox credentials separate from production credentials.
+- Never log Mercado Pago access tokens, webhook secrets, payer full payment details, card data, or raw authorization headers.
+
+Payment email rules:
+
+- Payment emails must use the configured email provider, preferably the Twilio SendGrid provider from the campaign delivery phase.
+- Send email when a token purchase is pending, approved, rejected, cancelled, refunded, or requires manual review.
+- Send email for subscription created, activated, paused, cancelled, renewal upcoming, payment approved, payment failed, and retry reminders.
+- Send low-token balance reminders based on admin-configurable thresholds.
+- Emails must be idempotent and backed by a notification log so webhooks do not send duplicates.
+- User-facing email content must be i18n-ready.
+
+Suggested payment entities:
+
+- `payment_providers`
+- `payment_transactions`
+- `payment_webhook_events`
+- `subscription_plans`
+- `tenant_subscriptions`
+- `subscription_invoices`
+- `payment_notifications`
+
 ## Survey Statistical Reporting Rules
 
 Cupcake must provide per-survey statistical reports.
@@ -778,6 +825,18 @@ DEFAULT_EMAIL_TOKEN_COST=1
 DEFAULT_SMS_TOKEN_COST=2
 DEFAULT_WHATSAPP_TOKEN_COST=3
 TOKEN_FAILED_SEND_POLICY="refund"
+
+MERCADOPAGO_ENV="sandbox"
+MERCADOPAGO_PUBLIC_KEY=""
+MERCADOPAGO_ACCESS_TOKEN=""
+MERCADOPAGO_WEBHOOK_SECRET=""
+MERCADOPAGO_SUCCESS_URL="http://localhost:5173/billing/payment/success"
+MERCADOPAGO_FAILURE_URL="http://localhost:5173/billing/payment/failure"
+MERCADOPAGO_PENDING_URL="http://localhost:5173/billing/payment/pending"
+MERCADOPAGO_NOTIFICATION_URL="http://localhost:4000/api/v1/webhooks/mercadopago"
+MERCADOPAGO_STATEMENT_DESCRIPTOR="CUPCAKE"
+PAYMENT_REMINDER_DAYS_BEFORE=3
+LOW_TOKEN_BALANCE_THRESHOLD=100
 
 STORAGE_DRIVER="local"
 STORAGE_PUBLIC_BASE_URL="http://localhost:4000/uploads"

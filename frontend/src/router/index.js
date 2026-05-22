@@ -14,6 +14,7 @@ import DashboardView from '../views/dashboard/DashboardView.vue';
 import SurveyListView from '../views/surveys/SurveyListView.vue';
 import SurveyBuilderView from '../views/surveys/SurveyBuilderView.vue';
 import SurveyStatsView from '../features/dashboard/SurveyStatsView.vue';
+import SurveyReportsView from '../features/reports/SurveyReportsView.vue';
 import ContactListView from '../views/contacts/ContactListView.vue';
 import ContactGroupListView from '../views/contacts/ContactGroupListView.vue';
 import CampaignListView from '../views/campaigns/CampaignListView.vue';
@@ -104,6 +105,16 @@ export const routes = [
           title: 'Survey stats',
           requiresAuth: true,
           permissions: ['dashboard.view'],
+        },
+      },
+      {
+        path: 'surveys/:id/reports',
+        name: 'surveys.reports',
+        component: SurveyReportsView,
+        meta: {
+          title: 'Survey reports',
+          requiresAuth: true,
+          permissions: ['responses.view'],
         },
       },
       {
