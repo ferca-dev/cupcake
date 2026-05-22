@@ -49,6 +49,29 @@ export const insertRecipients = async (recipients) => {
 export const removeRecipientsByCampaign = async ({ campaignId, tenantId }) =>
   CampaignRecipient.deleteMany(tenantFilter({ campaignId }, tenantId));
 
+/**
+ * Bulk transition recipients matching `fromStatus` to `toStatus`, optionally
+ * stamping a `failureReason`. Used by the preflight-blocked path to flip
+ * every pending recipient to `failed` in a single write rather than
+ * iterating, so no partial state leaks if the request is cancelled.
+ */
+export const markCampaignRecipientsStatus = async ({
+  campaignId,
+  tenantId,
+  fromStatus,
+  toStatus,
+  failureReason = null,
+}) =>
+  CampaignRecipient.updateMany(
+    tenantFilter({ campaignId, status: fromStatus }, tenantId),
+    {
+      $set: {
+        status: toStatus,
+        failureReason,
+      },
+    },
+  );
+
 export const findRecipientByProviderMessageId = async ({ providerMessageId, channel = null }) => {
   if (!providerMessageId) return null;
   const filter = { providerMessageId };

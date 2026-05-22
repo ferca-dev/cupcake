@@ -9,6 +9,7 @@ import { publicFormsRouter } from '../modules/public-forms/public-form.routes.js
 import { dashboardRouter } from '../modules/dashboard/dashboard.routes.js';
 import { templatesRouter } from '../modules/templates/template.routes.js';
 import { transactionsRouter } from '../modules/transactions/transaction.routes.js';
+import { tokenBillingRouter } from '../modules/tokens/token-billing.routes.js';
 import { adminRouter } from '../modules/admin/admin.routes.js';
 import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
@@ -77,6 +78,20 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/templates/:id/create-survey',
         '/api/v1/transactions',
         '/api/v1/transactions/:id',
+        '/api/v1/billing/tokens/balance',
+        '/api/v1/billing/tokens/ledger',
+        '/api/v1/billing/token-packages',
+        '/api/v1/billing/token-purchases',
+        '/api/v1/admin/token-packages',
+        '/api/v1/admin/token-packages/:id',
+        '/api/v1/admin/token-packages/:id/status',
+        '/api/v1/admin/channel-pricing',
+        '/api/v1/admin/tenants/:tenantId/token-wallet',
+        '/api/v1/admin/tenants/:tenantId/send-limits',
+        '/api/v1/admin/tenants/:tenantId/token-adjustments',
+        '/api/v1/admin/token-purchases',
+        '/api/v1/admin/token-purchases/:id/approve',
+        '/api/v1/admin/token-purchases/:id/reject',
         '/api/v1/webhooks/twilio/messages',
         '/api/v1/webhooks/sendgrid/events',
       ],
@@ -98,4 +113,5 @@ apiV1Router.use('/admin', adminRouter);
 apiV1Router.use('/settings', settingsRouter);
 apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
+apiV1Router.use('/billing', tokenBillingRouter);
 apiV1Router.use('/webhooks', webhooksRouter);

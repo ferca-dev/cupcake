@@ -14,6 +14,7 @@ import {
 } from '../../common/errors/index.js';
 import { loadEnv } from '../../config/env.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
+import * as tokenService from '../tokens/token.service.js';
 
 export const CAMPAIGN_AUDIT_ACTIONS = Object.freeze({
   CREATED: 'campaign.created',
@@ -62,6 +63,10 @@ const toPublicCampaign = (campaign) => ({
     failedCount: campaign.summary?.failedCount ?? 0,
     skippedCount: campaign.summary?.skippedCount ?? 0,
     skippedReasons: campaign.summary?.skippedReasons ? { ...campaign.summary.skippedReasons } : {},
+    tokenCost: campaign.summary?.tokenCost ?? 0,
+    tokensCharged: campaign.summary?.tokensCharged ?? 0,
+    tokensRefunded: campaign.summary?.tokensRefunded ?? 0,
+    tokensHeld: campaign.summary?.tokensHeld ?? 0,
   },
   status: campaign.status,
   createdBy: campaign.createdBy?.toString() ?? null,
@@ -376,9 +381,16 @@ const dispatchPendingRecipients = async ({
   survey,
   campaign,
   contactsById,
+  pricing,
+  tenantId,
+  actor,
+  failedSendPolicy,
 }) => {
   let sentCount = 0;
   let failedCount = 0;
+  let tokensCharged = 0;
+  let tokensRefunded = 0;
+  let tokensHeld = 0;
 
   for (const doc of recipientDocs) {
     if (doc.status !== 'pending') continue;
@@ -392,10 +404,39 @@ const dispatchPendingRecipients = async ({
       continue;
     }
 
+    // Atomically debit the wallet before any provider call. A concurrent
+    // send may have drained the balance since the preflight check, so the
+    // debit can still fail here — that is the only place we are allowed to
+    // observe an insufficient balance during dispatch.
+    const cost = pricing[doc.channel] ?? 0;
+    let debitEntry = null;
+    if (cost > 0) {
+      const debit = await tokenService.debitForRecipient({
+        tenantId,
+        recipientId: doc._id,
+        campaignId: campaign._id,
+        channel: doc.channel,
+        tokensPerRecipient: cost,
+        actor,
+      });
+      if (!debit.debited) {
+        doc.status = 'failed';
+        doc.failureReason = 'insufficient_balance';
+        doc.provider = provider.getProviderName();
+        await doc.save();
+        failedCount += 1;
+        continue;
+      }
+      debitEntry = debit.entry;
+      tokensCharged += cost;
+    }
+
     const contactId = doc.contactId ? doc.contactId.toString() : null;
     const contact = contactId ? (contactsById.get(contactId) ?? null) : null;
+    let providerResult = null;
+    let providerError = null;
     try {
-      const result = await provider.send({
+      providerResult = await provider.send({
         channel: doc.channel,
         recipient: doc.recipient,
         submissionToken: doc.submissionToken,
@@ -411,31 +452,55 @@ const dispatchPendingRecipients = async ({
           slug: survey.slug,
         },
       });
-      if (result.success) {
-        doc.status = 'sent';
-        doc.sentAt = new Date();
-        doc.failureReason = null;
-        doc.provider = result.provider ?? provider.getProviderName();
-        doc.providerMessageId = result.providerMessageId ?? null;
-        await doc.save();
-        sentCount += 1;
-      } else {
-        doc.status = 'failed';
-        doc.failureReason = result.reason ?? 'provider_failure';
-        doc.provider = result.provider ?? provider.getProviderName();
-        doc.providerMessageId = result.providerMessageId ?? null;
-        await doc.save();
-        failedCount += 1;
-      }
     } catch (err) {
-      doc.status = 'failed';
-      doc.failureReason = err?.message ?? 'provider_error';
+      providerError = err;
+    }
+
+    const isSuccess = providerResult?.success === true && !providerError;
+    if (isSuccess) {
+      doc.status = 'sent';
+      doc.sentAt = new Date();
+      doc.failureReason = null;
+      doc.provider = providerResult.provider ?? provider.getProviderName();
+      doc.providerMessageId = providerResult.providerMessageId ?? null;
       await doc.save();
-      failedCount += 1;
+      sentCount += 1;
+      continue;
+    }
+
+    // Provider failure path. Apply the configured policy to decide whether
+    // the previously debited tokens should be refunded, held, or kept.
+    const reason = providerError
+      ? (providerError.message ?? 'provider_error')
+      : (providerResult?.reason ?? 'provider_failure');
+    doc.status = 'failed';
+    doc.failureReason = reason;
+    doc.provider = providerResult?.provider ?? provider.getProviderName();
+    doc.providerMessageId = providerResult?.providerMessageId ?? null;
+    await doc.save();
+    failedCount += 1;
+
+    if (cost > 0 && debitEntry) {
+      if (failedSendPolicy === 'refund') {
+        await tokenService.refundForRecipient({
+          tenantId,
+          recipientId: doc._id,
+          campaignId: campaign._id,
+          channel: doc.channel,
+          amount: cost,
+          actor,
+          reason,
+          metadata: { originalLedgerEntryId: debitEntry._id?.toString?.() ?? null },
+        });
+        tokensRefunded += cost;
+      } else if (failedSendPolicy === 'hold') {
+        tokensHeld += cost;
+      }
+      // policy === 'charge' is a no-op: keep the debit.
     }
   }
 
-  return { sentCount, failedCount };
+  return { sentCount, failedCount, tokensCharged, tokensRefunded, tokensHeld };
 };
 
 export const sendCampaign = async ({
@@ -486,13 +551,69 @@ export const sendCampaign = async ({
   });
 
   const insertedDocs = await repo.insertRecipients(recipients);
+
+  // Aggregate the per-channel pending count from the inserted plan. Skipped
+  // recipients are excluded here so they never consume tokens or count
+  // toward the tenant send limits.
+  const pendingByChannel = { email: 0, sms: 0, whatsapp: 0 };
+  for (const doc of insertedDocs) {
+    if (doc.status === 'pending') pendingByChannel[doc.channel] = (pendingByChannel[doc.channel] ?? 0) + 1;
+  }
+
+  await tokenService.ensureWallet({ tenantId: tenant, env });
+  const preflight = await tokenService.preflightCampaignSend({
+    tenantId: tenant,
+    channelCounts: pendingByChannel,
+    env,
+  });
+
+  if (!preflight.allowed) {
+    const blockReason =
+      preflight.reasons.find((r) => r.code === 'send_limit_exceeded')?.code ??
+      preflight.reasons[0]?.code ??
+      'preflight_blocked';
+    const failureReason =
+      blockReason === 'send_limit_exceeded' ? 'send_limit_exceeded' : 'insufficient_balance';
+    await repo.markCampaignRecipientsStatus({
+      campaignId: campaign._id,
+      tenantId: tenant,
+      fromStatus: 'pending',
+      toStatus: 'failed',
+      failureReason,
+    });
+    campaign.status = 'failed';
+    campaign.completedAt = new Date();
+    campaign.summary = {
+      selectedCount: summary.selectedCount,
+      validCount: summary.validCount,
+      sentCount: 0,
+      failedCount: pendingByChannel.email + pendingByChannel.sms + pendingByChannel.whatsapp,
+      skippedCount: summary.skippedCount,
+      skippedReasons: summary.skippedReasons,
+      tokenCost: preflight.totalCost,
+      tokensCharged: 0,
+      tokensRefunded: 0,
+      tokensHeld: 0,
+    };
+    await campaign.save();
+
+    throw new ConflictError('Campaign cannot be sent', [
+      { reasons: preflight.reasons, balance: preflight.balance, totalCost: preflight.totalCost },
+    ]);
+  }
+
   const contactsById = new Map(contacts.map((contact) => [contact._id.toString(), contact]));
+  const failedSendPolicy = tokenService.resolveFailedSendPolicy({ env });
   const dispatch = await dispatchPendingRecipients({
     recipientDocs: insertedDocs,
     providers: providerSet,
     survey,
     campaign,
     contactsById,
+    pricing: preflight.pricing,
+    tenantId: tenant,
+    actor,
+    failedSendPolicy,
   });
 
   const completedAt = new Date();
@@ -518,8 +639,14 @@ export const sendCampaign = async ({
     failedCount: dispatch.failedCount,
     skippedCount: summary.skippedCount,
     skippedReasons: summary.skippedReasons,
+    tokenCost: preflight.totalCost,
+    tokensCharged: dispatch.tokensCharged,
+    tokensRefunded: dispatch.tokensRefunded,
+    tokensHeld: dispatch.tokensHeld,
   };
   await campaign.save();
+
+  const balanceAfter = await tokenService.getBalance({ tenantId: tenant });
 
   await audit(CAMPAIGN_AUDIT_ACTIONS.SENT, {
     actor,
@@ -531,6 +658,11 @@ export const sendCampaign = async ({
       sentCount: dispatch.sentCount,
       failedCount: dispatch.failedCount,
       skippedCount: summary.skippedCount,
+      tokenCost: preflight.totalCost,
+      tokensCharged: dispatch.tokensCharged,
+      tokensRefunded: dispatch.tokensRefunded,
+      tokensHeld: dispatch.tokensHeld,
+      failedSendPolicy,
       status,
     },
     ip,
@@ -546,6 +678,19 @@ export const sendCampaign = async ({
       failedCount: dispatch.failedCount,
       skippedCount: summary.skippedCount,
       skippedReasons: summary.skippedReasons,
+      tokenCost: preflight.totalCost,
+      tokensCharged: dispatch.tokensCharged,
+      tokensRefunded: dispatch.tokensRefunded,
+      tokensHeld: dispatch.tokensHeld,
+    },
+    tokens: {
+      pricing: preflight.pricing,
+      perChannelCost: preflight.perChannelCost,
+      totalCost: preflight.totalCost,
+      balanceBefore: preflight.balance,
+      balanceAfter: balanceAfter.balance,
+      limitWarnings: preflight.limitWarnings,
+      failedSendPolicy,
     },
   };
 };
@@ -592,6 +737,8 @@ export const getReport = async ({ id, tenantId }) => {
     clicked: statusCounts.clicked ?? 0,
   };
 
+  const wallet = await tokenService.getBalance({ tenantId: tenant });
+
   return {
     campaignId: campaign._id.toString(),
     status: campaign.status,
@@ -599,6 +746,13 @@ export const getReport = async ({ id, tenantId }) => {
     validCount: campaign.summary?.validCount ?? 0,
     counts,
     skippedReasons: skipReasons,
+    tokens: {
+      tokenCost: campaign.summary?.tokenCost ?? 0,
+      tokensCharged: campaign.summary?.tokensCharged ?? 0,
+      tokensRefunded: campaign.summary?.tokensRefunded ?? 0,
+      tokensHeld: campaign.summary?.tokensHeld ?? 0,
+      remainingBalance: wallet.balance,
+    },
     startedAt: campaign.startedAt ?? null,
     completedAt: campaign.completedAt ?? null,
   };

@@ -11,3 +11,14 @@ process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? 'test-access-se
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'test-refresh-secret-value-1234';
 process.env.CORS_ORIGIN = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
 process.env.LOG_LEVEL = process.env.LOG_LEVEL ?? 'silent';
+
+// Token wallet defaults for tests. The default starting balance is set high
+// so the long-standing campaign tests (written before the wallet existed)
+// keep sending without explicit wallet setup. Token-specific tests override
+// this by creating wallets with the balances they need.
+process.env.DEFAULT_TOKEN_BALANCE = process.env.DEFAULT_TOKEN_BALANCE ?? '1000000';
+process.env.DEFAULT_EMAIL_TOKEN_COST = process.env.DEFAULT_EMAIL_TOKEN_COST ?? '1';
+process.env.DEFAULT_SMS_TOKEN_COST = process.env.DEFAULT_SMS_TOKEN_COST ?? '2';
+process.env.DEFAULT_WHATSAPP_TOKEN_COST = process.env.DEFAULT_WHATSAPP_TOKEN_COST ?? '3';
+process.env.TOKEN_FAILED_SEND_POLICY = process.env.TOKEN_FAILED_SEND_POLICY ?? 'refund';
+process.env.TOKEN_PURCHASE_MODE = process.env.TOKEN_PURCHASE_MODE ?? 'manual';

@@ -52,6 +52,30 @@ const envSchema = z.object({
   TWILIO_SENDGRID_FROM_NAME: z.string().trim().default('Cupcake'),
   TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET: z.string().trim().default(''),
 
+  // Token wallet / billing configuration. Tokens are internal prepaid
+  // credits, not cryptocurrency. The mode controls how purchases settle:
+  //   - `manual`: clients submit purchase requests, a super admin approves
+  //     them, and the wallet is credited on approval. No real payment is
+  //     captured.
+  //   - any other non-empty value: name of a future payment provider; the
+  //     model already stores the provider/reference so wiring it later is a
+  //     code-only change.
+  TOKEN_PURCHASE_MODE: stringWithDefault('manual'),
+  DEFAULT_TOKEN_BALANCE: z.coerce.number().int().min(0).default(0),
+  DEFAULT_EMAIL_TOKEN_COST: z.coerce.number().int().min(1).default(1),
+  DEFAULT_SMS_TOKEN_COST: z.coerce.number().int().min(1).default(2),
+  DEFAULT_WHATSAPP_TOKEN_COST: z.coerce.number().int().min(1).default(3),
+  // Policy applied when a provider call fails after the wallet was already
+  // debited:
+  //   - `refund` (default): immediately credit the tokens back via a refund
+  //     ledger entry. Safe for retries and for transient provider outages.
+  //   - `charge`: keep the debit. Use when the upstream provider attempts
+  //     delivery and the cost is unavoidable.
+  //   - `hold`: keep the debit and surface the recipient for manual review.
+  TOKEN_FAILED_SEND_POLICY: z
+    .enum(['refund', 'charge', 'hold'])
+    .default('refund'),
+
   CORS_ORIGIN: stringWithDefault('http://localhost:5173'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),

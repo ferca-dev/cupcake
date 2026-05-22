@@ -32,6 +32,11 @@ This folder splits the original `promt.md` master prompt into execution-ready ph
 - `phase-16-response-rules-and-account-settings.md`: add one-response limits by device or IP and create account/settings screens for profile, password, language, and preferences.
 - `phase-17-navigation-and-responsive-data-grids.md`: add collapsible sidenav, sticky top nav, public survey open action, large-screen responsiveness, and fixed-header responsive tables.
 - `phase-18-final-post-delivery-hardening.md`: final verification pass after Twilio delivery, response limits, settings, navigation, and responsive table work.
+- `phase-19-token-wallet-send-limits-and-admin-pricing.md`: admin-configurable send limits, token wallet, channel token costs, purchase flow preparation, and tenant balance enforcement.
+- `phase-20-survey-statistical-reports.md`: per-survey statistical reports with response, completion, channel, question, timing, drop-off, and quality metrics.
+- `phase-21-media-storage-for-images.md`: image/media storage abstraction to avoid filling the app server, including validation, upload flows, and provider-ready storage.
+- `phase-22-centered-fill-width-layout-system.md`: global layout rules so content is centered while using available width consistently across large and small screens.
+- `phase-23-post-billing-reports-media-layout-hardening.md`: final verification pass for token billing, survey reports, media storage, and layout changes.
 
 ## Execution rule
 

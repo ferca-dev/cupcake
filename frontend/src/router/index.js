@@ -20,10 +20,12 @@ import CampaignListView from '../views/campaigns/CampaignListView.vue';
 import CampaignDetailView from '../views/campaigns/CampaignDetailView.vue';
 import TemplateListView from '../views/templates/TemplateListView.vue';
 import TransactionHistoryView from '../views/billing/TransactionHistoryView.vue';
+import TokenWalletView from '../views/billing/TokenWalletView.vue';
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue';
 import TenantListView from '../views/admin/TenantListView.vue';
 import TenantCreateView from '../views/admin/TenantCreateView.vue';
 import TenantDetailView from '../views/admin/TenantDetailView.vue';
+import TokenSettingsView from '../views/admin/TokenSettingsView.vue';
 import SettingsView from '../views/settings/SettingsView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
@@ -165,6 +167,16 @@ export const routes = [
         },
       },
       {
+        path: 'billing/tokens',
+        name: 'billing.tokens',
+        component: TokenWalletView,
+        meta: {
+          title: 'Token wallet',
+          requiresAuth: true,
+          permissions: ['billing.view'],
+        },
+      },
+      {
         path: 'settings',
         name: 'settings.account',
         component: SettingsView,
@@ -209,6 +221,16 @@ export const routes = [
         component: TenantDetailView,
         meta: {
           title: 'Client',
+          requiresAuth: true,
+          roles: ['super_admin'],
+        },
+      },
+      {
+        path: 'admin/tokens',
+        name: 'admin.tokens',
+        component: TokenSettingsView,
+        meta: {
+          title: 'Token settings',
           requiresAuth: true,
           roles: ['super_admin'],
         },

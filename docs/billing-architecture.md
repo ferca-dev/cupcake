@@ -154,3 +154,139 @@ Manual verification:
    tenant.
 4. Create a fresh tenant with no transactions and confirm the empty state
    renders without errors.
+
+## Token Wallet, Send Limits, and Admin Pricing (Phase 19)
+
+Phase 19 layers an internal prepaid-token economy on top of the existing
+billing primitives. Tokens are **not** cryptocurrency — they are accounting
+credits Cupcake uses to meter and limit channel sends.
+
+### Domain entities
+
+All models live under
+[`backend/src/modules/tokens/`](../backend/src/modules/tokens):
+
+- `token_wallets` — one document per tenant. Stores the live integer
+  balance plus lifetime credited/debited/refunded counters used for
+  reconciliation. The wallet document is updated through atomic
+  `findOneAndUpdate` operations so concurrent campaigns cannot double-spend.
+- `token_ledger_entries` — immutable history. Every change to a wallet
+  produces exactly one entry: `credit`, `debit`, `refund`,
+  `adjustment_credit`, `adjustment_debit`, or `purchase`. Entries record the
+  amount (always non-negative — the sign comes from `type`), the
+  `balanceAfter`, and a `referenceType + referenceId` pointer back to the
+  triggering campaign recipient, manual adjustment, or purchase.
+- `token_packages` — super-admin-curated catalogue of token bundles. Each
+  package stores `tokens`, `priceMinor`, and `currency` (ISO 4217). Prices
+  use integer minor units, matching the transaction model.
+- `channel_pricing_rules` — one document per channel
+  (`email | sms | whatsapp`) defining `tokensPerRecipient`. The default
+  rate comes from `DEFAULT_*_TOKEN_COST` env vars. Updating a rule never
+  rewrites historical ledger entries; each entry's `metadata.tokensPerRecipient`
+  captures the rate at debit time.
+- `tenant_send_limits` — per-tenant monthly caps. `monthlyTotal` and the
+  three per-channel fields can each be `null` (no limit). `enforcement` is
+  `hard` (block the send) or `soft` (allow but flag).
+- `token_purchases` — purchase requests. Until a real payment provider is
+  wired in, every request enters in `pending` and a super admin approves or
+  rejects it. Approval atomically credits the wallet and records a
+  `purchase` ledger entry. The model already stores `paymentProvider` /
+  `paymentReference` so plugging in a real provider is additive.
+- `monthly_send_usage` — denormalized per-tenant counters keyed by
+  `YYYY-MM`. They are `$inc`'d on every debit/refund so send-limit checks
+  stay O(1) without scanning the ledger.
+
+### Sending pipeline
+
+[`campaign.service.js`](../backend/src/modules/campaigns/campaign.service.js)
+runs the preflight + dispatch with these guarantees:
+
+1. **Plan** — `planRecipients` produces one record per contact × channel.
+   Skipped contacts (missing/invalid addresses, blocked, archived,
+   duplicates) are persisted with `status: 'skipped'` and never consume
+   tokens or send-limit quota.
+2. **Preflight** — `preflightCampaignSend` totals the per-channel cost,
+   checks the live wallet balance, and checks the projected monthly usage
+   against the tenant's limits. If a check fails, every pending recipient
+   is flipped to `failed` with `failureReason: 'insufficient_balance'` or
+   `'send_limit_exceeded'`, the campaign status becomes `failed`, and the
+   service throws a `ConflictError` *before* any provider call.
+3. **Atomic debit** — for each pending recipient,
+   `tokenService.debitForRecipient` runs a single `findOneAndUpdate` with
+   `balance: { $gte: cost }`. If a concurrent send drained the wallet, the
+   update returns `null`, the recipient is marked failed with
+   `'insufficient_balance'`, and dispatch continues with the rest.
+4. **Provider call** — only runs when the debit succeeded.
+5. **Failure policy** — controlled by `TOKEN_FAILED_SEND_POLICY`:
+   - `refund` (default): a `refund` ledger entry restores the cost.
+   - `charge`: the debit stays.
+   - `hold`: the debit stays and the campaign report surfaces the held
+     amount for manual review.
+6. **Summary** — the campaign summary stores `tokenCost`, `tokensCharged`,
+   `tokensRefunded`, and `tokensHeld`. The `/campaigns/:id/report` payload
+   adds `tokens.remainingBalance` so the UI can show the post-run balance
+   without a second round-trip.
+
+### API surface
+
+Super admin (under `/api/v1/admin/`):
+
+- `GET/POST/PUT /token-packages`, `PATCH /token-packages/:id/status`
+- `GET/PUT /channel-pricing`
+- `GET /tenants/:tenantId/token-wallet`
+- `GET/PUT /tenants/:tenantId/send-limits`
+- `POST /tenants/:tenantId/token-adjustments`
+- `GET /token-purchases`, `POST /token-purchases/:id/approve|reject`
+
+Client (under `/api/v1/billing/`, requires `billing.view`):
+
+- `GET /tokens/balance` (wallet + pricing + limits + monthly usage)
+- `GET /tokens/ledger`
+- `GET /token-packages`
+- `GET/POST /token-purchases`
+
+### Audit trail
+
+Every super-admin mutation calls `recordAuditEvent` with an action under the
+`tokens.*` namespace (`tokens.package.created`, `tokens.adjustment.credit`,
+`tokens.purchase.approved`, …). Campaign sends record `campaign.sent` with
+token totals in `metadata`, so the existing audit log surfaces both
+configuration changes and runtime spend.
+
+### Configuration
+
+The token economy is configured via these env vars (see
+[`.env.example` defaults in `config/env.js`](../backend/src/config/env.js)):
+
+```
+TOKEN_PURCHASE_MODE=manual         # `manual` keeps purchases in pending state for super-admin approval
+DEFAULT_TOKEN_BALANCE=0            # tokens granted when a tenant wallet is first created
+DEFAULT_EMAIL_TOKEN_COST=1
+DEFAULT_SMS_TOKEN_COST=2
+DEFAULT_WHATSAPP_TOKEN_COST=3
+TOKEN_FAILED_SEND_POLICY=refund    # refund | charge | hold
+```
+
+Tests under
+[`backend/src/tests/tokens.spec.js`](../backend/src/tests/tokens.spec.js)
+cover balance checks, atomic debits, skipped recipients, provider failures,
+refunds, monthly send-limit enforcement, and admin-only configuration. The
+existing campaign suite (`campaigns.spec.js`) keeps passing because the
+default test wallet balance is intentionally high — token-specific behaviour
+is asserted in the dedicated suite.
+
+### Manual verification
+
+1. `pnpm seed` to seed packages, channel pricing rules, a starter wallet,
+   and a pending purchase request.
+2. Sign in as the super admin and open `/app/admin/tokens` to configure
+   packages, pricing, and the demo tenant's limits/adjustments.
+3. Sign in as the demo client and open `/app/billing/tokens` to view the
+   balance, request a package, and see the ledger.
+4. Send a campaign to a mix of valid, missing-email, and `fail@example.com`
+   contacts and inspect the report: skipped recipients consume no tokens,
+   provider failures produce a refund ledger entry, and the remaining
+   balance matches the wallet.
+5. Set a tenant monthly cap of 1, queue 2 valid recipients, and send: the
+   API responds with 409 and every pending recipient ends in `failed`
+   without touching the wallet.

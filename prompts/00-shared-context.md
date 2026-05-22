@@ -576,6 +576,110 @@ Provider requirements:
 - Webhook/status callback routes may be prepared, but must be clearly documented if not fully active.
 - Never log Twilio auth tokens, SendGrid API keys, message bodies containing sensitive respondent data, or full recipient lists.
 
+## Token Wallet, Send Limits, and Admin Pricing Rules
+
+Cupcake must include an admin-controlled token system for paid message sending.
+
+Terminology:
+
+- Tokens are internal prepaid credits, not cryptocurrency.
+- Tenants buy tokens.
+- Tokens can be spent on email, SMS, and WhatsApp sends.
+- Admins configure how many tokens each channel costs.
+- Admins configure token package prices and tenant send limits.
+
+Rules:
+
+- Only super admins can configure channel token costs, token package pricing, tenant limits, and manual token adjustments.
+- Clients can view token balance, token usage, package history, and purchase options.
+- Clients can pay for more tokens when a payment provider is available; until then, the purchase flow can create pending purchase records for admin/manual approval.
+- Sending must perform a preflight balance and limit check before provider calls.
+- Token debit must be atomic and ledger-backed to avoid double-spending.
+- Skipped recipients must not consume tokens.
+- Failed provider sends should have an explicit configurable policy: charge, refund, or hold for review. Default to refunding provider failures unless documentation says otherwise.
+- Every debit, credit, refund, manual adjustment, and purchase must create an immutable ledger entry.
+- Campaign reports must include token cost, charged recipients, skipped recipients, refunded sends, and remaining balance.
+- Tenant send limits can be global, monthly, or per-channel.
+- Admins must be able to override limits for a tenant with audited changes.
+
+Suggested token entities:
+
+- `token_wallets`
+- `token_ledger_entries`
+- `token_packages`
+- `channel_pricing_rules`
+- `tenant_send_limits`
+- `token_purchases`
+
+## Survey Statistical Reporting Rules
+
+Cupcake must provide per-survey statistical reports.
+
+Minimum report areas:
+
+- Response funnel: audience size, sent, delivered when available, opened/clicked when available, started, completed, and completion rate.
+- Response rate: started divided by audience size when campaign audience exists.
+- Completion rate: completed divided by started.
+- Channel performance: email, SMS, WhatsApp, public/anonymous link, and token-linked links.
+- Response trends over time by day and channel.
+- Question-level response counts and non-response counts.
+- Question-level distributions for select, radio, checkbox, yes/no, rating, NPS, and numeric fields.
+- NPS summary: promoters, passives, detractors, score, and distribution.
+- Rating averages and distributions.
+- Text answer exports and simple text frequency/sentiment-ready preparation.
+- Drop-off analysis by page, step, section, or question where the data exists.
+- Duration analysis: average, median, min, max, and outlier-resistant trimmed mean if practical.
+- Device/browser and geographic metadata only when collected and privacy settings allow it.
+- Version comparison by `surveyVersionId`.
+- CSV export preparation for reports and raw responses.
+
+Rules:
+
+- Reports must be tenant-safe.
+- Reports must distinguish anonymous public links from campaign channels.
+- Reports must use immutable published schema versions to label historical answers correctly.
+- Reports must return stable zero-filled shapes when data is missing.
+- Do not expose personally sensitive contact data in aggregate reports unless the endpoint is explicitly for detailed response exports and permission-checked.
+
+## Media Storage Rules
+
+Cupcake must include a media storage system for images used in surveys, templates, branding, and content blocks.
+
+Rules:
+
+- Do not store uploaded image binaries inside MongoDB.
+- Do not rely on permanent local server disk storage for production.
+- Use a storage adapter interface so local development and object storage providers are interchangeable.
+- Local development may store files under an ignored uploads directory.
+- Production should be ready for S3-compatible object storage, Cloudflare R2, DigitalOcean Spaces, or another configured object storage provider.
+- Store only metadata and URLs/keys in MongoDB.
+- Validate file type, file size, dimensions where practical, and tenant ownership.
+- Generate safe object keys with tenant scoping.
+- Support deletion or orphan cleanup when media is no longer referenced.
+- Serve public assets through signed URLs or public CDN URLs depending on privacy requirements.
+- Do not let image upload traffic saturate the application server.
+
+Suggested media entities:
+
+- `media_assets`
+- `media_references` if reference tracking is needed.
+
+## Centered Fill-Width Layout Rules
+
+Application content should be centered and fill the available width intentionally.
+
+Rules:
+
+- Main content containers should use `width: 100%`.
+- Content should be centered within the available app shell.
+- Large screens should use responsive max-widths, grid tracks, and full-width sections where appropriate.
+- Avoid narrow content stuck to the left edge on desktop.
+- Avoid unlimited line lengths for forms, paragraphs, and settings screens.
+- Data-heavy views may use full available width while keeping table content readable.
+- Public forms should remain centered and readable while filling the viewport gracefully.
+- Builder and dashboard layouts may use full-width multi-column layouts.
+- Mobile behavior must remain intact.
+
 ## Account Settings Rules
 
 The application must include a settings area for authenticated users.
@@ -667,6 +771,24 @@ TWILIO_SENDGRID_API_KEY=""
 TWILIO_SENDGRID_FROM_EMAIL="no-reply@cupcake.local"
 TWILIO_SENDGRID_FROM_NAME="Cupcake"
 TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET=""
+
+TOKEN_PURCHASE_MODE="manual"
+DEFAULT_TOKEN_BALANCE=0
+DEFAULT_EMAIL_TOKEN_COST=1
+DEFAULT_SMS_TOKEN_COST=2
+DEFAULT_WHATSAPP_TOKEN_COST=3
+TOKEN_FAILED_SEND_POLICY="refund"
+
+STORAGE_DRIVER="local"
+STORAGE_PUBLIC_BASE_URL="http://localhost:4000/uploads"
+LOCAL_UPLOADS_DIR="./uploads"
+MAX_IMAGE_UPLOAD_MB=5
+S3_ENDPOINT=""
+S3_REGION=""
+S3_BUCKET=""
+S3_ACCESS_KEY_ID=""
+S3_SECRET_ACCESS_KEY=""
+S3_PUBLIC_BASE_URL=""
 
 CORS_ORIGIN="http://localhost:5173"
 ```

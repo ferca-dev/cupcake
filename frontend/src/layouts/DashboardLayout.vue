@@ -126,6 +126,12 @@ const navItems = computed(() => {
       visible: auth.hasPermission('billing.view'),
     },
     {
+      to: { name: 'billing.tokens' },
+      label: t('billingTokens.nav'),
+      icon: 'M12 2 4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7Z M9 12h6',
+      visible: auth.hasPermission('billing.view'),
+    },
+    {
       to: { name: 'settings.account' },
       label: t('settings.nav'),
       icon: 'M12 8a4 4 0 1 0 4 4 4 4 0 0 0-4-4Zm9 4-2 1 1 2-2 2-2-1-1 2h-4l-1-2-2 1-2-2 1-2-2-1v-2l2-1-1-2 2-2 2 1 1-2h4l1 2 2-1 2 2-1 2 2 1Z',
@@ -147,6 +153,12 @@ const adminItems = computed(() => {
       to: { name: 'admin.tenants.list' },
       label: t('adminPanel.tenants.title'),
       icon: 'M4 21V8l8-5 8 5v13h-5v-6h-6v6Z',
+      nested: true,
+    },
+    {
+      to: { name: 'admin.tokens' },
+      label: t('adminTokens.nav'),
+      icon: 'M12 2 4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7Z',
       nested: true,
     },
   ];

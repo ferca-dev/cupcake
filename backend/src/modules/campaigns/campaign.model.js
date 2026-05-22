@@ -21,6 +21,13 @@ const summarySchema = new Schema(
     failedCount: { type: Number, default: 0 },
     skippedCount: { type: Number, default: 0 },
     skippedReasons: { type: Schema.Types.Mixed, default: () => ({}) },
+    // Token economy snapshot for this campaign run. Captured at send time
+    // and refreshed when refunds are applied so the campaign report can
+    // surface accurate billing data without re-aggregating the ledger.
+    tokenCost: { type: Number, default: 0, min: 0 },
+    tokensCharged: { type: Number, default: 0, min: 0 },
+    tokensRefunded: { type: Number, default: 0, min: 0 },
+    tokensHeld: { type: Number, default: 0, min: 0 },
   },
   { _id: false },
 );
