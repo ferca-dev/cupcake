@@ -75,6 +75,7 @@ const campaignRecipientSchema = new Schema(
     submissionToken: { type: String, required: true },
     publicUrl: { type: String, required: true },
     provider: { type: String, default: null },
+    providerMessageId: { type: String, default: null },
     sentAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
     openedAt: { type: Date, default: null },

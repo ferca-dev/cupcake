@@ -45,19 +45,65 @@ Every provider exposes the same three methods:
 ## The Factory
 
 `provider.factory.js` exposes `resolveProviders({ env })`, which returns one
-provider per channel based on the env values. Today only `mock` is registered;
-a real Twilio/SES/WhatsApp adapter is added by:
+provider per channel based on the env values. Phase 15 ships:
 
-1. Implementing the three-method interface in `providers/<vendor>.provider.js`.
-2. Registering its factory in the relevant map (`EMAIL_PROVIDERS`,
+| Env var             | Supported values   | Adapter file                          |
+| ------------------- | ------------------ | ------------------------------------- |
+| `EMAIL_PROVIDER`    | `mock`, `sendgrid` | `twilio-sendgrid-email.provider.js`   |
+| `SMS_PROVIDER`      | `mock`, `twilio`   | `twilio-sms.provider.js`              |
+| `WHATSAPP_PROVIDER` | `mock`, `twilio`   | `twilio-whatsapp.provider.js`         |
+
+Adding a new adapter follows the same pattern as before:
+
+1. Implement the three-method interface in `providers/<vendor>.provider.js`.
+2. Register its factory in the relevant map (`EMAIL_PROVIDERS`,
    `SMS_PROVIDERS`, `WHATSAPP_PROVIDERS`) keyed by the env value.
-3. Setting the corresponding env variable (e.g. `EMAIL_PROVIDER=ses`).
+3. Set the corresponding env variable (e.g. `EMAIL_PROVIDER=ses`).
 
 No changes to `campaign.service.js` are required.
 
+## Twilio SMS and WhatsApp
+
+`createTwilioSmsProvider` and `createTwilioWhatsAppProvider` both wrap the
+official `twilio` SDK. They share validation logic via `twilio.shared.js` and
+fail fast at construction time when `TWILIO_ACCOUNT_SID` or `TWILIO_AUTH_TOKEN`
+are missing. Either a channel-specific From number
+(`TWILIO_SMS_FROM` / `TWILIO_WHATSAPP_FROM`) or a `TWILIO_MESSAGING_SERVICE_SID`
+must be set. When `TWILIO_STATUS_CALLBACK_URL` is configured, the provider
+attaches it on each send so Twilio can post delivery status updates to the
+webhook endpoint described below.
+
+Provider responses are normalised so the campaign report sees a stable set of
+failure reasons (`invalid_recipient`, `authentication_failed`,
+`twilio_delivery_failed`, etc.) instead of vendor-specific message text.
+
+## Twilio SendGrid Email
+
+`createTwilioSendGridEmailProvider` wraps `@sendgrid/mail`. It requires
+`TWILIO_SENDGRID_API_KEY` and `TWILIO_SENDGRID_FROM_EMAIL`. The submission
+token is forwarded as a SendGrid `customArgs` value so event webhooks can map
+opens/clicks back to a campaign recipient without exposing tenant identifiers.
+
+## Webhook Endpoints
+
+Two routes are wired but optional. They update existing recipient documents
+based on incoming events and never trigger a new send:
+
+- `POST /api/v1/webhooks/twilio/messages` — Twilio SMS/WhatsApp status
+  callbacks. Expects `application/x-www-form-urlencoded`. Fields it reads:
+  `MessageSid`, `MessageStatus`, optional `ErrorCode`.
+- `POST /api/v1/webhooks/sendgrid/events` — SendGrid Event Webhook. Expects
+  a JSON array of events. Reads `event`, `submissionToken`, `sg_message_id`.
+
+Signature verification (Twilio's `X-Twilio-Signature` and SendGrid's
+`X-Twilio-Email-Event-Webhook-Signature`) is intentionally left as a follow-up
+once the public webhook host is finalised. Production deployments should
+enable verification before exposing these routes to the internet.
+
 ## Mock Providers
 
-Mock implementations exist for every channel:
+Mock implementations remain the default and are exercised by local
+development and the test suite.
 
 - `mock-email`: validates `contact.email` and fails any address whose local
   part contains the substring `fail`, which lets tests assert the failure

@@ -46,6 +46,19 @@ export const insertRecipients = async (recipients) => {
   return CampaignRecipient.insertMany(recipients);
 };
 
+export const removeRecipientsByCampaign = async ({ campaignId, tenantId }) =>
+  CampaignRecipient.deleteMany(tenantFilter({ campaignId }, tenantId));
+
+export const findRecipientByProviderMessageId = async ({
+  providerMessageId,
+  channel = null,
+}) => {
+  if (!providerMessageId) return null;
+  const filter = { providerMessageId };
+  if (channel) filter.channel = channel;
+  return CampaignRecipient.findOne(filter);
+};
+
 export const findRecipients = async ({
   campaignId,
   tenantId,

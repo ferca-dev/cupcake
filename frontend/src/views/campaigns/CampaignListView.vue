@@ -75,7 +75,10 @@ onMounted(refresh);
 const openCreate = () => {
   draft.value = {
     name: '',
-    surveyId: publishedSurveys.value[0]?.id ?? '',
+    // Always leave the survey choice empty so the user has to make a
+    // deliberate selection â€” the campaign service locks onto the survey's
+    // immutable published version and there is no good default to pick.
+    surveyId: '',
     channels: { email: true, sms: false, whatsapp: false },
     contactIds: new Set(),
     groupIds: new Set(),
@@ -243,12 +246,18 @@ const surveyTitle = (id) => surveys.value.find((s) => s.id === id)?.title ?? 'â€
 
         <label class="campaigns__field">
           <span class="campaigns__field-label">{{ t('campaigns.modal.surveyLabel') }}</span>
-          <select v-model="draft.surveyId" class="campaigns__select">
-            <option value="" disabled>{{ t('campaigns.modal.surveyHint') }}</option>
+          <select v-model="draft.surveyId" class="campaigns__select" required>
+            <option value="" disabled>
+              {{ t('campaigns.modal.surveyChoosePlaceholder') }}
+            </option>
             <option v-for="survey in publishedSurveys" :key="survey.id" :value="survey.id">
               {{ survey.title }}
             </option>
           </select>
+          <span class="campaigns__field-hint">{{ t('campaigns.modal.surveyHint') }}</span>
+          <span v-if="draft.surveyId" class="campaigns__field-hint campaigns__field-hint--lock">
+            {{ t('campaigns.modal.surveyLockNotice') }}
+          </span>
         </label>
 
         <fieldset class="campaigns__fieldset">
@@ -352,6 +361,18 @@ const surveyTitle = (id) => surveys.value.find((s) => s.id === id)?.title ?? 'â€
 .campaigns__field-label {
   font-weight: 500;
   font-size: var(--font-size-sm);
+}
+
+.campaigns__field-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.campaigns__field-hint--lock {
+  color: var(--color-text);
+  background: var(--color-surface-muted, rgba(37, 99, 235, 0.08));
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
 }
 
 .campaigns__select {

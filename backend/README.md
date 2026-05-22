@@ -53,9 +53,19 @@ All variables are validated at startup by `src/config/env.js`. The server **fail
 | `SUPER_ADMIN_*`          | no       | see `.env.example`      | Seeder defaults (Phase 02+).                           |
 | `DEMO_CLIENT_*`          | no       | see `.env.example`      | Seeder defaults (Phase 02+).                           |
 | `DEMO_TENANT_NAME`       | no       | `Demo Company`          | Seeder default (Phase 02+).                            |
-| `EMAIL_PROVIDER`         | no       | `mock`                  | Email channel provider.                                |
-| `SMS_PROVIDER`           | no       | `mock`                  | SMS channel provider.                                  |
-| `WHATSAPP_PROVIDER`      | no       | `mock`                  | WhatsApp channel provider.                             |
+| `EMAIL_PROVIDER`         | no       | `mock`                  | Email channel provider (`mock` or `sendgrid`).         |
+| `SMS_PROVIDER`           | no       | `mock`                  | SMS channel provider (`mock` or `twilio`).             |
+| `WHATSAPP_PROVIDER`      | no       | `mock`                  | WhatsApp channel provider (`mock` or `twilio`).        |
+| `TWILIO_ACCOUNT_SID`     | conditional | —                    | Required when SMS or WhatsApp use `twilio`.            |
+| `TWILIO_AUTH_TOKEN`      | conditional | —                    | Required when SMS or WhatsApp use `twilio`.            |
+| `TWILIO_MESSAGING_SERVICE_SID` | no | —                       | Optional Twilio Messaging Service.                     |
+| `TWILIO_SMS_FROM`        | conditional | —                    | Required for `SMS_PROVIDER=twilio` if no service SID.  |
+| `TWILIO_WHATSAPP_FROM`   | conditional | —                    | Required for `WHATSAPP_PROVIDER=twilio` if no service SID. Format `whatsapp:+1...`. |
+| `TWILIO_STATUS_CALLBACK_URL` | no   | —                       | Public URL of `/api/v1/webhooks/twilio/messages`.      |
+| `TWILIO_SENDGRID_API_KEY`| conditional | —                    | Required when `EMAIL_PROVIDER=sendgrid`.               |
+| `TWILIO_SENDGRID_FROM_EMAIL` | conditional | —                | Required when `EMAIL_PROVIDER=sendgrid`.               |
+| `TWILIO_SENDGRID_FROM_NAME` | no    | `Cupcake`                | Friendly sender name for email.                        |
+| `TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET` | no | —              | Reserved for SendGrid webhook signature verification.  |
 | `CORS_ORIGIN`            | no       | `http://localhost:5173` | Comma-separated allow list. `*` allows any.            |
 | `LOG_LEVEL`              | no       | `info`                  | Pino log level.                                        |
 | `REQUEST_BODY_LIMIT`     | no       | `100kb`                 | Maximum request body size.                             |
@@ -529,6 +539,38 @@ and duplication semantics are documented in
 validator (`form-schema.validator.js`) is used for templates and
 surveys, so a template can never store a schema that would fail to
 publish later.
+
+## Endpoints implemented in Phase 15
+
+Phase 15 makes campaign delivery production-ready by adding real provider
+adapters behind the existing factory and prepares webhook routes for
+delivery-status callbacks.
+
+| Method | Path                                  | Auth   | Description                                                                                                     |
+| ------ | ------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/v1/webhooks/twilio/messages`    | public | Receives Twilio SMS/WhatsApp status callbacks (`MessageSid`, `MessageStatus`, optional `ErrorCode`).            |
+| POST   | `/api/v1/webhooks/sendgrid/events`    | public | Receives SendGrid Event Webhook batches and forwards delivered/opened/clicked/bounce events to recipient docs.  |
+
+### Campaign send rules (Phase 15)
+
+- A campaign sends exactly **one** survey. `surveyId` is required at creation
+  and `surveyVersionId` is captured as an immutable snapshot of the survey's
+  current published version.
+- Sending re-validates that the survey is still `published` and that the
+  locked `surveyVersionId` document still exists. Draft, paused, archived, or
+  missing-version surveys are refused with `409 CONFLICT` / `404 NOT_FOUND`.
+- Re-sending a `failed` campaign is retry-safe — prior recipient documents are
+  cleared before the new plan is built, so the campaign report never grows
+  duplicate `(channel, contactId)` rows.
+
+### Provider selection (Phase 15)
+
+`resolveProviders({ env })` picks one adapter per channel and fails fast at
+construction time when the selected real provider is missing credentials
+(e.g. `EMAIL_PROVIDER=sendgrid` with no `TWILIO_SENDGRID_API_KEY`). Mock
+providers remain the default for local development and the test suite. See
+[`docs/provider-architecture.md`](../docs/provider-architecture.md) for the
+full configuration matrix and webhook contract.
 
 ## Security middleware
 

@@ -572,6 +572,9 @@ export default {
       nameHint: 'Internal label visible only to your team.',
       surveyLabel: 'Survey',
       surveyHint: 'Only published surveys can be selected.',
+      surveyChoosePlaceholder: 'Choose a published survey…',
+      surveyLockNotice:
+        'The campaign locks onto the survey’s current published version. Re-publishing the survey will not change what this campaign sends.',
       channelsLabel: 'Channels',
       contactsLabel: 'Contacts',
       groupsLabel: 'Groups',

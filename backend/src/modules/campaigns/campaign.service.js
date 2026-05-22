@@ -86,6 +86,7 @@ const toPublicRecipient = (recipient) => ({
   submissionToken: recipient.submissionToken,
   publicUrl: recipient.publicUrl,
   provider: recipient.provider ?? null,
+  providerMessageId: recipient.providerMessageId ?? null,
   sentAt: recipient.sentAt ?? null,
   deliveredAt: recipient.deliveredAt ?? null,
   openedAt: recipient.openedAt ?? null,
@@ -108,6 +109,35 @@ const loadPublishedSurvey = async ({ surveyId, tenantId }) => {
   });
   if (!version) {
     throw new NotFoundError('Published survey version not found');
+  }
+  return { survey, version };
+};
+
+/**
+ * Loads the survey + the exact version that a campaign was created against.
+ * The version stored on the campaign is immutable: re-publishing the survey
+ * creates a new SurveyVersion document, but a previously created campaign keeps
+ * pointing at the snapshot the user explicitly selected.
+ */
+const loadCampaignSurveyForSend = async ({ campaign, tenantId }) => {
+  const survey = await surveyRepo.findSurveyById({ id: campaign.surveyId, tenantId });
+  if (!survey) {
+    throw new NotFoundError('Survey not found');
+  }
+  if (survey.status !== 'published') {
+    throw new ConflictError(
+      `Survey is ${survey.status}; only published surveys can be sent through a campaign`,
+    );
+  }
+  if (!campaign.surveyVersionId) {
+    throw new ConflictError('Campaign is missing a locked survey version');
+  }
+  const version = await surveyRepo.findVersionById({
+    id: campaign.surveyVersionId,
+    tenantId,
+  });
+  if (!version) {
+    throw new NotFoundError('Survey version locked to this campaign no longer exists');
   }
   return { survey, version };
 };
@@ -333,7 +363,20 @@ const planRecipients = ({ campaign, survey, version, contacts, providers, env })
   return { recipients, summary };
 };
 
-const dispatchPendingRecipients = async ({ recipientDocs, providers, survey, campaign }) => {
+const contactDisplayName = (contact) => {
+  if (!contact) return null;
+  if (contact.fullName) return contact.fullName;
+  const composed = [contact.firstName, contact.lastName].filter(Boolean).join(' ').trim();
+  return composed.length > 0 ? composed : null;
+};
+
+const dispatchPendingRecipients = async ({
+  recipientDocs,
+  providers,
+  survey,
+  campaign,
+  contactsById,
+}) => {
   let sentCount = 0;
   let failedCount = 0;
 
@@ -349,6 +392,8 @@ const dispatchPendingRecipients = async ({ recipientDocs, providers, survey, cam
       continue;
     }
 
+    const contactId = doc.contactId ? doc.contactId.toString() : null;
+    const contact = contactId ? contactsById.get(contactId) ?? null : null;
     try {
       const result = await provider.send({
         channel: doc.channel,
@@ -356,8 +401,8 @@ const dispatchPendingRecipients = async ({ recipientDocs, providers, survey, cam
         submissionToken: doc.submissionToken,
         publicUrl: doc.publicUrl,
         contact: {
-          id: doc.contactId ? doc.contactId.toString() : null,
-          fullName: null,
+          id: contactId,
+          fullName: contactDisplayName(contact),
         },
         campaign: { id: campaign._id.toString(), name: campaign.name },
         survey: {
@@ -371,12 +416,14 @@ const dispatchPendingRecipients = async ({ recipientDocs, providers, survey, cam
         doc.sentAt = new Date();
         doc.failureReason = null;
         doc.provider = result.provider ?? provider.getProviderName();
+        doc.providerMessageId = result.providerMessageId ?? null;
         await doc.save();
         sentCount += 1;
       } else {
         doc.status = 'failed';
         doc.failureReason = result.reason ?? 'provider_failure';
         doc.provider = result.provider ?? provider.getProviderName();
+        doc.providerMessageId = result.providerMessageId ?? null;
         await doc.save();
         failedCount += 1;
       }
@@ -409,8 +456,8 @@ export const sendCampaign = async ({
     throw new ConflictError('Campaign has already been processed');
   }
 
-  const { survey, version } = await loadPublishedSurvey({
-    surveyId: campaign.surveyId,
+  const { survey, version } = await loadCampaignSurveyForSend({
+    campaign,
     tenantId: tenant,
   });
 
@@ -419,6 +466,11 @@ export const sendCampaign = async ({
     target: campaign.target,
     tenantId: tenant,
   });
+
+  // Drop any prior recipient docs for this campaign so a retry produces a
+  // fresh plan instead of duplicating contact/channel attempts. The campaign
+  // summary is rebuilt at the end of the send.
+  await repo.removeRecipientsByCampaign({ campaignId: campaign._id, tenantId: tenant });
 
   campaign.status = 'sending';
   campaign.startedAt = new Date();
@@ -434,11 +486,13 @@ export const sendCampaign = async ({
   });
 
   const insertedDocs = await repo.insertRecipients(recipients);
+  const contactsById = new Map(contacts.map((contact) => [contact._id.toString(), contact]));
   const dispatch = await dispatchPendingRecipients({
     recipientDocs: insertedDocs,
     providers: providerSet,
     survey,
     campaign,
+    contactsById,
   });
 
   const completedAt = new Date();

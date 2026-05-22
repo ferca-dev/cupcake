@@ -574,6 +574,9 @@ export default {
       nameHint: 'Etiqueta interna visible sólo para tu equipo.',
       surveyLabel: 'Encuesta',
       surveyHint: 'Sólo se pueden elegir encuestas publicadas.',
+      surveyChoosePlaceholder: 'Elige una encuesta publicada…',
+      surveyLockNotice:
+        'La campaña queda fijada a la versión publicada actual de la encuesta. Volver a publicar la encuesta no cambiará lo que envía esta campaña.',
       channelsLabel: 'Canales',
       contactsLabel: 'Contactos',
       groupsLabel: 'Grupos',

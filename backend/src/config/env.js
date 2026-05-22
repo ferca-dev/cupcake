@@ -35,6 +35,23 @@ const envSchema = z.object({
   SMS_PROVIDER: stringWithDefault('mock'),
   WHATSAPP_PROVIDER: stringWithDefault('mock'),
 
+  // Twilio credentials shared by the SMS and WhatsApp providers. They stay
+  // optional so the default mock setup works out of the box; each real
+  // provider validates the subset of variables it actually requires when it
+  // is initialised.
+  TWILIO_ACCOUNT_SID: z.string().trim().default(''),
+  TWILIO_AUTH_TOKEN: z.string().trim().default(''),
+  TWILIO_MESSAGING_SERVICE_SID: z.string().trim().default(''),
+  TWILIO_SMS_FROM: z.string().trim().default(''),
+  TWILIO_WHATSAPP_FROM: z.string().trim().default(''),
+  TWILIO_STATUS_CALLBACK_URL: z.string().trim().default(''),
+
+  // Twilio SendGrid email credentials.
+  TWILIO_SENDGRID_API_KEY: z.string().trim().default(''),
+  TWILIO_SENDGRID_FROM_EMAIL: z.string().trim().default(''),
+  TWILIO_SENDGRID_FROM_NAME: z.string().trim().default('Cupcake'),
+  TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET: z.string().trim().default(''),
+
   CORS_ORIGIN: stringWithDefault('http://localhost:5173'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),

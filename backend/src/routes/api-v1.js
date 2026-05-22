@@ -10,6 +10,7 @@ import { dashboardRouter } from '../modules/dashboard/dashboard.routes.js';
 import { templatesRouter } from '../modules/templates/template.routes.js';
 import { transactionsRouter } from '../modules/transactions/transaction.routes.js';
 import { adminRouter } from '../modules/admin/admin.routes.js';
+import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -72,6 +73,8 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/templates/:id/create-survey',
         '/api/v1/transactions',
         '/api/v1/transactions/:id',
+        '/api/v1/webhooks/twilio/messages',
+        '/api/v1/webhooks/sendgrid/events',
       ],
     },
     message: 'API metadata',
@@ -90,3 +93,4 @@ apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminRouter);
 apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
+apiV1Router.use('/webhooks', webhooksRouter);
