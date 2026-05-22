@@ -24,6 +24,7 @@ import AdminDashboardView from '../views/admin/AdminDashboardView.vue';
 import TenantListView from '../views/admin/TenantListView.vue';
 import TenantCreateView from '../views/admin/TenantCreateView.vue';
 import TenantDetailView from '../views/admin/TenantDetailView.vue';
+import SettingsView from '../views/settings/SettingsView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormView from '../views/public/PublicFormView.vue';
@@ -161,6 +162,15 @@ export const routes = [
           title: 'Billing history',
           requiresAuth: true,
           permissions: ['billing.view'],
+        },
+      },
+      {
+        path: 'settings',
+        name: 'settings.account',
+        component: SettingsView,
+        meta: {
+          title: 'Account settings',
+          requiresAuth: true,
         },
       },
       {

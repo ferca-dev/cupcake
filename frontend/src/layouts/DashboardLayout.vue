@@ -104,6 +104,9 @@ const handleLogout = async () => {
         >
           {{ t('billing.nav') }}
         </RouterLink>
+        <RouterLink :to="{ name: 'settings.account' }" class="dashboard-layout__nav-link">
+          {{ t('settings.nav') }}
+        </RouterLink>
         <template v-if="auth.isSuperAdmin">
           <hr class="dashboard-layout__nav-divider" aria-hidden="true" />
           <RouterLink :to="{ name: 'admin.home' }" class="dashboard-layout__nav-link">

@@ -48,6 +48,7 @@ const toPublicVersion = (version) => ({
   surveyId: version.surveyId.toString(),
   versionNumber: version.versionNumber,
   schema: version.schema,
+  settings: version.settings ?? null,
   publishedBy: version.publishedBy ? version.publishedBy.toString() : null,
   publishedAt: version.publishedAt,
   createdAt: version.createdAt,
@@ -241,11 +242,20 @@ export const publishSurvey = async ({ id, tenantId, actor, ip = null, userAgent 
   const nextVersionNumber = (await repo.findLatestVersionNumber({ surveyId: survey._id })) + 1;
 
   const now = new Date();
+  // Snapshot the live settings into the version so public submissions read a
+  // frozen copy. Without this, editing settings after publish could silently
+  // loosen response limits or change messaging mid-flight.
+  const settingsSnapshot =
+    typeof survey.settings?.toObject === 'function'
+      ? survey.settings.toObject()
+      : { ...(survey.settings ?? {}) };
+
   const version = await repo.createSurveyVersion({
     tenantId: survey.tenantId,
     surveyId: survey._id,
     versionNumber: nextVersionNumber,
     schema: validatedSchema,
+    settings: settingsSnapshot,
     publishedBy: actor.id,
     publishedAt: now,
   });

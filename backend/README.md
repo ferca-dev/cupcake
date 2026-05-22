@@ -38,39 +38,39 @@ Run any script via the workspace from the repo root with `pnpm --filter ./backen
 
 All variables are validated at startup by `src/config/env.js`. The server **fails fast** with a readable error when a required variable is missing or invalid.
 
-| Variable                 | Required | Default                 | Purpose                                                |
-| ------------------------ | -------- | ----------------------- | ------------------------------------------------------ |
-| `APP_NAME`               | no       | `Cupcake`               | Runtime product name (do not hardcode).                |
-| `APP_ENV`                | no       | `development`           | One of `development`, `test`, `staging`, `production`. |
-| `APP_PORT`               | no       | `4000`                  | HTTP port to listen on (0 lets the OS pick).           |
-| `APP_URL`                | no       | `http://localhost:4000` | Public URL of the API.                                 |
-| `FRONTEND_URL`           | no       | `http://localhost:5173` | Public URL of the SPA.                                 |
-| `MONGODB_URI`            | **yes**  | —                       | MongoDB connection string.                             |
-| `JWT_ACCESS_SECRET`      | **yes**  | —                       | Access-token signing secret (≥ 16 chars).              |
-| `JWT_REFRESH_SECRET`     | **yes**  | —                       | Refresh-token signing secret (≥ 16 chars).             |
-| `JWT_ACCESS_EXPIRES_IN`  | no       | `15m`                   | Access-token lifetime.                                 |
-| `JWT_REFRESH_EXPIRES_IN` | no       | `7d`                    | Refresh-token lifetime.                                |
-| `SUPER_ADMIN_*`          | no       | see `.env.example`      | Seeder defaults (Phase 02+).                           |
-| `DEMO_CLIENT_*`          | no       | see `.env.example`      | Seeder defaults (Phase 02+).                           |
-| `DEMO_TENANT_NAME`       | no       | `Demo Company`          | Seeder default (Phase 02+).                            |
-| `EMAIL_PROVIDER`         | no       | `mock`                  | Email channel provider (`mock` or `sendgrid`).         |
-| `SMS_PROVIDER`           | no       | `mock`                  | SMS channel provider (`mock` or `twilio`).             |
-| `WHATSAPP_PROVIDER`      | no       | `mock`                  | WhatsApp channel provider (`mock` or `twilio`).        |
-| `TWILIO_ACCOUNT_SID`     | conditional | —                    | Required when SMS or WhatsApp use `twilio`.            |
-| `TWILIO_AUTH_TOKEN`      | conditional | —                    | Required when SMS or WhatsApp use `twilio`.            |
-| `TWILIO_MESSAGING_SERVICE_SID` | no | —                       | Optional Twilio Messaging Service.                     |
-| `TWILIO_SMS_FROM`        | conditional | —                    | Required for `SMS_PROVIDER=twilio` if no service SID.  |
-| `TWILIO_WHATSAPP_FROM`   | conditional | —                    | Required for `WHATSAPP_PROVIDER=twilio` if no service SID. Format `whatsapp:+1...`. |
-| `TWILIO_STATUS_CALLBACK_URL` | no   | —                       | Public URL of `/api/v1/webhooks/twilio/messages`.      |
-| `TWILIO_SENDGRID_API_KEY`| conditional | —                    | Required when `EMAIL_PROVIDER=sendgrid`.               |
-| `TWILIO_SENDGRID_FROM_EMAIL` | conditional | —                | Required when `EMAIL_PROVIDER=sendgrid`.               |
-| `TWILIO_SENDGRID_FROM_NAME` | no    | `Cupcake`                | Friendly sender name for email.                        |
-| `TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET` | no | —              | Reserved for SendGrid webhook signature verification.  |
-| `CORS_ORIGIN`            | no       | `http://localhost:5173` | Comma-separated allow list. `*` allows any.            |
-| `LOG_LEVEL`              | no       | `info`                  | Pino log level.                                        |
-| `REQUEST_BODY_LIMIT`     | no       | `100kb`                 | Maximum request body size.                             |
-| `RATE_LIMIT_WINDOW_MS`   | no       | `900000`                | Global rate-limit window (15 min).                     |
-| `RATE_LIMIT_MAX`         | no       | `300`                   | Global rate-limit request count per window.            |
+| Variable                               | Required    | Default                 | Purpose                                                                             |
+| -------------------------------------- | ----------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `APP_NAME`                             | no          | `Cupcake`               | Runtime product name (do not hardcode).                                             |
+| `APP_ENV`                              | no          | `development`           | One of `development`, `test`, `staging`, `production`.                              |
+| `APP_PORT`                             | no          | `4000`                  | HTTP port to listen on (0 lets the OS pick).                                        |
+| `APP_URL`                              | no          | `http://localhost:4000` | Public URL of the API.                                                              |
+| `FRONTEND_URL`                         | no          | `http://localhost:5173` | Public URL of the SPA.                                                              |
+| `MONGODB_URI`                          | **yes**     | —                       | MongoDB connection string.                                                          |
+| `JWT_ACCESS_SECRET`                    | **yes**     | —                       | Access-token signing secret (≥ 16 chars).                                           |
+| `JWT_REFRESH_SECRET`                   | **yes**     | —                       | Refresh-token signing secret (≥ 16 chars).                                          |
+| `JWT_ACCESS_EXPIRES_IN`                | no          | `15m`                   | Access-token lifetime.                                                              |
+| `JWT_REFRESH_EXPIRES_IN`               | no          | `7d`                    | Refresh-token lifetime.                                                             |
+| `SUPER_ADMIN_*`                        | no          | see `.env.example`      | Seeder defaults (Phase 02+).                                                        |
+| `DEMO_CLIENT_*`                        | no          | see `.env.example`      | Seeder defaults (Phase 02+).                                                        |
+| `DEMO_TENANT_NAME`                     | no          | `Demo Company`          | Seeder default (Phase 02+).                                                         |
+| `EMAIL_PROVIDER`                       | no          | `mock`                  | Email channel provider (`mock` or `sendgrid`).                                      |
+| `SMS_PROVIDER`                         | no          | `mock`                  | SMS channel provider (`mock` or `twilio`).                                          |
+| `WHATSAPP_PROVIDER`                    | no          | `mock`                  | WhatsApp channel provider (`mock` or `twilio`).                                     |
+| `TWILIO_ACCOUNT_SID`                   | conditional | —                       | Required when SMS or WhatsApp use `twilio`.                                         |
+| `TWILIO_AUTH_TOKEN`                    | conditional | —                       | Required when SMS or WhatsApp use `twilio`.                                         |
+| `TWILIO_MESSAGING_SERVICE_SID`         | no          | —                       | Optional Twilio Messaging Service.                                                  |
+| `TWILIO_SMS_FROM`                      | conditional | —                       | Required for `SMS_PROVIDER=twilio` if no service SID.                               |
+| `TWILIO_WHATSAPP_FROM`                 | conditional | —                       | Required for `WHATSAPP_PROVIDER=twilio` if no service SID. Format `whatsapp:+1...`. |
+| `TWILIO_STATUS_CALLBACK_URL`           | no          | —                       | Public URL of `/api/v1/webhooks/twilio/messages`.                                   |
+| `TWILIO_SENDGRID_API_KEY`              | conditional | —                       | Required when `EMAIL_PROVIDER=sendgrid`.                                            |
+| `TWILIO_SENDGRID_FROM_EMAIL`           | conditional | —                       | Required when `EMAIL_PROVIDER=sendgrid`.                                            |
+| `TWILIO_SENDGRID_FROM_NAME`            | no          | `Cupcake`               | Friendly sender name for email.                                                     |
+| `TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET` | no          | —                       | Reserved for SendGrid webhook signature verification.                               |
+| `CORS_ORIGIN`                          | no          | `http://localhost:5173` | Comma-separated allow list. `*` allows any.                                         |
+| `LOG_LEVEL`                            | no          | `info`                  | Pino log level.                                                                     |
+| `REQUEST_BODY_LIMIT`                   | no          | `100kb`                 | Maximum request body size.                                                          |
+| `RATE_LIMIT_WINDOW_MS`                 | no          | `900000`                | Global rate-limit window (15 min).                                                  |
+| `RATE_LIMIT_MAX`                       | no          | `300`                   | Global rate-limit request count per window.                                         |
 
 The full template lives in [`.env.example`](./.env.example).
 
@@ -546,10 +546,10 @@ Phase 15 makes campaign delivery production-ready by adding real provider
 adapters behind the existing factory and prepares webhook routes for
 delivery-status callbacks.
 
-| Method | Path                                  | Auth   | Description                                                                                                     |
-| ------ | ------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/v1/webhooks/twilio/messages`    | public | Receives Twilio SMS/WhatsApp status callbacks (`MessageSid`, `MessageStatus`, optional `ErrorCode`).            |
-| POST   | `/api/v1/webhooks/sendgrid/events`    | public | Receives SendGrid Event Webhook batches and forwards delivered/opened/clicked/bounce events to recipient docs.  |
+| Method | Path                               | Auth   | Description                                                                                                    |
+| ------ | ---------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/v1/webhooks/twilio/messages` | public | Receives Twilio SMS/WhatsApp status callbacks (`MessageSid`, `MessageStatus`, optional `ErrorCode`).           |
+| POST   | `/api/v1/webhooks/sendgrid/events` | public | Receives SendGrid Event Webhook batches and forwards delivered/opened/clicked/bounce events to recipient docs. |
 
 ### Campaign send rules (Phase 15)
 

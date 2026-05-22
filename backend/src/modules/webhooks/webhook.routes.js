@@ -45,6 +45,9 @@ webhooksRouter.post(
     for (const event of events) {
       await recordSendGridEvent(event);
     }
-    return sendSuccess(res, { data: { processed: events.length }, message: 'SendGrid events processed' });
+    return sendSuccess(res, {
+      data: { processed: events.length },
+      message: 'SendGrid events processed',
+    });
   }),
 );

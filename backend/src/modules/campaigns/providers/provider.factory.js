@@ -25,9 +25,7 @@ const resolve = (registry, key, channelLabel, ctx) => {
   const factory = registry[key];
   if (!factory) {
     const supported = Object.keys(registry).join(', ');
-    throw new Error(
-      `Unknown ${channelLabel} provider "${key}". Supported values: ${supported}`,
-    );
+    throw new Error(`Unknown ${channelLabel} provider "${key}". Supported values: ${supported}`);
   }
   return factory(ctx);
 };

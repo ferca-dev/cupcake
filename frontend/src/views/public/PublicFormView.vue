@@ -16,6 +16,7 @@ import {
   serializeAnswers,
   validateAnswers,
 } from '../../features/public-form/answers.js';
+import { getOrCreateDeviceKey } from '../../features/public-form/device-key.js';
 import { computeFieldVisibility } from '../../features/logic/logic-engine.js';
 import PublicFieldRenderer from '../../components/public-form/PublicFieldRenderer.vue';
 import PublicThankYouView from './PublicThankYouView.vue';
@@ -34,10 +35,17 @@ const schema = computed(() => surveyData.value?.version?.schema ?? null);
 const survey = computed(() => surveyData.value?.survey ?? null);
 const acceptingResponses = computed(() => surveyData.value?.acceptingResponses === true);
 const pausedMessage = computed(() => surveyData.value?.pausedMessage ?? null);
+const responseLimit = computed(() => survey.value?.settings?.responseLimit ?? null);
+const limitMode = computed(() => responseLimit.value?.mode ?? 'unlimited');
+const requiresDeviceKey = computed(
+  () => responseLimit.value?.deviceKeyRequired === true || limitMode.value === 'one_per_device',
+);
+const limitMessage = computed(() => responseLimit.value?.message || t('publicForm.responseLimit'));
 
 const loadState = reactive({ loading: true, error: null });
 const submitState = reactive({ submitting: false, error: null });
 const submittedResult = ref(null);
+const limitReached = ref(false);
 
 const answerState = reactive({});
 const fieldErrors = reactive({});
@@ -132,11 +140,17 @@ const onSubmit = async () => {
     if (submissionToken.value) {
       payload.submissionToken = submissionToken.value;
     }
+    if (requiresDeviceKey.value) {
+      payload.deviceKey = getOrCreateDeviceKey(slug.value);
+    }
     const result = await publicFormService.submit(slug.value, payload);
     submittedResult.value = result?.response ?? null;
   } catch (err) {
     if (err instanceof ApiError) {
-      if (err.isValidation && applyServerValidationDetails(err.details)) {
+      if (err.code === 'RESPONSE_LIMIT_REACHED') {
+        limitReached.value = true;
+        submitState.error = err.message || limitMessage.value;
+      } else if (err.isValidation && applyServerValidationDetails(err.details)) {
         submitState.error = t('publicForm.validationSummary');
       } else if (err.status === 409) {
         submitState.error = err.message || t('publicForm.closed');
@@ -174,6 +188,10 @@ watch(slug, (next, prev) => {
 
     <div v-else-if="loadState.error" class="public-form__state">
       <AppAlert variant="error">{{ loadState.error }}</AppAlert>
+    </div>
+
+    <div v-else-if="limitReached" class="public-form__state" data-testid="public-form-limit">
+      <AppAlert variant="warning">{{ limitMessage }}</AppAlert>
     </div>
 
     <PublicThankYouView

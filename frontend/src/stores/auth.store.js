@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 
 import { authService } from '../services/auth.service.js';
 import { apiClient, setAuthProvider, setRefreshHandler, ApiError } from '../services/apiClient.js';
+import { setLocale } from '../i18n/index.js';
 
 const STORAGE_KEY = 'cupcake.auth.session';
 
@@ -89,6 +90,10 @@ export const useAuthStore = defineStore('auth', {
         accessToken: this.accessToken,
         refreshToken: this.refreshToken,
       });
+      // Sync the runtime locale with the server-side preference so a user who
+      // logs in on a fresh browser immediately sees their saved language.
+      const preferredLocale = user?.preferences?.locale;
+      if (preferredLocale) setLocale(preferredLocale);
     },
 
     clearSession() {

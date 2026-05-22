@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { SURVEY_STATUSES } from './survey.model.js';
+import { SURVEY_STATUSES, RESPONSE_LIMIT_MODES } from './survey.model.js';
 import { formSchemaSchema } from './form-schema.validator.js';
 
 const slugSchema = z
@@ -11,6 +11,15 @@ const slugSchema = z
   .min(2, 'Slug must be at least 2 characters')
   .max(80, 'Slug is too long');
 
+const responseLimitSchema = z
+  .object({
+    mode: z.enum(RESPONSE_LIMIT_MODES).optional(),
+    deviceKeyRequired: z.boolean().optional(),
+    ipRequired: z.boolean().optional(),
+    message: z.string().trim().max(500).optional(),
+  })
+  .strict();
+
 const settingsSchema = z
   .object({
     allowAnonymous: z.boolean().optional(),
@@ -20,8 +29,20 @@ const settingsSchema = z
     pausedMessage: z.string().max(500).optional(),
     oneResponsePerContact: z.boolean().optional(),
     collectIp: z.boolean().optional(),
+    responseLimit: responseLimitSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const limit = value.responseLimit;
+    if (!limit) return;
+    if (limit.mode === 'one_per_ip' && value.collectIp === false) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['responseLimit', 'mode'],
+        message: 'IP-based response limits require collectIp to be enabled',
+      });
+    }
+  });
 
 export const createSurveySchema = z
   .object({

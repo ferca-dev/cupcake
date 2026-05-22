@@ -6,6 +6,29 @@ export const SURVEY_STATUSES = Object.freeze(['draft', 'published', 'paused', 'a
 
 export const PUBLIC_SURVEY_STATUSES = Object.freeze(['published', 'paused']);
 
+export const RESPONSE_LIMIT_MODES = Object.freeze([
+  'unlimited',
+  'one_per_contact',
+  'one_per_device',
+  'one_per_ip',
+]);
+
+export const DEFAULT_RESPONSE_LIMIT_MESSAGE = 'This survey has already been answered.';
+
+const responseLimitSchema = new Schema(
+  {
+    mode: {
+      type: String,
+      enum: RESPONSE_LIMIT_MODES,
+      default: 'unlimited',
+    },
+    deviceKeyRequired: { type: Boolean, default: false },
+    ipRequired: { type: Boolean, default: false },
+    message: { type: String, default: DEFAULT_RESPONSE_LIMIT_MESSAGE },
+  },
+  { _id: false },
+);
+
 const surveySettingsSchema = new Schema(
   {
     allowAnonymous: { type: Boolean, default: true },
@@ -19,8 +42,11 @@ const surveySettingsSchema = new Schema(
       type: String,
       default: 'This survey is temporarily paused.',
     },
+    // Legacy boolean kept for backwards-compatibility; `responseLimit.mode`
+    // is the authoritative value going forward.
     oneResponsePerContact: { type: Boolean, default: false },
     collectIp: { type: Boolean, default: false },
+    responseLimit: { type: responseLimitSchema, default: () => ({}) },
   },
   { _id: false },
 );

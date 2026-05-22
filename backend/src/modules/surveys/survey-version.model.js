@@ -18,6 +18,10 @@ const surveyVersionSchema = new Schema(
     },
     versionNumber: { type: Number, required: true, min: 1 },
     schema: { type: Schema.Types.Mixed, required: true },
+    // Snapshot of the survey settings at publish time. The renderer treats
+    // this as the authoritative copy so editing draft settings cannot loosen
+    // a published survey's response limits or messaging mid-flight.
+    settings: { type: Schema.Types.Mixed, default: () => ({}) },
     publishedBy: { type: Types.ObjectId, ref: 'User', required: true },
     publishedAt: { type: Date, required: true },
   },

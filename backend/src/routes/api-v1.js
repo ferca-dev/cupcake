@@ -10,6 +10,7 @@ import { dashboardRouter } from '../modules/dashboard/dashboard.routes.js';
 import { templatesRouter } from '../modules/templates/template.routes.js';
 import { transactionsRouter } from '../modules/transactions/transaction.routes.js';
 import { adminRouter } from '../modules/admin/admin.routes.js';
+import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
@@ -68,6 +69,9 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/admin/tenants/:id',
         '/api/v1/admin/tenants/:id/status',
         '/api/v1/admin/tenants/:id/users',
+        '/api/v1/settings/profile',
+        '/api/v1/settings/password',
+        '/api/v1/settings/preferences',
         '/api/v1/templates',
         '/api/v1/templates/:id',
         '/api/v1/templates/:id/create-survey',
@@ -91,6 +95,7 @@ apiV1Router.use('/campaigns', campaignsRouter);
 apiV1Router.use('/public', publicFormsRouter);
 apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminRouter);
+apiV1Router.use('/settings', settingsRouter);
 apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
 apiV1Router.use('/webhooks', webhooksRouter);

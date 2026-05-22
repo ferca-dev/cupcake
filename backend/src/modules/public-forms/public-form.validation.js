@@ -33,6 +33,16 @@ export const submitResponseSchema = z
       .max(128)
       .regex(/^[A-Za-z0-9_-]+$/)
       .optional(),
+    // Anonymous device identifier generated in the public form. The format
+    // intentionally allows base64url-style values so different client
+    // implementations (web, mobile) can plug in without a server change.
+    deviceKey: z
+      .string()
+      .trim()
+      .min(8)
+      .max(128)
+      .regex(/^[A-Za-z0-9_-]+$/, 'Device key is malformed')
+      .optional(),
     answers: z.array(answerSchema).max(500).default([]),
     metadata: z
       .object({

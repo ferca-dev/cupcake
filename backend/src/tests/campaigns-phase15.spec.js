@@ -50,7 +50,12 @@ const buildPublishedSurvey = async ({ tenantId, ownerId, title = 'Customer pulse
     description: null,
     slug: title.toLowerCase().replace(/\s+/g, '-'),
     status: 'draft',
-    currentDraftSchema: { fields: [], sections: [], logicRules: [], layout: { mode: 'single_page' } },
+    currentDraftSchema: {
+      fields: [],
+      sections: [],
+      logicRules: [],
+      layout: { mode: 'single_page' },
+    },
     settings: {},
     createdBy: ownerId,
   });
@@ -394,9 +399,8 @@ describe('Campaign send uses the selected real providers', () => {
     // Drive the service directly so we can swap in a fake provider trio
     // without monkey-patching the factory. This mirrors how a future test
     // could plug Twilio mocks into the same code path.
-    const { sendCampaign, createCampaign } = await import(
-      '../modules/campaigns/campaign.service.js'
-    );
+    const { sendCampaign, createCampaign } =
+      await import('../modules/campaigns/campaign.service.js');
     const campaign = await createCampaign({
       tenantId: tenant._id.toString(),
       actor: { id: user._id.toString() },
@@ -462,9 +466,8 @@ describe('Campaign send uses the selected real providers', () => {
       }),
     };
 
-    const { sendCampaign, createCampaign } = await import(
-      '../modules/campaigns/campaign.service.js'
-    );
+    const { sendCampaign, createCampaign } =
+      await import('../modules/campaigns/campaign.service.js');
     const campaign = await createCampaign({
       tenantId: tenant._id.toString(),
       actor: { id: user._id.toString() },

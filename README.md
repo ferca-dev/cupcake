@@ -295,6 +295,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/troubleshooting.md](docs/troubleshooting.md) — common local issues, seeder, env, and first-deploy smoke test.
 - [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 14.
 - [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
+- [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md) — response-limit configuration and account-settings API.
 
 ## Phase workflow
 
@@ -323,6 +324,8 @@ Phase index:
 - `12` — Transactions and billing history.
 - `13` — Admin panel.
 - `14` — Hardening.
+- `15` — Campaign delivery and Twilio providers.
+- `16` — Response limits and account settings.
 
 ## Continuous integration
 

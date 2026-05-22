@@ -93,8 +93,7 @@ export const createTwilioSendGridEmailProvider = ({ env, client = null } = {}) =
       try {
         const response = await sgMail.send(message);
         const headers = Array.isArray(response) ? response[0]?.headers : response?.headers;
-        const providerMessageId =
-          headers?.['x-message-id'] ?? headers?.['X-Message-Id'] ?? null;
+        const providerMessageId = headers?.['x-message-id'] ?? headers?.['X-Message-Id'] ?? null;
         return {
           success: true,
           provider: PROVIDER_NAME,

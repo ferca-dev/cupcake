@@ -6,6 +6,17 @@ const { Schema, Types } = mongoose;
 
 const USER_STATUSES = ['active', 'inactive', 'suspended'];
 
+const preferencesSchema = new Schema(
+  {
+    // Language preference is mirrored to the frontend on `/auth/me`. The
+    // bundle keys live in `frontend/src/i18n`; keep this list in sync with
+    // `backend/src/modules/settings/supported-locales.js`.
+    locale: { type: String, default: 'en' },
+    timezone: { type: String, default: 'UTC' },
+  },
+  { _id: false },
+);
+
 const userSchema = new Schema(
   {
     tenantId: {
@@ -39,6 +50,12 @@ const userSchema = new Schema(
       index: true,
     },
     emailVerifiedAt: { type: Date, default: null },
+    // Pending email-verification candidate. Stored separately from `email`
+    // so the active address is never updated until a future verification
+    // round confirms ownership. Phase 16 surfaces this field on the API; the
+    // verification email flow is deferred to a later phase.
+    pendingEmail: { type: String, default: null, lowercase: true, trim: true },
+    preferences: { type: preferencesSchema, default: () => ({}) },
     lastLoginAt: { type: Date, default: null },
   },
   {

@@ -30,9 +30,9 @@ const samplePayload = (overrides = {}) => ({
 
 describe('TwilioSmsProvider', () => {
   it('throws when required env vars are missing', () => {
-    expect(() =>
-      createTwilioSmsProvider({ env: { ...baseEnv, TWILIO_ACCOUNT_SID: '' } }),
-    ).toThrow(ProviderConfigurationError);
+    expect(() => createTwilioSmsProvider({ env: { ...baseEnv, TWILIO_ACCOUNT_SID: '' } })).toThrow(
+      ProviderConfigurationError,
+    );
   });
 
   it('requires either a From number or a messaging service', () => {
@@ -141,12 +141,14 @@ describe('TwilioWhatsAppProvider', () => {
       reason: 'missing_whatsapp_phone',
       recipient: null,
     });
-    expect(provider.validateRecipient({ status: 'blocked', whatsappPhone: '5550001111' })).toEqual(
-      { ready: false, reason: 'contact_blocked', recipient: null },
-    );
-    expect(provider.validateRecipient({ status: 'active', whatsappPhone: '+1 555 222 3333' })).toEqual(
-      { ready: true, reason: null, recipient: '+15552223333' },
-    );
+    expect(provider.validateRecipient({ status: 'blocked', whatsappPhone: '5550001111' })).toEqual({
+      ready: false,
+      reason: 'contact_blocked',
+      recipient: null,
+    });
+    expect(
+      provider.validateRecipient({ status: 'active', whatsappPhone: '+1 555 222 3333' }),
+    ).toEqual({ ready: true, reason: null, recipient: '+15552223333' });
   });
 });
 

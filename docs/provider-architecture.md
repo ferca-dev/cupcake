@@ -47,11 +47,11 @@ Every provider exposes the same three methods:
 `provider.factory.js` exposes `resolveProviders({ env })`, which returns one
 provider per channel based on the env values. Phase 15 ships:
 
-| Env var             | Supported values   | Adapter file                          |
-| ------------------- | ------------------ | ------------------------------------- |
-| `EMAIL_PROVIDER`    | `mock`, `sendgrid` | `twilio-sendgrid-email.provider.js`   |
-| `SMS_PROVIDER`      | `mock`, `twilio`   | `twilio-sms.provider.js`              |
-| `WHATSAPP_PROVIDER` | `mock`, `twilio`   | `twilio-whatsapp.provider.js`         |
+| Env var             | Supported values   | Adapter file                        |
+| ------------------- | ------------------ | ----------------------------------- |
+| `EMAIL_PROVIDER`    | `mock`, `sendgrid` | `twilio-sendgrid-email.provider.js` |
+| `SMS_PROVIDER`      | `mock`, `twilio`   | `twilio-sms.provider.js`            |
+| `WHATSAPP_PROVIDER` | `mock`, `twilio`   | `twilio-whatsapp.provider.js`       |
 
 Adding a new adapter follows the same pattern as before:
 

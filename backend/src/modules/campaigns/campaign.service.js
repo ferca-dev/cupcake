@@ -393,7 +393,7 @@ const dispatchPendingRecipients = async ({
     }
 
     const contactId = doc.contactId ? doc.contactId.toString() : null;
-    const contact = contactId ? contactsById.get(contactId) ?? null : null;
+    const contact = contactId ? (contactsById.get(contactId) ?? null) : null;
     try {
       const result = await provider.send({
         channel: doc.channel,

@@ -49,10 +49,7 @@ export const insertRecipients = async (recipients) => {
 export const removeRecipientsByCampaign = async ({ campaignId, tenantId }) =>
   CampaignRecipient.deleteMany(tenantFilter({ campaignId }, tenantId));
 
-export const findRecipientByProviderMessageId = async ({
-  providerMessageId,
-  channel = null,
-}) => {
+export const findRecipientByProviderMessageId = async ({ providerMessageId, channel = null }) => {
   if (!providerMessageId) return null;
   const filter = { providerMessageId };
   if (channel) filter.channel = channel;
