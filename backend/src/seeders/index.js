@@ -8,6 +8,7 @@ import { seedCampaigns } from './seed-campaigns.js';
 import { seedTemplates } from './seed-templates.js';
 import { seedTransactions } from './seed-transactions.js';
 import { seedTokens } from './seed-tokens.js';
+import { seedPlans } from './seed-plans.js';
 
 /**
  * Runs all available seeders in dependency order. Idempotent — running the
@@ -20,6 +21,7 @@ const runSeeders = async () => {
 
   try {
     await seedAuth();
+    await seedPlans();
     await seedTemplates();
     await seedSurveys();
     await seedContacts();

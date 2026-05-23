@@ -7,6 +7,8 @@ import { RefreshToken } from '../auth/refresh-token.model.js';
 import { TeamInvitation } from './team-invitation.model.js';
 import { sendTeamNotification } from './team-notification.service.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
+import { assertFeature, assertQuota } from '../plans/plan.service.js';
+import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
 import {
   ROLES,
   TENANT_INVITABLE_ROLES,
@@ -524,6 +526,14 @@ export const createInvitation = async ({ actor, payload, ip, userAgent }) => {
   if (tenant.status !== 'active') {
     throw new ConflictError('Tenant is not active');
   }
+
+  // Plan-level enforcement runs alongside the existing `maxTeamMembers`
+  // setting on the tenant doc. The feature gate is the higher-level rule
+  // ("can this tenant invite new users at all?") and the quota gates the
+  // numeric seat budget; the seat check inside `assertSeatAvailable` still
+  // runs so per-tenant overrides set by an admin still apply.
+  await assertFeature({ tenantId, feature: FEATURE_KEYS.TEAM_INVITATIONS });
+  await assertQuota({ tenantId, quotaKey: QUOTA_KEYS.USERS });
 
   const email = payload.email.toLowerCase().trim();
 

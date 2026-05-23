@@ -306,6 +306,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
 - [docs/media-storage.md](docs/media-storage.md) — image upload validation, local/S3 storage, and cleanup policy.
 - [docs/team-management.md](docs/team-management.md) — tenant team membership, invitations, and ownership transfer.
+- [docs/plans-and-quotas.md](docs/plans-and-quotas.md) — plan catalogue, feature gates, quota enforcement, and tenant assignment history.
 
 ## Phase workflow
 

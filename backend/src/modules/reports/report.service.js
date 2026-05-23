@@ -6,6 +6,8 @@ import { Response } from '../responses/response.model.js';
 import { CampaignRecipient } from '../campaigns/campaign-recipient.model.js';
 import { ValidationError, NotFoundError } from '../../common/errors/index.js';
 import { buildCsv } from './report.csv.js';
+import { assertFeature, assertQuota, consumeMonthlyQuota } from '../plans/plan.service.js';
+import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
 
 const CAMPAIGN_CHANNELS = Object.freeze(['email', 'sms', 'whatsapp']);
 const ALL_REPORT_CHANNELS = Object.freeze([...CAMPAIGN_CHANNELS, 'public_link']);
@@ -1127,7 +1129,22 @@ export const getVersionsReport = async ({ surveyId, tenantId, filters = {} }) =>
  * and `format` (csv vs json). For raw response exports each schema field
  * becomes a column so analysts can pivot or filter downstream.
  */
-export const buildExport = async ({ surveyId, tenantId, filters = {}, options = {} }) => {
+export const buildExport = async (input) => {
+  const { tenantId } = input ?? {};
+  if (tenantId) {
+    // Exports are a paid feature with their own monthly quota. Both checks
+    // happen up-front so the response is fast for tenants without access.
+    await assertFeature({ tenantId, feature: FEATURE_KEYS.SURVEYS_EXPORTS });
+    await assertQuota({ tenantId, quotaKey: QUOTA_KEYS.EXPORTS_MONTHLY });
+  }
+  const result = await buildExportInternal(input);
+  if (tenantId) {
+    await consumeMonthlyQuota({ tenantId, quotaKey: QUOTA_KEYS.EXPORTS_MONTHLY });
+  }
+  return result;
+};
+
+const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options = {} }) => {
   const survey = await loadSurveyForReport({ surveyId, tenantId });
   const { schema, version } = await resolveReportSchema({
     survey,

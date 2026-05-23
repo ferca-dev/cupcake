@@ -11,6 +11,8 @@ import {
 } from '../../common/errors/index.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 import { getSurveyDashboardStats } from '../dashboard/dashboard.service.js';
+import { assertFeature, assertQuota } from '../plans/plan.service.js';
+import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
 
 export const SURVEY_AUDIT_ACTIONS = Object.freeze({
   CREATED: 'survey.created',
@@ -135,6 +137,9 @@ export const getSurvey = async ({ id, tenantId, allowSuperAdminGlobal = false })
 
 export const createSurvey = async ({ tenantId, actor, payload, ip = null, userAgent = null }) => {
   const tenant = ensureTenant(tenantId);
+  // Quota check is performed before any expensive validation so the upgrade
+  // prompt is surfaced as cheaply as possible.
+  await assertQuota({ tenantId: tenant, quotaKey: QUOTA_KEYS.SURVEYS });
   const schema = payload.schema ? parseFormSchema(payload.schema) : emptyFormSchema();
   const slug = await resolveUniqueSlug({
     desired: payload.slug,
@@ -227,6 +232,14 @@ export const deleteSurvey = async ({ id, tenantId, actor, ip = null, userAgent =
 export const publishSurvey = async ({ id, tenantId, actor, ip = null, userAgent = null }) => {
   const survey = await requireSurvey({ id, tenantId });
 
+  // Publish requires the `surveys.publish` plan feature. A tenant that loses
+  // the feature on downgrade can still see/edit existing surveys but cannot
+  // publish a new version until they upgrade.
+  await assertFeature({
+    tenantId: survey.tenantId.toString(),
+    feature: FEATURE_KEYS.SURVEYS_PUBLISH,
+  });
+
   if (survey.status === 'archived') {
     throw new ConflictError('Archived surveys cannot be published');
   }
@@ -315,6 +328,9 @@ export const duplicateSurvey = async ({
 }) => {
   const source = await requireSurvey({ id, tenantId });
   const tenant = ensureTenant(tenantId ?? source.tenantId);
+  // Duplicating creates a new survey row so it counts toward the same quota
+  // as a fresh `createSurvey`.
+  await assertQuota({ tenantId: tenant, quotaKey: QUOTA_KEYS.SURVEYS });
 
   const newTitle = payload?.title?.trim() || `${source.title} (copy)`;
   const slug = await resolveUniqueSlug({

@@ -10,7 +10,10 @@ let mongoServer = null;
  */
 export const startInMemoryMongo = async () => {
   if (mongoServer) return mongoServer.getUri();
-  mongoServer = await MongoMemoryServer.create();
+  // MongoDB 8.x cold-starts in 5+ seconds on macOS. The library's default 10s
+  // instance timeout is borderline when several specs spin up in parallel, so
+  // we bump it explicitly to keep CI runs deterministic.
+  mongoServer = await MongoMemoryServer.create({ instance: { launchTimeout: 30000 } });
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
   return uri;

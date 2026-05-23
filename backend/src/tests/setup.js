@@ -3,6 +3,9 @@
 // pick a value of APP_ENV=test so loggers and middleware adjust accordingly.
 
 process.env.APP_ENV = process.env.APP_ENV ?? 'test';
+// Tests don't care about password hash strength; lowering the bcrypt cost
+// keeps the suite fast (12 → 4 cuts each hash from ~150ms to single digits).
+process.env.BCRYPT_SALT_ROUNDS = process.env.BCRYPT_SALT_ROUNDS ?? '4';
 process.env.APP_PORT = process.env.APP_PORT ?? '0';
 process.env.APP_URL = process.env.APP_URL ?? 'http://localhost:4000';
 process.env.FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';

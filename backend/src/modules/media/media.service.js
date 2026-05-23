@@ -15,6 +15,8 @@ import {
 import { createStorageProvider } from './storage/index.js';
 import { AuthorizationError, NotFoundError, ValidationError } from '../../common/errors/index.js';
 import { loadEnv } from '../../config/env.js';
+import { assertFeature, assertQuota } from '../plans/plan.service.js';
+import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
 
 const PURPOSE_SEGMENTS = Object.freeze({
   survey_image: 'surveys',
@@ -179,6 +181,15 @@ const requireAsset = async ({ id, tenantId, includeDeleted = false }) => {
 export const uploadImage = async ({ tenantId, actor, file, purpose = 'general' }) => {
   const tenant = ensureTenant(tenantId);
   const env = loadEnv();
+  // Feature gate first (cheap), then storage quota. The storage quota is
+  // measured in MB so we round up the incoming size before comparing.
+  await assertFeature({ tenantId: tenant, feature: FEATURE_KEYS.MEDIA_UPLOAD });
+  const requestedMb = Math.max(1, Math.ceil((file?.size ?? 0) / (1024 * 1024)));
+  await assertQuota({
+    tenantId: tenant,
+    quotaKey: QUOTA_KEYS.STORAGE_MB,
+    requested: requestedMb,
+  });
   const validated = await validateImage({ file, maxBytes: env.MAX_IMAGE_UPLOAD_BYTES });
   const storage = createStorageProvider(env);
   const storageKey = buildStorageKey({

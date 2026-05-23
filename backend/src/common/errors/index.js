@@ -7,3 +7,5 @@ export { ConflictError } from './conflict-error.js';
 export { ResponseLimitError } from './response-limit-error.js';
 export { RateLimitError } from './rate-limit-error.js';
 export { BadRequestError } from './bad-request-error.js';
+export { FeatureBlockedError } from './feature-blocked-error.js';
+export { QuotaExceededError } from './quota-exceeded-error.js';

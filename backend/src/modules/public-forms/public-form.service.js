@@ -12,6 +12,8 @@ import {
 import { hashResponseKey } from '../../common/utils/hashing.js';
 import { DEFAULT_RESPONSE_LIMIT_MESSAGE, RESPONSE_LIMIT_MODES } from '../surveys/survey.model.js';
 import { validateAnswersAgainstSchema } from './answer.validator.js';
+import { assertQuota, consumeMonthlyQuota } from '../plans/plan.service.js';
+import { QUOTA_KEYS } from '../plans/plan.constants.js';
 
 const PUBLIC_VIEW_STATUSES = new Set(['published', 'paused']);
 
@@ -215,6 +217,12 @@ export const submitPublicResponse = async ({
     throw new ConflictError('This survey requires a personal submission link.');
   }
 
+  // Enforce the tenant's monthly response quota before validating the body so
+  // a tenant that has run out of their plan does not consume CPU for nothing.
+  // The error code is machine-readable so the public form can surface a
+  // "this workspace has reached its monthly limit" message.
+  await assertQuota({ tenantId: survey.tenantId.toString(), quotaKey: QUOTA_KEYS.RESPONSES_MONTHLY });
+
   const answers = validateAnswersAgainstSchema(version.schema, payload?.answers ?? []);
 
   // Match the token to a campaign recipient so the submitted response carries
@@ -312,6 +320,13 @@ export const submitPublicResponse = async ({
     recipient.clickedAt = submittedAt;
     await recipient.save();
   }
+
+  // Counter increment runs after the response is committed so a failed insert
+  // does not consume the quota.
+  await consumeMonthlyQuota({
+    tenantId: survey.tenantId.toString(),
+    quotaKey: QUOTA_KEYS.RESPONSES_MONTHLY,
+  });
 
   return {
     id: response._id.toString(),

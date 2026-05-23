@@ -11,6 +11,8 @@ import { sendPaymentNotification } from './notification.service.js';
 import { registerSubscriptionHandlers } from './payment.service.js';
 import { Tenant } from '../tenants/tenant.model.js';
 import { User } from '../users/user.model.js';
+import { Plan } from '../plans/plan.model.js';
+import { assignPlanToTenant } from '../plans/plan.service.js';
 import { loadEnv } from '../../config/env.js';
 import {
   ConflictError,
@@ -496,6 +498,26 @@ const applyPreapprovalFetched = async (sub, fetched) => {
       recipientEmail: sub.mercadoPagoPayerEmail,
       data: { planName: sub.planNameSnapshot },
     });
+    // When the subscription plan (Mercado Pago) is linked to a product Plan
+    // we auto-assign the tenant so feature gates flip the moment the
+    // recurring charge is authorised. Best-effort — a missing mapping is not
+    // an error because plenty of subscription plans are pure token bundles.
+    try {
+      const productPlan = await Plan.findOne({ subscriptionPlanId: sub.planId });
+      if (productPlan && productPlan.status === 'active') {
+        await assignPlanToTenant({
+          tenantId: sub.tenantId,
+          planId: productPlan._id,
+          actor: null,
+          source: 'subscription',
+          subscriptionId: sub._id,
+          reason: `Subscription ${sub.planCode} authorised`,
+        });
+      }
+    } catch {
+      // Subscription state is more important than the gate cascade; never let
+      // a plan assignment error block the webhook acknowledgement.
+    }
   }
 };
 

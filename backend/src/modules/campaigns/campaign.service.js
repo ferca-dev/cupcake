@@ -15,6 +15,25 @@ import {
 import { loadEnv } from '../../config/env.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 import * as tokenService from '../tokens/token.service.js';
+import { assertFeature, assertQuota, consumeMonthlyQuota } from '../plans/plan.service.js';
+import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
+
+// Maps a campaign channel to the plan feature flag that gates it.
+const CHANNEL_FEATURE = Object.freeze({
+  email: FEATURE_KEYS.CAMPAIGNS_EMAIL,
+  sms: FEATURE_KEYS.CAMPAIGNS_SMS,
+  whatsapp: FEATURE_KEYS.CAMPAIGNS_WHATSAPP,
+});
+
+const assertChannelFeatures = async ({ tenantId, channels }) => {
+  const unique = Array.isArray(channels) ? [...new Set(channels)] : [];
+  for (const channel of unique) {
+    const featureKey = CHANNEL_FEATURE[channel];
+    if (featureKey) {
+      await assertFeature({ tenantId, feature: featureKey });
+    }
+  }
+};
 
 export const CAMPAIGN_AUDIT_ACTIONS = Object.freeze({
   CREATED: 'campaign.created',
@@ -209,6 +228,11 @@ export const getCampaign = async ({ id, tenantId }) => {
 
 export const createCampaign = async ({ tenantId, actor, payload, ip = null, userAgent = null }) => {
   const tenant = ensureTenant(tenantId);
+  // Block channels that the plan does not include before any work happens.
+  await assertChannelFeatures({ tenantId: tenant, channels: payload.channels });
+  // Reserve a monthly campaign slot up-front so concurrent attempts cannot
+  // double-spend the cap. The slot is only incremented at send time below.
+  await assertQuota({ tenantId: tenant, quotaKey: QUOTA_KEYS.CAMPAIGNS_MONTHLY });
   const { survey, version } = await loadPublishedSurvey({
     surveyId: payload.surveyId,
     tenantId: tenant,
@@ -646,6 +670,15 @@ export const sendCampaign = async ({
     tokensHeld: dispatch.tokensHeld,
   };
   await campaign.save();
+
+  // Count this send toward the monthly campaign quota. The pre-create check
+  // already gated it; this increment is what closes the loop for future
+  // sends. Stays a no-op when the campaign produced no `validCount` (which
+  // covers the "completely skipped" path) so a tenant is not penalised for
+  // a no-op send.
+  if (summary.validCount > 0) {
+    await consumeMonthlyQuota({ tenantId: tenant, quotaKey: QUOTA_KEYS.CAMPAIGNS_MONTHLY });
+  }
 
   const balanceAfter = await tokenService.getBalance({ tenantId: tenant });
 

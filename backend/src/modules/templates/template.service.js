@@ -11,6 +11,8 @@ import {
   AuthorizationError,
 } from '../../common/errors/index.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
+import { assertFeature, assertQuota } from '../plans/plan.service.js';
+import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
 
 export const TEMPLATE_AUDIT_ACTIONS = Object.freeze({
   CREATED: 'template.created',
@@ -150,6 +152,13 @@ export const createTemplate = async ({
   const isSystem = wantsSystem || (isSuperAdmin && !tenantId);
   if (!isSystem && !tenantId) {
     throw new AuthorizationError('Tenant context is required to create a template');
+  }
+
+  // Plan gating only applies to tenant-scoped templates. System templates are
+  // managed by the platform admins and are out of plan scope.
+  if (!isSystem) {
+    await assertFeature({ tenantId, feature: FEATURE_KEYS.TEMPLATES_CUSTOM });
+    await assertQuota({ tenantId, quotaKey: QUOTA_KEYS.TEMPLATES });
   }
 
   const template = await repo.createTemplate({

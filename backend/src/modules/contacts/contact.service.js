@@ -14,6 +14,8 @@ import {
   AuthorizationError,
 } from '../../common/errors/index.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
+import { assertQuota } from '../plans/plan.service.js';
+import { QUOTA_KEYS } from '../plans/plan.constants.js';
 
 export const CONTACT_AUDIT_ACTIONS = Object.freeze({
   CREATED: 'contact.created',
@@ -194,6 +196,7 @@ export const getContact = async ({ id, tenantId }) => {
 
 export const createContact = async ({ tenantId, actor, payload, ip = null, userAgent = null }) => {
   const tenant = ensureTenant(tenantId);
+  await assertQuota({ tenantId: tenant, quotaKey: QUOTA_KEYS.CONTACTS });
 
   const email = normaliseEmail(payload.email ?? null);
   const phone = normalisePhone(payload.phone ?? null);

@@ -31,6 +31,8 @@ import TenantCreateView from '../views/admin/TenantCreateView.vue';
 import TenantDetailView from '../views/admin/TenantDetailView.vue';
 import TokenSettingsView from '../views/admin/TokenSettingsView.vue';
 import PaymentsAdminView from '../views/admin/PaymentsAdminView.vue';
+import PlansAdminView from '../views/admin/PlansAdminView.vue';
+import PlanView from '../views/billing/PlanView.vue';
 import SettingsView from '../views/settings/SettingsView.vue';
 import TeamManagementView from '../views/team/TeamManagementView.vue';
 import AcceptInvitationView from '../views/auth/AcceptInvitationView.vue';
@@ -335,6 +337,26 @@ export const routes = [
           title: 'Mercado Pago',
           requiresAuth: true,
           roles: ['super_admin'],
+        },
+      },
+      {
+        path: 'admin/plans',
+        name: 'admin.plans',
+        component: PlansAdminView,
+        meta: {
+          title: 'Plans',
+          requiresAuth: true,
+          roles: ['super_admin'],
+        },
+      },
+      {
+        path: 'billing/plan',
+        name: 'billing.plan',
+        component: PlanView,
+        meta: {
+          title: 'Plan',
+          requiresAuth: true,
+          permissions: ['billing.view'],
         },
       },
     ],

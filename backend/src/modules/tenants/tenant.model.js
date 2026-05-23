@@ -42,7 +42,7 @@ const tenantSchema = new Schema(
       default: 'active',
       required: true,
     },
-    planId: { type: Types.ObjectId, default: null },
+    planId: { type: Types.ObjectId, ref: 'Plan', default: null },
     settings: { type: settingsSchema, default: () => ({}) },
   },
   {

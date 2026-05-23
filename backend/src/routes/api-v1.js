@@ -11,6 +11,7 @@ import { templatesRouter } from '../modules/templates/template.routes.js';
 import { transactionsRouter } from '../modules/transactions/transaction.routes.js';
 import { tokenBillingRouter } from '../modules/tokens/token-billing.routes.js';
 import { paymentBillingRouter } from '../modules/payments/payment.routes.js';
+import { planBillingRouter } from '../modules/plans/plan-billing.routes.js';
 import { adminRouter } from '../modules/admin/admin.routes.js';
 import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
@@ -128,6 +129,17 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/admin/subscriptions/:id/pause',
         '/api/v1/admin/payments/reminders/low-balance',
         '/api/v1/admin/payments/reminders/renewals',
+        '/api/v1/admin/plans',
+        '/api/v1/admin/plans/:id',
+        '/api/v1/admin/plans/:id/status',
+        '/api/v1/admin/plans/catalogue',
+        '/api/v1/admin/tenants/:tenantId/plan',
+        '/api/v1/admin/tenants/:tenantId/plan-history',
+        '/api/v1/admin/tenants/:tenantId/usage',
+        '/api/v1/billing/plan',
+        '/api/v1/billing/usage',
+        '/api/v1/billing/plans/available',
+        '/api/v1/billing/plans/catalogue',
         '/api/v1/team/members',
         '/api/v1/team/members/:id',
         '/api/v1/team/members/:id/role',
@@ -163,6 +175,7 @@ apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
 apiV1Router.use('/billing', tokenBillingRouter);
 apiV1Router.use('/billing', paymentBillingRouter);
+apiV1Router.use('/billing', planBillingRouter);
 apiV1Router.use('/team', teamPublicRouter);
 apiV1Router.use('/team', teamRouter);
 apiV1Router.use('/webhooks', webhooksRouter);

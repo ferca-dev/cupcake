@@ -50,6 +50,8 @@ const buildRouter = () => {
           },
           { path: 'admin/tokens', name: 'admin.tokens', component: Empty },
           { path: 'admin/payments', name: 'admin.payments', component: Empty },
+          { path: 'admin/plans', name: 'admin.plans', component: Empty },
+          { path: 'billing/plan', name: 'billing.plan', component: Empty },
         ],
       },
       { path: '/auth/login', name: 'auth.login', component: Empty },
