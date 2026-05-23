@@ -17,6 +17,7 @@ import SurveyStatsView from '../features/dashboard/SurveyStatsView.vue';
 import SurveyReportsView from '../features/reports/SurveyReportsView.vue';
 import ContactListView from '../views/contacts/ContactListView.vue';
 import ContactGroupListView from '../views/contacts/ContactGroupListView.vue';
+import SuppressionListView from '../views/contacts/SuppressionListView.vue';
 import CampaignListView from '../views/campaigns/CampaignListView.vue';
 import CampaignDetailView from '../views/campaigns/CampaignDetailView.vue';
 import TemplateListView from '../views/templates/TemplateListView.vue';
@@ -39,6 +40,7 @@ import AcceptInvitationView from '../views/auth/AcceptInvitationView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormView from '../views/public/PublicFormView.vue';
+import EmailUnsubscribeView from '../views/public/EmailUnsubscribeView.vue';
 
 export const routes = [
   {
@@ -152,6 +154,16 @@ export const routes = [
           title: 'Contact groups',
           requiresAuth: true,
           permissions: ['groups.manage'],
+        },
+      },
+      {
+        path: 'suppression-list',
+        name: 'suppression.list',
+        component: SuppressionListView,
+        meta: {
+          title: 'Suppression list',
+          requiresAuth: true,
+          permissions: ['contacts.manage'],
         },
       },
       {
@@ -398,6 +410,18 @@ export const routes = [
         submissionToken: to.params.submissionToken,
       },
     }),
+  },
+  {
+    path: '/unsubscribe/email/:token',
+    component: PublicFormLayout,
+    children: [
+      {
+        path: '',
+        name: 'public.unsubscribe.email',
+        component: EmailUnsubscribeView,
+        meta: { title: 'Email unsubscribe', public: true },
+      },
+    ],
   },
   {
     path: '/:pathMatch(.*)*',

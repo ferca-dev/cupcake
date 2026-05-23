@@ -61,6 +61,10 @@ const envSchema = z
     TWILIO_SENDGRID_FROM_NAME: z.string().trim().default('Cupcake'),
     TWILIO_SENDGRID_EVENT_WEBHOOK_SECRET: z.string().trim().default(''),
 
+    // Signed public unsubscribe tokens use this HMAC secret when set. If left
+    // empty the backend falls back to JWT_ACCESS_SECRET.
+    UNSUBSCRIBE_TOKEN_SECRET: z.string().trim().default(''),
+
     // Token wallet / billing configuration. Tokens are internal prepaid
     // credits, not cryptocurrency. The mode controls how purchases settle:
     //   - `manual`: clients submit purchase requests, a super admin approves

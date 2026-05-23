@@ -35,6 +35,7 @@ const columns = computed(() => [
   { key: 'phone', label: t('contacts.list.columns.phone') },
   { key: 'whatsappPhone', label: t('contacts.list.columns.whatsapp') },
   { key: 'channels', label: t('contacts.list.columns.channels') },
+  { key: 'consent', label: t('contacts.list.columns.consent') },
   { key: 'status', label: t('contacts.list.columns.status') },
   { key: 'actions', label: t('contacts.list.columns.actions'), align: 'right' },
 ]);
@@ -149,6 +150,20 @@ const channelLabel = (channel, info) => {
 };
 
 const isReady = (info) => Boolean(info?.ready);
+
+const consentVariant = (status) => {
+  switch (status) {
+    case 'subscribed':
+      return 'success';
+    case 'pending':
+    case 'unknown':
+      return 'warning';
+    case 'unsubscribed':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+};
 </script>
 
 <template>
@@ -234,6 +249,19 @@ const isReady = (info) => Boolean(info?.ready);
               :title="channelLabel(key, row.channels?.[key])"
             >
               {{ t(`contacts.channels.${key}.short`) }}
+            </AppBadge>
+          </div>
+        </template>
+        <template #cell:consent="{ row }">
+          <div class="contacts__channels">
+            <AppBadge
+              v-for="key in ['email', 'sms', 'whatsapp']"
+              :key="key"
+              :variant="consentVariant(row.consent?.[key]?.status)"
+              :title="`${row.consent?.[key]?.source ?? ''} ${row.consent?.[key]?.changedAt ?? ''}`"
+            >
+              {{ t(`contacts.consent.short.${key}`) }}:
+              {{ t(`contacts.consent.statuses.${row.consent?.[key]?.status ?? 'unknown'}`) }}
             </AppBadge>
           </div>
         </template>

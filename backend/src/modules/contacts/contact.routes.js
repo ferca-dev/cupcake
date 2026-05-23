@@ -46,6 +46,12 @@ contactsRouter.put(
   contactController.updateContact,
 );
 
+contactsRouter.patch(
+  '/:id/consent',
+  requirePermission(PERMISSIONS.CONTACTS_MANAGE),
+  contactController.updateContactConsent,
+);
+
 contactsRouter.delete(
   '/:id',
   requirePermission(PERMISSIONS.CONTACTS_MANAGE),

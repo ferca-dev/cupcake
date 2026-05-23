@@ -4,6 +4,7 @@ import { asyncHandler } from '../../common/utils/async-handler.js';
 import { sendSuccess } from '../../common/responses/index.js';
 import { recordSendGridEvent, recordTwilioStatusEvent } from './webhook.service.js';
 import { receiveMercadoPagoWebhook } from '../payments/webhook.controller.js';
+import { receiveTwilioOptOut } from '../suppression/suppression.controller.js';
 
 export const webhooksRouter = Router();
 
@@ -30,6 +31,8 @@ webhooksRouter.post(
     return sendSuccess(res, { data: null, message: 'Twilio status event acknowledged' });
   }),
 );
+
+webhooksRouter.post('/twilio/opt-out', express.urlencoded({ extended: true }), receiveTwilioOptOut);
 
 /**
  * SendGrid posts events as a JSON array. Each event references the original

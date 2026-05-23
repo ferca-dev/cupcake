@@ -24,6 +24,15 @@ export const SKIP_REASONS = Object.freeze([
   'contact_blocked',
   'contact_archived',
   'duplicate_recipient',
+  'email_consent_missing',
+  'sms_consent_missing',
+  'whatsapp_consent_missing',
+  'email_consent_opted_out',
+  'sms_consent_opted_out',
+  'whatsapp_consent_opted_out',
+  'email_suppressed',
+  'sms_suppressed',
+  'whatsapp_suppressed',
 ]);
 
 const campaignRecipientSchema = new Schema(

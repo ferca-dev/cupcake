@@ -2,6 +2,11 @@ import { z } from 'zod';
 
 import { CONTACT_STATUSES } from './contact.model.js';
 import { CONTACT_GROUP_STATUSES } from './contact-group.model.js';
+import {
+  CONTACT_CONSENT_SOURCES,
+  CONTACT_CONSENT_STATUSES,
+  CONSENT_CHANNELS,
+} from './consent.utils.js';
 
 const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, 'Must be a valid ObjectId');
 
@@ -49,6 +54,23 @@ const tagsSchema = z.array(z.string().trim().min(1).max(40)).max(50).optional();
 
 const groupIdsSchema = z.array(objectIdSchema).max(100).optional();
 
+const channelConsentInputSchema = z
+  .object({
+    status: z.enum(CONTACT_CONSENT_STATUSES).optional(),
+    source: z.enum(CONTACT_CONSENT_SOURCES).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
+
+const contactConsentInputSchema = z
+  .object({
+    email: channelConsentInputSchema.optional(),
+    sms: channelConsentInputSchema.optional(),
+    whatsapp: channelConsentInputSchema.optional(),
+  })
+  .strict()
+  .optional();
+
 const baseContactFields = {
   firstName: nullableString(120),
   lastName: nullableString(120),
@@ -68,6 +90,7 @@ const baseContactFields = {
   tags: tagsSchema,
   groupIds: groupIdsSchema,
   metadata: z.record(z.string(), z.unknown()).optional(),
+  consent: contactConsentInputSchema,
   status: z.enum(CONTACT_STATUSES).optional(),
 };
 
@@ -149,6 +172,15 @@ export const groupMembershipSchema = z
 export const groupMembershipBulkSchema = z
   .object({
     contactIds: z.array(objectIdSchema).min(1).max(500),
+  })
+  .strict();
+
+export const updateContactConsentSchema = z
+  .object({
+    channel: z.enum(CONSENT_CHANNELS),
+    status: z.enum(CONTACT_CONSENT_STATUSES),
+    source: z.enum(CONTACT_CONSENT_SOURCES).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 

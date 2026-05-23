@@ -132,6 +132,12 @@ const navItems = computed(() => {
       visible: auth.hasPermission('groups.manage'),
     },
     {
+      to: { name: 'suppression.list' },
+      label: t('suppression.nav'),
+      icon: 'M12 3 4 7v5c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7Zm-4 9h8',
+      visible: auth.hasPermission('contacts.manage'),
+    },
+    {
       to: { name: 'campaigns.list' },
       label: t('campaigns.list.title'),
       icon: 'M3 11 21 4l-3 16-7-4-3 4Z',

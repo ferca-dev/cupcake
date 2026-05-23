@@ -107,6 +107,14 @@ export const useContactsStore = defineStore('contacts', {
       return data?.contact ?? null;
     },
 
+    async updateContactConsent(id, payload) {
+      const data = await contactService.updateConsent(id, payload);
+      if (data?.contact) {
+        this.contacts = this.contacts.map((c) => (c.id === id ? data.contact : c));
+      }
+      return data?.contact ?? null;
+    },
+
     async archiveContact(id) {
       const data = await contactService.remove(id);
       // The contact stays in the list with status: archived so the filter

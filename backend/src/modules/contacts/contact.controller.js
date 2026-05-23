@@ -2,6 +2,7 @@ import * as contactService from './contact.service.js';
 import {
   createContactSchema,
   updateContactSchema,
+  updateContactConsentSchema,
   listContactsQuerySchema,
   createContactGroupSchema,
   updateContactGroupSchema,
@@ -59,6 +60,19 @@ export const updateContact = asyncHandler(async (req, res) => {
     ...requestContext(req),
   });
   return sendSuccess(res, { data: { contact }, message: 'Contact updated' });
+});
+
+export const updateContactConsent = asyncHandler(async (req, res) => {
+  const payload = updateContactConsentSchema.parse(req.body ?? {});
+  const tenantId = resolveTenantId(req);
+  const contact = await contactService.updateContactConsent({
+    id: req.params.id,
+    tenantId,
+    actor: req.user,
+    payload,
+    ...requestContext(req),
+  });
+  return sendSuccess(res, { data: { contact }, message: 'Contact consent updated' });
 });
 
 export const deleteContact = asyncHandler(async (req, res) => {

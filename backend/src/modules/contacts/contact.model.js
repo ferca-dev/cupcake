@@ -1,8 +1,34 @@
 import mongoose from 'mongoose';
 
+import {
+  CONTACT_CONSENT_SOURCES,
+  CONTACT_CONSENT_STATUSES,
+  defaultConsentState,
+} from './consent.utils.js';
+
 const { Schema, Types } = mongoose;
 
 export const CONTACT_STATUSES = Object.freeze(['active', 'archived', 'blocked']);
+
+const channelConsentSchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: CONTACT_CONSENT_STATUSES,
+      default: 'subscribed',
+      required: true,
+    },
+    source: {
+      type: String,
+      enum: CONTACT_CONSENT_SOURCES,
+      default: 'system',
+      required: true,
+    },
+    changedAt: { type: Date, default: Date.now },
+    metadata: { type: Schema.Types.Mixed, default: () => ({}) },
+  },
+  { _id: false },
+);
 
 /**
  * Tenant-scoped people directory. A contact is "useful" when it has at least
@@ -38,6 +64,11 @@ const contactSchema = new Schema(
       default: () => [],
     },
     metadata: { type: Schema.Types.Mixed, default: () => ({}) },
+    consent: {
+      email: { type: channelConsentSchema, default: () => defaultConsentState() },
+      sms: { type: channelConsentSchema, default: () => defaultConsentState() },
+      whatsapp: { type: channelConsentSchema, default: () => defaultConsentState() },
+    },
     status: {
       type: String,
       enum: CONTACT_STATUSES,

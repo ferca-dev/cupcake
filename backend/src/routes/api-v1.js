@@ -17,6 +17,10 @@ import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
 import { mediaRouter } from '../modules/media/media.routes.js';
 import { teamRouter, teamPublicRouter } from '../modules/team/team.routes.js';
+import {
+  publicSuppressionRouter,
+  suppressionRouter,
+} from '../modules/suppression/suppression.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -59,8 +63,11 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/surveys/:id/reports/export',
         '/api/v1/contacts',
         '/api/v1/contacts/:id',
+        '/api/v1/contacts/:id/consent',
         '/api/v1/contacts/import',
         '/api/v1/contacts/imports/:id/report',
+        '/api/v1/suppression-list',
+        '/api/v1/suppression-list/:id',
         '/api/v1/contact-groups',
         '/api/v1/contact-groups/:id',
         '/api/v1/contact-groups/:id/contacts',
@@ -73,6 +80,8 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/public/forms/:slug',
         '/api/v1/public/forms/:slug/token/:submissionToken',
         '/api/v1/public/forms/:slug/responses',
+        '/api/v1/public/unsubscribe/email',
+        '/api/v1/public/unsubscribe/email/:token',
         '/api/v1/dashboard/summary',
         '/api/v1/dashboard/surveys/:id',
         '/api/v1/dashboard/channels',
@@ -151,6 +160,7 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/team/owner-transfer',
         '/api/v1/admin/tenants/:id/invitations',
         '/api/v1/webhooks/twilio/messages',
+        '/api/v1/webhooks/twilio/opt-out',
         '/api/v1/webhooks/sendgrid/events',
         '/api/v1/webhooks/mercadopago',
       ],
@@ -165,7 +175,9 @@ apiV1Router.use('/tenants', tenantsRouter);
 apiV1Router.use('/surveys', surveysRouter);
 apiV1Router.use('/contacts', contactsRouter);
 apiV1Router.use('/contact-groups', contactGroupsRouter);
+apiV1Router.use('/suppression-list', suppressionRouter);
 apiV1Router.use('/campaigns', campaignsRouter);
+apiV1Router.use('/public', publicSuppressionRouter);
 apiV1Router.use('/public', publicFormsRouter);
 apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminRouter);

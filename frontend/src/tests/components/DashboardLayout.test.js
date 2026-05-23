@@ -28,6 +28,7 @@ const buildRouter = () => {
           { path: 'templates', name: 'templates.list', component: Empty },
           { path: 'contacts', name: 'contacts.list', component: Empty },
           { path: 'contact-groups', name: 'contact-groups.list', component: Empty },
+          { path: 'suppression-list', name: 'suppression.list', component: Empty },
           { path: 'campaigns', name: 'campaigns.list', component: Empty },
           { path: 'billing/transactions', name: 'billing.transactions', component: Empty },
           { path: 'billing/tokens', name: 'billing.tokens', component: Empty },

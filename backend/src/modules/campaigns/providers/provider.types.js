@@ -9,6 +9,7 @@
  * @property {string} recipient - Address validated for the channel.
  * @property {string} submissionToken - Per-recipient submission token.
  * @property {string} publicUrl - Public URL for the recipient.
+ * @property {string|null} unsubscribeUrl - Public one-click email unsubscribe URL.
  * @property {{ id: string|null, fullName: string|null }} contact
  * @property {{ id: string, name: string }} campaign
  * @property {{ id: string, title: string, slug: string }} survey

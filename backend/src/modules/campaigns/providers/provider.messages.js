@@ -21,6 +21,8 @@ const surveyTitle = (payload) => payload?.survey?.title ?? 'our survey';
 
 const ensureUrl = (payload) => payload?.publicUrl ?? '';
 
+const unsubscribeUrl = (payload) => payload?.unsubscribeUrl ?? null;
+
 /**
  * Plain-text body used for SMS. Carriers reject lengthy messages, so the body
  * is capped well under 320 characters to fit in two GSM-7 segments.
@@ -57,9 +59,10 @@ const escapeHtml = (value) =>
 export const buildEmailContent = (payload) => {
   const title = surveyTitle(payload);
   const url = ensureUrl(payload);
+  const unsubscribe = unsubscribeUrl(payload);
   const opening = greeting(payload);
 
-  const text = [
+  const textParts = [
     `${opening},`,
     '',
     `Please take a moment to answer "${title}".`,
@@ -67,7 +70,17 @@ export const buildEmailContent = (payload) => {
     `Open the survey: ${url}`,
     '',
     'Thank you!',
-  ].join('\n');
+  ];
+  if (unsubscribe) {
+    textParts.push('', `Unsubscribe from future email surveys: ${unsubscribe}`);
+  }
+  const text = textParts.join('\n');
+
+  const unsubscribeHtml = unsubscribe
+    ? `<p style="font-size:12px;color:#6b7280">To stop future email survey invitations, <a href="${escapeHtml(
+        unsubscribe,
+      )}" style="color:#2563eb">unsubscribe here</a>.</p>`
+    : '';
 
   const html = `<!doctype html>
 <html>
@@ -80,6 +93,7 @@ export const buildEmailContent = (payload) => {
       </a>
     </p>
     <p style="font-size:12px;color:#6b7280">If the button does not work, copy and paste this link:<br>${escapeHtml(url)}</p>
+    ${unsubscribeHtml}
   </body>
 </html>`;
 

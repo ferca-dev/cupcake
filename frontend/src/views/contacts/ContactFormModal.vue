@@ -28,6 +28,11 @@ const blankDraft = () => ({
   whatsappPhone: '',
   tagsInput: '',
   groupIds: [],
+  consent: {
+    email: 'subscribed',
+    sms: 'subscribed',
+    whatsapp: 'subscribed',
+  },
   status: 'active',
 });
 
@@ -48,6 +53,11 @@ const hydrate = (source) => {
     whatsappPhone: source.whatsappPhone ?? '',
     tagsInput: (source.tags ?? []).join(', '),
     groupIds: [...(source.groupIds ?? [])],
+    consent: {
+      email: source.consent?.email?.status ?? 'subscribed',
+      sms: source.consent?.sms?.status ?? 'subscribed',
+      whatsapp: source.consent?.whatsapp?.status ?? 'subscribed',
+    },
     status: source.status ?? 'active',
   };
   localError.value = '';
@@ -67,6 +77,13 @@ const statusOptions = [
   { value: 'active', label: t('contacts.modal.status.active') },
   { value: 'archived', label: t('contacts.modal.status.archived') },
   { value: 'blocked', label: t('contacts.modal.status.blocked') },
+];
+
+const consentOptions = [
+  { value: 'subscribed', label: t('contacts.consent.statuses.subscribed') },
+  { value: 'pending', label: t('contacts.consent.statuses.pending') },
+  { value: 'unknown', label: t('contacts.consent.statuses.unknown') },
+  { value: 'unsubscribed', label: t('contacts.consent.statuses.unsubscribed') },
 ];
 
 const close = () => {
@@ -91,6 +108,11 @@ const submit = () => {
     whatsappPhone: draft.value.whatsappPhone.trim() || null,
     tags,
     groupIds: draft.value.groupIds,
+    consent: {
+      email: { status: draft.value.consent.email, source: 'manual' },
+      sms: { status: draft.value.consent.sms, source: 'manual' },
+      whatsapp: { status: draft.value.consent.whatsapp, source: 'manual' },
+    },
     status: draft.value.status,
   };
   const hasChannel = payload.email || payload.phone || payload.whatsappPhone;
@@ -167,6 +189,27 @@ const isGroupSelected = (groupId) => draft.value.groupIds.includes(groupId);
         :options="statusOptions"
         :label="t('contacts.modal.statusLabel')"
       />
+
+      <fieldset class="contact-form__groups">
+        <legend>{{ t('contacts.consent.title') }}</legend>
+        <div class="contact-form__row">
+          <AppSelect
+            v-model="draft.consent.email"
+            :options="consentOptions"
+            :label="t('contacts.consent.email')"
+          />
+          <AppSelect
+            v-model="draft.consent.sms"
+            :options="consentOptions"
+            :label="t('contacts.consent.sms')"
+          />
+        </div>
+        <AppSelect
+          v-model="draft.consent.whatsapp"
+          :options="consentOptions"
+          :label="t('contacts.consent.whatsapp')"
+        />
+      </fieldset>
 
       <fieldset class="contact-form__groups">
         <legend>{{ t('contacts.modal.groups') }}</legend>

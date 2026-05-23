@@ -92,6 +92,10 @@ based on incoming events and never trigger a new send:
 - `POST /api/v1/webhooks/twilio/messages` — Twilio SMS/WhatsApp status
   callbacks. Expects `application/x-www-form-urlencoded`. Fields it reads:
   `MessageSid`, `MessageStatus`, optional `ErrorCode`.
+- `POST /api/v1/webhooks/twilio/opt-out` — Twilio inbound STOP/START-style
+  callbacks. Reads `From`, `To`, `Body`, `MessageSid`/`SmsSid`, optional
+  `TenantId`, and optional `Channel`. STOP-like callbacks upsert tenant-scoped
+  suppression entries and update matching contact consent idempotently.
 - `POST /api/v1/webhooks/sendgrid/events` — SendGrid Event Webhook. Expects
   a JSON array of events. Reads `event`, `submissionToken`, `sg_message_id`.
 
@@ -136,6 +140,11 @@ summary reflects:
 - `contact_blocked`
 - `contact_archived`
 - `duplicate_recipient`
+- `email_consent_missing` / `sms_consent_missing` /
+  `whatsapp_consent_missing`
+- `email_consent_opted_out` / `sms_consent_opted_out` /
+  `whatsapp_consent_opted_out`
+- `email_suppressed` / `sms_suppressed` / `whatsapp_suppressed`
 
 `GET /campaigns/:id/report` aggregates the persisted recipients (instead of
 relying on the cached summary) so the report stays accurate even if a future

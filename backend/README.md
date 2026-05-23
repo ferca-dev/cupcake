@@ -456,9 +456,13 @@ caller's tenant; cross-tenant ids never resolve.
 | POST   | `/api/v1/contacts`                               | `contacts.manage` | Create a contact. Requires at least one of `email`, `phone`, `whatsappPhone`.                                    |
 | GET    | `/api/v1/contacts/:id`                           | `contacts.manage` | Fetch a single contact (404 outside tenant).                                                                     |
 | PUT    | `/api/v1/contacts/:id`                           | `contacts.manage` | Partial update. Updates that would leave the contact unreachable are rejected.                                   |
+| PATCH  | `/api/v1/contacts/:id/consent`                   | `contacts.manage` | Update one channel consent state with source and metadata.                                                       |
 | DELETE | `/api/v1/contacts/:id`                           | `contacts.manage` | Soft-archive by default. Pass `?hard=true` to remove the record.                                                 |
 | POST   | `/api/v1/contacts/import`                        | `contacts.manage` | Bulk import placeholder. Returns `202` with a `pending_implementation` job.                                      |
 | GET    | `/api/v1/contacts/imports/:id/report`            | `contacts.manage` | Bulk import report placeholder. Returns the empty schema with `placeholder: true`.                               |
+| GET    | `/api/v1/suppression-list`                       | `contacts.manage` | List tenant suppression entries with channel, status, reason, source, and search filters.                        |
+| POST   | `/api/v1/suppression-list`                       | `contacts.manage` | Create a manual tenant suppression entry for email, SMS, or WhatsApp.                                            |
+| DELETE | `/api/v1/suppression-list/:id`                   | `contacts.manage` | Release a suppression entry. Provider/legal entries require super-admin access.                                  |
 | GET    | `/api/v1/contact-groups`                         | `groups.manage`   | Paginated list with member counts.                                                                               |
 | POST   | `/api/v1/contact-groups`                         | `groups.manage`   | Create a group. Names must be unique per tenant.                                                                 |
 | GET    | `/api/v1/contact-groups/:id`                     | `groups.manage`   | Fetch a single group with the current member count.                                                              |
@@ -478,6 +482,9 @@ caller's tenant; cross-tenant ids never resolve.
 - `status: 'active' | 'archived' | 'blocked'` — `archived` is the soft-delete state;
   `blocked` is reserved for explicit suppression and is treated as unreachable on
   every channel.
+- `consent.email`, `consent.sms`, `consent.whatsapp` — per-channel consent
+  status (`subscribed`, `unsubscribed`, `pending`, `unknown`), source,
+  timestamp, and metadata. Campaigns require `subscribed` consent.
 
 Each contact response includes a `channels` block with per-channel readiness:
 
@@ -492,17 +499,21 @@ Each contact response includes a `channels` block with per-channel readiness:
 Reasons use the campaign-skip vocabulary defined in `00-shared-context.md`
 (`missing_email`, `invalid_email`, `missing_phone`, `invalid_phone`,
 `missing_whatsapp_phone`, `invalid_whatsapp_phone`, `contact_blocked`,
-`contact_archived`). The frontend uses these to render channel pills and
-explain why a contact is incomplete for a given delivery method.
+`contact_archived`, plus the Phase 28 consent/suppression reasons). The
+frontend uses these to render channel pills and explain why a contact is
+incomplete for a given delivery method.
 
 ### Audit events (contacts)
 
 `contact.service.js` records the following actions:
 
 - `contact.created`, `contact.updated`, `contact.archived`, `contact.deleted`,
-  `contact.import.requested`
+  `contact.import.requested`, `contact.consent.updated`
 - `contact_group.created`, `contact_group.updated`, `contact_group.deleted`
 - `contact_group.contact_added`, `contact_group.contact_removed`
+- `suppression.created`, `suppression.released`,
+  `suppression.email_unsubscribed`, `suppression.opt_out.received`,
+  `suppression.opt_in.received`
 
 ## Endpoints implemented in Phase 10
 
@@ -578,6 +589,7 @@ delivery-status callbacks.
 | Method | Path                               | Auth   | Description                                                                                                    |
 | ------ | ---------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/v1/webhooks/twilio/messages` | public | Receives Twilio SMS/WhatsApp status callbacks (`MessageSid`, `MessageStatus`, optional `ErrorCode`).           |
+| POST   | `/api/v1/webhooks/twilio/opt-out`  | public | Receives Twilio inbound STOP/START-style callbacks and updates suppression/consent state idempotently.         |
 | POST   | `/api/v1/webhooks/sendgrid/events` | public | Receives SendGrid Event Webhook batches and forwards delivered/opened/clicked/bounce events to recipient docs. |
 
 ### Campaign send rules (Phase 15)
@@ -600,6 +612,25 @@ construction time when the selected real provider is missing credentials
 providers remain the default for local development and the test suite. See
 [`docs/provider-architecture.md`](../docs/provider-architecture.md) for the
 full configuration matrix and webhook contract.
+
+## Endpoints implemented in Phase 28
+
+Phase 28 adds consent, public email unsubscribe, and suppression-list
+enforcement. Campaign planning checks suppression and consent before token
+preflight, wallet debits, send-limit consumption, and provider calls.
+
+| Method | Path                                      | Auth              | Description                                                                                         |
+| ------ | ----------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/public/unsubscribe/email/:token` | public            | Verifies a signed unsubscribe token and returns the preview state.                                  |
+| POST   | `/api/v1/public/unsubscribe/email`        | public            | Confirms email unsubscribe and creates an active tenant suppression entry. Body: `{ "token": "" }`. |
+| GET    | `/api/v1/suppression-list`                | `contacts.manage` | Lists tenant suppression entries.                                                                   |
+| POST   | `/api/v1/suppression-list`                | `contacts.manage` | Creates a manual suppression entry.                                                                 |
+| DELETE | `/api/v1/suppression-list/:id`            | `contacts.manage` | Releases a suppression entry; protected provider/legal entries require super-admin access.          |
+| PATCH  | `/api/v1/contacts/:id/consent`            | `contacts.manage` | Updates one contact channel consent state.                                                          |
+
+See [`docs/consent-and-suppression.md`](../docs/consent-and-suppression.md)
+for token signing, STOP/START handling, protected suppression releases, and
+the full skip-reason vocabulary.
 
 ## Endpoints implemented in Phase 20
 

@@ -16,6 +16,8 @@ export const contactService = Object.freeze({
 
   update: (id, payload) => apiClient.put(`/contacts/${id}`, payload).then(unwrap),
 
+  updateConsent: (id, payload) => apiClient.patch(`/contacts/${id}/consent`, payload).then(unwrap),
+
   remove: (id, { hard = false } = {}) =>
     apiClient.delete(`/contacts/${id}`, { query: { hard } }).then(unwrap),
 

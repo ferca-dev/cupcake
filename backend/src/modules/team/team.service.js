@@ -546,10 +546,22 @@ export const createInvitation = async ({ actor, payload, ip, userAgent }) => {
   if (existingUser?.tenantId?.toString() === tenantId.toString()) {
     throw new ConflictError('User already belongs to this tenant');
   }
-  if (existingUser && existingUser.tenantId && existingUser.tenantId.toString() !== tenantId.toString()) {
+  if (
+    existingUser &&
+    existingUser.tenantId &&
+    existingUser.tenantId.toString() !== tenantId.toString()
+  ) {
     // A user can only belong to one tenant. We surface a 409 instead of
     // silently accepting an invitation that could never resolve.
     throw new ConflictError('Email already belongs to another tenant');
+  }
+  const existingPendingInvitation = await TeamInvitation.findOne({
+    tenantId,
+    email,
+    status: 'pending',
+  });
+  if (existingPendingInvitation) {
+    throw new ConflictError('An invitation for this email is already pending');
   }
 
   await assertSeatAvailable({ tenant });

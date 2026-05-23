@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import * as repo from './campaign.repository.js';
 import * as surveyRepo from '../surveys/survey.repository.js';
 import { Contact } from '../contacts/contact.model.js';
+import { consentSkipReason, isConsentGranted } from '../contacts/consent.utils.js';
 import { resolveProviders } from './providers/provider.factory.js';
 import {
   AuthorizationError,
@@ -17,6 +18,11 @@ import { recordAuditEvent } from '../audit/audit.service.js';
 import * as tokenService from '../tokens/token.service.js';
 import { assertFeature, assertQuota, consumeMonthlyQuota } from '../plans/plan.service.js';
 import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
+import {
+  buildEmailUnsubscribeUrl,
+  buildSuppressionLookup,
+  suppressionSkipReason,
+} from '../suppression/suppression.service.js';
 
 // Maps a campaign channel to the plan feature flag that gates it.
 const CHANNEL_FEATURE = Object.freeze({
@@ -300,7 +306,30 @@ const incrementReason = (reasons, key) => {
  * Returns `recipients` (the documents to persist) plus aggregate counts so the
  * caller can update the campaign summary in one round-trip.
  */
-const planRecipients = ({ campaign, survey, version, contacts, providers, env }) => {
+const collectSuppressionValues = ({ campaign, contacts, providers }) => {
+  const valuesByChannel = {};
+  for (const channel of campaign.channels) {
+    const provider = providers[channel];
+    if (!provider) continue;
+    for (const contact of contacts) {
+      const validation = provider.validateRecipient(contact);
+      if (!validation.ready || !validation.recipient) continue;
+      if (!valuesByChannel[channel]) valuesByChannel[channel] = [];
+      valuesByChannel[channel].push(validation.recipient);
+    }
+  }
+  return valuesByChannel;
+};
+
+const planRecipients = ({
+  campaign,
+  survey,
+  version,
+  contacts,
+  providers,
+  env,
+  suppressionLookup = new Set(),
+}) => {
   const recipients = [];
   const summary = {
     selectedCount: contacts.length,
@@ -362,6 +391,30 @@ const planRecipients = ({ campaign, survey, version, contacts, providers, env })
         });
         summary.skippedCount += 1;
         incrementReason(summary.skippedReasons, validation.reason ?? 'invalid_recipient');
+        continue;
+      }
+
+      if (suppressionLookup.has(`${channel}:${validation.recipient}`)) {
+        recipients.push({
+          ...base,
+          recipient: validation.recipient,
+          status: 'skipped',
+          skippedReason: suppressionSkipReason(channel),
+        });
+        summary.skippedCount += 1;
+        incrementReason(summary.skippedReasons, suppressionSkipReason(channel));
+        continue;
+      }
+
+      if (!isConsentGranted(contact, channel)) {
+        recipients.push({
+          ...base,
+          recipient: validation.recipient,
+          status: 'skipped',
+          skippedReason: consentSkipReason(channel, contact),
+        });
+        summary.skippedCount += 1;
+        incrementReason(summary.skippedReasons, consentSkipReason(channel, contact));
         continue;
       }
 
@@ -469,6 +522,14 @@ const dispatchPendingRecipients = async ({
           id: contactId,
           fullName: contactDisplayName(contact),
         },
+        unsubscribeUrl:
+          doc.channel === 'email' && contact && doc.recipient
+            ? buildEmailUnsubscribeUrl({
+                tenantId,
+                contactId,
+                email: doc.recipient,
+              })
+            : null,
         campaign: { id: campaign._id.toString(), name: campaign.name },
         survey: {
           id: survey._id.toString(),
@@ -555,6 +616,14 @@ export const sendCampaign = async ({
     target: campaign.target,
     tenantId: tenant,
   });
+  const suppressionLookup = await buildSuppressionLookup({
+    tenantId: tenant,
+    valuesByChannel: collectSuppressionValues({
+      campaign,
+      contacts,
+      providers: providerSet,
+    }),
+  });
 
   // Drop any prior recipient docs for this campaign so a retry produces a
   // fresh plan instead of duplicating contact/channel attempts. The campaign
@@ -572,6 +641,7 @@ export const sendCampaign = async ({
     contacts,
     providers: providerSet,
     env,
+    suppressionLookup,
   });
 
   const insertedDocs = await repo.insertRecipients(recipients);
@@ -797,5 +867,6 @@ export const __testing = {
   toPublicRecipient,
   generateSubmissionToken,
   buildPublicUrl,
+  collectSuppressionValues,
   planRecipients,
 };

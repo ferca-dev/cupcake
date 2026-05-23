@@ -34,7 +34,9 @@ unavailable`. No password can be changed through this code path.
   audit event, and responds `202` with a job whose status is
   `pending_implementation`. The report endpoint always returns the same empty
   report shape with `placeholder: true`. No CSV/XLSX is parsed and no contacts
-  are created.
+  are created. Suppression state is already stored separately from contacts,
+  so a future import or a manual re-create of a contact cannot clear an active
+  suppression entry for the same tenant/channel/address.
 - **Why deferred**: a real import requires file upload handling, schema
   detection, duplicate resolution policy, and a background job runner. None of
   those infrastructures exist yet.

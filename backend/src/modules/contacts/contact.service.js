@@ -8,6 +8,18 @@ import {
   normalisePhone,
 } from './contact.validation.js';
 import {
+  CHANNEL_ADDRESS_FIELDS,
+  CHANNEL_CONSENT_KEYS,
+  CONSENT_CHANNELS,
+  CONTACT_CONSENT_SOURCES,
+  CONTACT_CONSENT_STATUSES,
+  consentSkipReason,
+  defaultConsentState,
+  isConsentGranted,
+  normalizeConsentBlock,
+  normalizeConsentState,
+} from './consent.utils.js';
+import {
   ConflictError,
   NotFoundError,
   ValidationError,
@@ -16,6 +28,7 @@ import {
 import { recordAuditEvent } from '../audit/audit.service.js';
 import { assertQuota } from '../plans/plan.service.js';
 import { QUOTA_KEYS } from '../plans/plan.constants.js';
+import { upsertSuppressionEntry } from '../suppression/suppression.service.js';
 
 export const CONTACT_AUDIT_ACTIONS = Object.freeze({
   CREATED: 'contact.created',
@@ -24,6 +37,7 @@ export const CONTACT_AUDIT_ACTIONS = Object.freeze({
   ARCHIVED: 'contact.archived',
   RESTORED: 'contact.restored',
   IMPORT_REQUESTED: 'contact.import.requested',
+  CONSENT_UPDATED: 'contact.consent.updated',
 });
 
 export const CONTACT_GROUP_AUDIT_ACTIONS = Object.freeze({
@@ -59,6 +73,7 @@ const toPublicContact = (contact) => {
   const email = contact.email ?? null;
   const phone = contact.phone ?? null;
   const whatsappPhone = contact.whatsappPhone ?? null;
+  const consent = toPublicConsent(contact.consent);
   return {
     id: contact._id.toString(),
     tenantId: contact.tenantId.toString(),
@@ -71,12 +86,29 @@ const toPublicContact = (contact) => {
     tags: Array.isArray(contact.tags) ? [...contact.tags] : [],
     groupIds: Array.isArray(contact.groupIds) ? contact.groupIds.map((id) => id.toString()) : [],
     metadata: contact.metadata ?? {},
+    consent,
     status: contact.status,
-    channels: channelStatus({ email, phone, whatsappPhone, status: contact.status }),
+    channels: channelStatus({ email, phone, whatsappPhone, status: contact.status, consent }),
     createdAt: contact.createdAt,
     updatedAt: contact.updatedAt,
   };
 };
+
+const toPublicConsentState = (state) => {
+  const normalized = normalizeConsentState(state);
+  return {
+    status: normalized.status,
+    source: normalized.source,
+    changedAt: normalized.changedAt,
+    metadata: normalized.metadata ?? {},
+  };
+};
+
+const toPublicConsent = (consent) => ({
+  email: toPublicConsentState(consent?.email),
+  sms: toPublicConsentState(consent?.sms),
+  whatsapp: toPublicConsentState(consent?.whatsapp),
+});
 
 const toPublicContactGroup = (group, contactCount = 0) => ({
   id: group._id.toString(),
@@ -94,18 +126,27 @@ const toPublicContactGroup = (group, contactCount = 0) => ({
  * can render a tooltip explaining exactly why a contact is unreachable for a
  * given delivery type — e.g. "missing_email" vs. "invalid_email".
  */
-export const channelStatus = ({ email, phone, whatsappPhone, status = 'active' }) => {
-  const reasonFor = (field, normalised, validator) => {
+export const channelStatus = ({
+  email,
+  phone,
+  whatsappPhone,
+  status = 'active',
+  consent = null,
+}) => {
+  const reasonFor = (field, normalised, validator, channel) => {
     if (status === 'blocked') return { ready: false, reason: 'contact_blocked' };
     if (status === 'archived') return { ready: false, reason: 'contact_archived' };
     if (!normalised) return { ready: false, reason: `missing_${field}` };
     if (!validator(normalised)) return { ready: false, reason: `invalid_${field}` };
+    if (!isConsentGranted({ consent }, channel)) {
+      return { ready: false, reason: consentSkipReason(channel, { consent }) };
+    }
     return { ready: true, reason: null };
   };
   return {
-    email: reasonFor('email', email, isValidEmail),
-    phone: reasonFor('phone', phone, isValidPhoneLike),
-    whatsapp_phone: reasonFor('whatsapp_phone', whatsappPhone, isValidPhoneLike),
+    email: reasonFor('email', email, isValidEmail, 'email'),
+    phone: reasonFor('phone', phone, isValidPhoneLike, 'sms'),
+    whatsapp_phone: reasonFor('whatsapp_phone', whatsappPhone, isValidPhoneLike, 'whatsapp'),
   };
 };
 
@@ -157,6 +198,70 @@ const validateChannelFormats = ({ email, phone, whatsappPhone }) => {
   }
   if (details.length > 0) {
     throw new ValidationError('Invalid contact channel data', details);
+  }
+};
+
+const normalizeConsentInput = (input = {}, fallbackSource = 'manual') => {
+  const now = new Date();
+  const current = normalizeConsentBlock(undefined, fallbackSource);
+  for (const channel of CONSENT_CHANNELS) {
+    const patch = input?.[channel] ?? {};
+    current[channel] = {
+      status: CONTACT_CONSENT_STATUSES.includes(patch.status)
+        ? patch.status
+        : defaultConsentState(fallbackSource).status,
+      source: CONTACT_CONSENT_SOURCES.includes(patch.source) ? patch.source : fallbackSource,
+      changedAt: now,
+      metadata: patch.metadata ?? {},
+    };
+  }
+  return current;
+};
+
+const mergeConsentInput = (existing, input = {}, fallbackSource = 'manual') => {
+  const next = normalizeConsentBlock(existing, 'system');
+  const now = new Date();
+  for (const channel of CONSENT_CHANNELS) {
+    if (!input?.[channel]) continue;
+    const patch = input[channel];
+    next[channel] = {
+      status: patch.status ?? next[channel].status,
+      source: patch.source ?? fallbackSource,
+      changedAt: now,
+      metadata: patch.metadata ?? next[channel].metadata ?? {},
+    };
+  }
+  return next;
+};
+
+const syncUnsubscribedSuppressions = async ({
+  contact,
+  tenantId,
+  actor = null,
+  ip = null,
+  userAgent = null,
+}) => {
+  const consent = normalizeConsentBlock(contact.consent);
+  for (const channel of CONSENT_CHANNELS) {
+    if (consent[channel].status !== 'unsubscribed') continue;
+    const addressField = CHANNEL_ADDRESS_FIELDS[channel];
+    const address = contact[addressField] ?? null;
+    if (!address) continue;
+    await upsertSuppressionEntry({
+      tenantId,
+      channel,
+      value: address,
+      reason:
+        channel === 'email' ? 'unsubscribe' : channel === 'sms' ? 'sms_stop' : 'whatsapp_opt_out',
+      source: consent[channel].source === 'manual' ? 'manual' : consent[channel].source,
+      actor,
+      metadata: {
+        contactId: contact._id.toString(),
+        consentStatus: consent[channel].status,
+      },
+      ip,
+      userAgent,
+    });
   }
 };
 
@@ -227,7 +332,16 @@ export const createContact = async ({ tenantId, actor, payload, ip = null, userA
     tags: payload.tags ?? [],
     groupIds,
     metadata: payload.metadata ?? {},
+    consent: normalizeConsentInput(payload.consent, 'manual'),
     status: payload.status ?? 'active',
+  });
+
+  await syncUnsubscribedSuppressions({
+    contact,
+    tenantId: tenant,
+    actor,
+    ip,
+    userAgent,
   });
 
   await audit(CONTACT_AUDIT_ACTIONS.CREATED, {
@@ -285,6 +399,9 @@ export const updateContact = async ({
   }
   if (payload.tags !== undefined) updates.tags = payload.tags ?? [];
   if (payload.metadata !== undefined) updates.metadata = payload.metadata ?? {};
+  if (payload.consent !== undefined) {
+    updates.consent = mergeConsentInput(contact.consent, payload.consent, 'manual');
+  }
   if (payload.status !== undefined) updates.status = payload.status;
   if (payload.groupIds !== undefined) {
     updates.groupIds = await ensureGroupsBelongToTenant({
@@ -299,6 +416,16 @@ export const updateContact = async ({
 
   await repo.updateContact(contact, updates);
 
+  if (updates.consent) {
+    await syncUnsubscribedSuppressions({
+      contact,
+      tenantId: tenant,
+      actor,
+      ip,
+      userAgent,
+    });
+  }
+
   await audit(CONTACT_AUDIT_ACTIONS.UPDATED, {
     actor,
     entity: contact,
@@ -307,6 +434,70 @@ export const updateContact = async ({
     metadata: { changedKeys: Object.keys(updates) },
     ip,
     userAgent,
+  });
+
+  return toPublicContact(contact);
+};
+
+export const updateContactConsent = async ({
+  id,
+  tenantId,
+  actor,
+  payload,
+  ip = null,
+  userAgent = null,
+}) => {
+  const tenant = ensureTenant(tenantId);
+  assertObjectId(id, 'contact id');
+  const contact = await repo.findContactById({ id, tenantId: tenant });
+  if (!contact) throw new NotFoundError('Contact not found');
+
+  const channel = payload.channel;
+  const source = payload.source ?? 'manual';
+  if (!CONSENT_CHANNELS.includes(channel)) {
+    throw new ValidationError('Invalid consent channel');
+  }
+  if (!CONTACT_CONSENT_STATUSES.includes(payload.status)) {
+    throw new ValidationError('Invalid consent status');
+  }
+  if (!CONTACT_CONSENT_SOURCES.includes(source)) {
+    throw new ValidationError('Invalid consent source');
+  }
+
+  const key = CHANNEL_CONSENT_KEYS[channel];
+  if (!contact.consent) contact.consent = {};
+  contact.consent[key] = {
+    status: payload.status,
+    source,
+    changedAt: new Date(),
+    metadata: payload.metadata ?? {},
+  };
+  await contact.save();
+
+  if (payload.status === 'unsubscribed') {
+    await syncUnsubscribedSuppressions({
+      contact,
+      tenantId: tenant,
+      actor,
+      ip,
+      userAgent,
+    });
+  }
+
+  await recordAuditEvent({
+    action: CONTACT_AUDIT_ACTIONS.CONSENT_UPDATED,
+    entityType: CONTACT_ENTITY,
+    entityId: contact._id.toString(),
+    userId: actor?.id ?? null,
+    tenantId: tenant,
+    ip,
+    userAgent,
+    metadata: {
+      channel,
+      status: payload.status,
+      source,
+      metadata: payload.metadata ?? {},
+    },
   });
 
   return toPublicContact(contact);
@@ -382,6 +573,7 @@ export const requestContactImport = async ({
     requestedBy: actor?.id ?? null,
     source: payload?.source ?? null,
     note: payload?.note ?? null,
+    suppressionStatePreserved: true,
     createdAt: new Date().toISOString(),
   };
   await recordAuditEvent({
@@ -416,6 +608,7 @@ export const getContactImportReport = async ({ id, tenantId }) => {
     },
     rows: [],
     placeholder: true,
+    suppressionStatePreserved: true,
   };
 };
 
