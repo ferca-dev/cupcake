@@ -106,6 +106,14 @@ export const cancelSubscriptionAsAdmin = asyncHandler(async (req, res) => {
   return sendSuccess(res, { data: { subscription }, message: 'Subscription cancelled' });
 });
 
+export const pauseSubscriptionAsAdmin = asyncHandler(async (req, res) => {
+  const subscription = await subscriptionService.pauseSubscription({
+    id: req.params.id,
+    actor: req.user,
+  });
+  return sendSuccess(res, { data: { subscription }, message: 'Subscription paused' });
+});
+
 // Reminder job triggers --------------------------------------------
 
 export const triggerLowBalanceReminders = asyncHandler(async (_req, res) => {

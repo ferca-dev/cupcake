@@ -14,6 +14,7 @@ export const PAYMENT_NOTIFICATION_TYPES = Object.freeze([
   'token_payment_rejected',
   'token_payment_cancelled',
   'token_payment_refunded',
+  'token_payment_charged_back',
   'token_payment_manual_review',
   // Subscription lifecycle.
   'subscription_created',
@@ -67,5 +68,4 @@ notificationSchema.set('toJSON', { virtuals: true, versionKey: false, transform:
 notificationSchema.set('toObject', { virtuals: true, versionKey: false, transform: toPublic });
 
 export const PaymentNotification =
-  mongoose.models.PaymentNotification ??
-  mongoose.model('PaymentNotification', notificationSchema);
+  mongoose.models.PaymentNotification ?? mongoose.model('PaymentNotification', notificationSchema);

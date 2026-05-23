@@ -614,6 +614,9 @@ export default {
       authorize: 'Autorizar en Mercado Pago',
       cancel: 'Cancelar suscripción',
       cancelConfirm: '¿Cancelar esta suscripción? Los cobros recurrentes se detendrán.',
+      pause: 'Pausar suscripción',
+      pauseConfirm:
+        '¿Pausar esta suscripción? Los cobros recurrentes se detendrán hasta que la reanudes.',
       resume: 'Reanudar suscripción',
       confirm: '¿Suscribirte al plan {plan}?',
       columns: {
@@ -636,8 +639,7 @@ export default {
   adminPayments: {
     nav: 'Mercado Pago',
     title: 'Pagos con Mercado Pago',
-    subtitle:
-      'Revisa pagos, entregas de webhook, suscripciones y herramientas de reconciliación.',
+    subtitle: 'Revisa pagos, entregas de webhook, suscripciones y herramientas de reconciliación.',
     payments: 'Pagos',
     webhooks: 'Eventos de webhook',
     subscriptions: 'Suscripciones',
@@ -645,6 +647,7 @@ export default {
     webhooksEmpty: 'Aún no hay eventos de webhook.',
     subscriptionsEmpty: 'Aún no hay suscripciones.',
     sync: 'Sincronizar',
+    pause: 'Pausar',
     cancel: 'Cancelar',
     reconcile: 'Reconciliar un pago',
     reconcileHint:

@@ -544,13 +544,14 @@ const handleAuthorizedPaymentEvent = async ({ provider, authorizedPaymentId, eve
       currency: fetched.currency ?? subscription.currency,
       periodStart: fetched.periodStart ?? null,
       periodEnd: fetched.periodEnd ?? null,
-      paidAt: fetched.status === 'processed' ? fetched.paymentDate ?? new Date() : null,
+      paidAt: fetched.status === 'processed' ? (fetched.paymentDate ?? new Date()) : null,
     });
   } else {
     await repo.saveInvoice(invoice, {
       status: fetched.status,
       mercadoPagoPaymentId: fetched.paymentId ?? invoice.mercadoPagoPaymentId,
-      paidAt: fetched.status === 'processed' ? fetched.paymentDate ?? invoice.paidAt : invoice.paidAt,
+      paidAt:
+        fetched.status === 'processed' ? (fetched.paymentDate ?? invoice.paidAt) : invoice.paidAt,
     });
   }
 

@@ -192,6 +192,11 @@ All models live under
   rejects it. Approval atomically credits the wallet and records a
   `purchase` ledger entry. The model already stores `paymentProvider` /
   `paymentReference` so plugging in a real provider is additive.
+- Mercado Pago refunds and chargebacks reverse credited token purchases with
+  an idempotent `adjustment_debit` ledger entry that references the original
+  `payment_transaction`. If the wallet balance is no longer sufficient, the
+  payment transaction records an `insufficient_balance` reversal status for
+  operator reconciliation instead of taking the wallet negative.
 - `monthly_send_usage` — denormalized per-tenant counters keyed by
   `YYYY-MM`. They are `$inc`'d on every debit/refund so send-limit checks
   stay O(1) without scanning the ledger.

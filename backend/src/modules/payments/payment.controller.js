@@ -83,6 +83,16 @@ export const cancelClientSubscription = asyncHandler(async (req, res) => {
   return sendSuccess(res, { data: { subscription }, message: 'Subscription cancelled' });
 });
 
+export const pauseClientSubscription = asyncHandler(async (req, res) => {
+  const tenantId = resolveTenantId(req);
+  const subscription = await subscriptionService.pauseSubscription({
+    id: req.params.id,
+    tenantId,
+    actor: req.user,
+  });
+  return sendSuccess(res, { data: { subscription }, message: 'Subscription paused' });
+});
+
 export const resumeClientSubscription = asyncHandler(async (req, res) => {
   const tenantId = resolveTenantId(req);
   const subscription = await subscriptionService.resumeSubscription({

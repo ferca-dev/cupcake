@@ -119,6 +119,16 @@ const cancelSubscription = async (sub) => {
   }
 };
 
+const pauseSubscription = async (sub) => {
+  if (!window.confirm('Pause this subscription in Mercado Pago?')) return;
+  try {
+    await adminPaymentsService.pauseSubscription(sub.id);
+    await refresh();
+  } catch (err) {
+    lastError.value = err?.message ?? 'Pause failed';
+  }
+};
+
 const reconcile = async () => {
   if (!reconcilePaymentId.value.trim()) return;
   try {
@@ -211,12 +221,18 @@ const triggerReminders = async (kind) => {
         <template #cell:status="{ row }">
           <AppBadge :variant="statusVariant(row.status)">{{ row.status }}</AppBadge>
         </template>
-        <template #cell:preapproval="{ row }">{{
-          row.mercadoPagoPreapprovalId ?? '—'
-        }}</template>
+        <template #cell:preapproval="{ row }">{{ row.mercadoPagoPreapprovalId ?? '—' }}</template>
         <template #cell:actions="{ row }">
           <AppButton size="sm" variant="secondary" @click="syncSubscription(row)">
             {{ t('adminPayments.sync') }}
+          </AppButton>
+          <AppButton
+            size="sm"
+            variant="secondary"
+            :disabled="row.status !== 'authorized'"
+            @click="pauseSubscription(row)"
+          >
+            {{ t('adminPayments.pause') }}
           </AppButton>
           <AppButton
             size="sm"

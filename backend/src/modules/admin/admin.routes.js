@@ -67,13 +67,11 @@ adminRouter.patch('/subscription-plans/:id/status', paymentAdminController.updat
 adminRouter.get('/subscriptions', paymentAdminController.listSubscriptions);
 adminRouter.post('/subscriptions/:id/sync', paymentAdminController.syncSubscription);
 adminRouter.post('/subscriptions/:id/cancel', paymentAdminController.cancelSubscriptionAsAdmin);
+adminRouter.post('/subscriptions/:id/pause', paymentAdminController.pauseSubscriptionAsAdmin);
 
 // Reminder triggers (callable from a scheduled job or operator console)
 adminRouter.post(
   '/payments/reminders/low-balance',
   paymentAdminController.triggerLowBalanceReminders,
 );
-adminRouter.post(
-  '/payments/reminders/renewals',
-  paymentAdminController.triggerRenewalReminders,
-);
+adminRouter.post('/payments/reminders/renewals', paymentAdminController.triggerRenewalReminders);

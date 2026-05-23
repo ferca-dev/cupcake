@@ -173,7 +173,9 @@ Typical workflow once you have signed in:
 5. **Campaigns** — sidebar → "Campaigns". Pick a published survey, target contacts/groups, choose channels (email / SMS / WhatsApp). Bulk sends are tolerant: unreachable recipients are marked `skipped` with a clear reason, the rest are sent. The default `mock` provider runs offline; set `EMAIL_PROVIDER=sendgrid`, `SMS_PROVIDER=twilio`, and/or `WHATSAPP_PROVIDER=twilio` plus the matching credentials to switch to real delivery — see [docs/provider-architecture.md](docs/provider-architecture.md).
 6. **Public responses** — open the form URL in an incognito window, fill it in, submit. The response shows up in the survey's stats and on the dashboard.
 7. **Templates** — start a new survey from a pre-built schema (NPS, customer satisfaction, etc.).
-8. **Billing history** — past invoices, refunds, and credits for the workspace.
+8. **Billing** — buy token packages through Mercado Pago Checkout Pro,
+   manage recurring subscriptions, and review invoices, refunds, reversals,
+   and credits for the workspace.
 9. **Admin panel** (super admin only) — "Admin panel" → "Clients". Create, edit, suspend, or cancel tenant workspaces. Suspending a tenant immediately revokes refresh tokens and blocks already-issued access tokens.
 
 A step-by-step smoke test that exercises every feature lives in [docs/troubleshooting.md](docs/troubleshooting.md#first-deploy-smoke-test).
@@ -191,7 +193,7 @@ pnpm format            # apply Prettier
 
 Tests do not require Docker. The backend suite uses `mongodb-memory-server`, which downloads the right Mongo binary on first run and caches it under `~/.cache/mongodb-binaries/`.
 
-Current coverage: 240 backend tests, 130 frontend tests.
+Current coverage: 309 backend tests, 147 frontend tests.
 
 ## Workspace scripts
 

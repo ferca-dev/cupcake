@@ -72,5 +72,4 @@ subscriptionSchema.set('toJSON', { virtuals: true, versionKey: false, transform:
 subscriptionSchema.set('toObject', { virtuals: true, versionKey: false, transform: toPublic });
 
 export const TenantSubscription =
-  mongoose.models.TenantSubscription ??
-  mongoose.model('TenantSubscription', subscriptionSchema);
+  mongoose.models.TenantSubscription ?? mongoose.model('TenantSubscription', subscriptionSchema);

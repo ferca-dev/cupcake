@@ -61,6 +61,10 @@ export const toPublicTransaction = (t) => ({
   tokensToCredit: t.tokensToCredit ?? 0,
   tokenCredited: !!t.tokenCredited,
   tokenLedgerEntryId: t.tokenLedgerEntryId ? t.tokenLedgerEntryId.toString() : null,
+  tokenReversed: !!t.tokenReversed,
+  tokenReversalLedgerEntryId: t.tokenReversalLedgerEntryId
+    ? t.tokenReversalLedgerEntryId.toString()
+    : null,
   tokenPurchaseId: t.tokenPurchaseId ? t.tokenPurchaseId.toString() : null,
   subscriptionId: t.subscriptionId ? t.subscriptionId.toString() : null,
   subscriptionInvoiceId: t.subscriptionInvoiceId ? t.subscriptionInvoiceId.toString() : null,
@@ -254,7 +258,7 @@ export const processIncomingWebhook = async ({
   env = loadEnv(),
 }) => {
   const eventType = body?.type ?? body?.topic ?? null;
-  const dataId = body?.data?.id ?? body?.resource ?? null;
+  const dataId = normalizeWebhookResourceId(body?.data?.id ?? body?.resource ?? null);
   // Mercado Pago repeats deliveries with the same `id` so use that as the
   // unique event id. As a fallback we hash the payload — repeated unparseable
   // payloads still collapse into one stored event.
@@ -263,7 +267,11 @@ export const processIncomingWebhook = async ({
     (rawBody ? crypto.createHash('sha256').update(rawBody).digest('hex') : null) ??
     crypto.randomBytes(8).toString('hex');
 
-  const signatureValid = provider.verifyWebhookSignature(rawBody, headers ?? {});
+  const signatureValid = provider.verifyWebhookSignature(rawBody, {
+    ...(headers ?? {}),
+    'x-resource-id': dataId ?? undefined,
+    'data-id': dataId ?? undefined,
+  });
 
   // Reject mismatched signatures only when a secret is configured AND the
   // verification function returned a definite `false`. A `null` means
@@ -360,6 +368,14 @@ export const processIncomingWebhook = async ({
 const formatPriceLabel = (minor, currency) =>
   `${toMajor(minor).toFixed(2)} ${currency ?? ''}`.trim();
 
+const normalizeWebhookResourceId = (value) => {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const match = text.match(/\/([^/?#]+)(?:[?#].*)?$/);
+  return match ? match[1] : text;
+};
+
 /**
  * Apply a Mercado Pago `payment` notification. The handler fetches the
  * payment from the API (so the payload itself is never trusted) and:
@@ -409,6 +425,9 @@ const handlePaymentEvent = async ({ provider, paymentId, event }) => {
   if (fetched.status === 'refunded') {
     updates.refundedAt = new Date();
   }
+  if (fetched.status === 'charged_back') {
+    updates.refundedAt = transaction.refundedAt ?? new Date();
+  }
   if (fetched.status === 'failed' || fetched.status === 'rejected') {
     updates.failureReason = fetched.rawStatus ?? 'rejected';
   }
@@ -417,6 +436,9 @@ const handlePaymentEvent = async ({ provider, paymentId, event }) => {
 
   if (fetched.status === 'approved' && !transaction.tokenCredited) {
     await creditTokensForTransaction({ transaction, event });
+  }
+  if (['refunded', 'charged_back'].includes(fetched.status)) {
+    await reverseTokensForTransaction({ transaction, event, reason: fetched.status });
   }
 
   // Sync the token_purchases row so the existing UI keeps showing the right
@@ -479,6 +501,79 @@ const creditTokensForTransaction = async ({ transaction, event = null }) => {
     entityId: transaction._id.toString(),
     tenantId: transaction.tenantId,
     metadata: {
+      tokens: transaction.tokensToCredit,
+      ledgerEntryId: ledger._id.toString(),
+      provider: transaction.provider,
+    },
+  });
+
+  return ledger;
+};
+
+const reverseTokensForTransaction = async ({ transaction, event = null, reason }) => {
+  if (!transaction.tokenCredited || transaction.tokenReversed) return null;
+  if (transaction.purpose !== 'token_package') return null;
+  if (!transaction.tokensToCredit || transaction.tokensToCredit <= 0) return null;
+
+  await tokenService.ensureWallet({ tenantId: transaction.tenantId });
+  const wallet = await tokenRepo.atomicForceDebit({
+    tenantId: transaction.tenantId,
+    amount: transaction.tokensToCredit,
+  });
+
+  if (!wallet) {
+    await repo.saveTransaction(transaction, {
+      metadata: {
+        ...(transaction.metadata ?? {}),
+        tokenReversalStatus: 'insufficient_balance',
+        tokenReversalReason: reason,
+        tokenReversalAttemptedAt: new Date().toISOString(),
+      },
+    });
+    return null;
+  }
+
+  const ledger = await tokenRepo.createLedgerEntry({
+    tenantId: transaction.tenantId,
+    type: 'adjustment_debit',
+    channel: null,
+    amount: transaction.tokensToCredit,
+    balanceAfter: wallet.balance,
+    referenceType: 'payment_transaction',
+    referenceId: transaction._id.toString(),
+    description: `Mercado Pago ${reason} reversal: ${
+      transaction.packageName ?? transaction.externalReference
+    }`,
+    createdBy: transaction.requestedBy ?? null,
+    metadata: {
+      paymentId: transaction.providerPaymentId ?? null,
+      provider: transaction.provider,
+      reason,
+      originalLedgerEntryId: transaction.tokenLedgerEntryId
+        ? transaction.tokenLedgerEntryId.toString()
+        : null,
+      webhookEventId: event?._id?.toString() ?? null,
+    },
+  });
+
+  await repo.saveTransaction(transaction, {
+    tokenReversed: true,
+    tokenReversalLedgerEntryId: ledger._id,
+    metadata: {
+      ...(transaction.metadata ?? {}),
+      tokenReversalStatus: 'completed',
+      tokenReversalReason: reason,
+      tokenReversalLedgerEntryId: ledger._id.toString(),
+    },
+  });
+
+  await recordAuditEvent({
+    action: PAYMENT_AUDIT_ACTIONS.PAYMENT_REFUNDED,
+    entityType: 'payment_transaction',
+    entityId: transaction._id.toString(),
+    tenantId: transaction.tenantId,
+    metadata: {
+      reason,
       tokens: transaction.tokensToCredit,
       ledgerEntryId: ledger._id.toString(),
       provider: transaction.provider,
@@ -557,6 +652,17 @@ const dispatchPaymentLifecycleEmail = async ({ transaction, fetched }) => {
       referenceType: 'payment_transaction',
       referenceId: transaction._id.toString(),
       idempotencyKey: `token_payment_refunded:${transaction._id.toString()}`,
+      recipientEmail: transaction.providerPayerEmail ?? null,
+      data: baseData,
+    });
+  }
+  if (fetched.status === 'charged_back') {
+    return sendPaymentNotification({
+      type: 'token_payment_charged_back',
+      tenantId: transaction.tenantId,
+      referenceType: 'payment_transaction',
+      referenceId: transaction._id.toString(),
+      idempotencyKey: `token_payment_charged_back:${transaction._id.toString()}`,
       recipientEmail: transaction.providerPayerEmail ?? null,
       data: baseData,
     });
@@ -687,15 +793,16 @@ export const listAdminWebhookEvents = async ({ query = {} }) => {
  * the webhook handler. Used when a webhook delivery was lost and an admin
  * needs to force the local state to converge.
  */
-export const reconcilePayment = async ({
-  paymentId,
-  provider = resolvePaymentProvider(),
-}) => {
+export const reconcilePayment = async ({ paymentId, provider = resolvePaymentProvider() }) => {
   if (!paymentId) throw new ValidationError('paymentId is required');
   // We synthesize a webhook event so the same code path runs.
   return processIncomingWebhook({
     provider,
-    body: { type: 'payment', data: { id: paymentId } },
+    body: {
+      id: `reconcile:${paymentId}:${Date.now()}:${crypto.randomBytes(4).toString('hex')}`,
+      type: 'payment',
+      data: { id: paymentId },
+    },
     rawBody: JSON.stringify({ type: 'payment', data: { id: paymentId } }),
     headers: {},
   });
@@ -714,7 +821,9 @@ export const findTenantsBelowBalanceThreshold = async ({ env = loadEnv() } = {})
 
 export const __testing = {
   buildExternalReference,
+  normalizeWebhookResourceId,
   creditTokensForTransaction,
+  reverseTokensForTransaction,
   syncTokenPurchase,
   handlePaymentEvent,
   dispatchPaymentLifecycleEmail,

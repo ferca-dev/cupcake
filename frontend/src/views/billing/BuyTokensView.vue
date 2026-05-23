@@ -90,17 +90,15 @@ watch(
     </header>
 
     <AppAlert v-if="tokensStore.lastError" variant="error">{{ tokensStore.lastError }}</AppAlert>
-    <AppAlert v-if="paymentsStore.lastError" variant="error">{{ paymentsStore.lastError }}</AppAlert>
+    <AppAlert v-if="paymentsStore.lastError" variant="error">{{
+      paymentsStore.lastError
+    }}</AppAlert>
 
     <AppCard padded>
       <template #title>{{ t('billingPayments.buy.packages') }}</template>
       <AppLoader v-if="tokensStore.isLoadingPackages" />
       <div v-else class="buy-tokens__packages">
-        <article
-          v-for="pkg in tokensStore.packages"
-          :key="pkg.id"
-          class="buy-tokens__package"
-        >
+        <article v-for="pkg in tokensStore.packages" :key="pkg.id" class="buy-tokens__package">
           <header>
             <h3>{{ pkg.name }}</h3>
             <p>{{ t('billingPayments.buy.tokensLine', { tokens: pkg.tokens }) }}</p>

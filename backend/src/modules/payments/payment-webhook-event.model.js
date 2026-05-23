@@ -52,5 +52,4 @@ webhookEventSchema.set('toJSON', { virtuals: true, versionKey: false, transform:
 webhookEventSchema.set('toObject', { virtuals: true, versionKey: false, transform: toPublic });
 
 export const PaymentWebhookEvent =
-  mongoose.models.PaymentWebhookEvent ??
-  mongoose.model('PaymentWebhookEvent', webhookEventSchema);
+  mongoose.models.PaymentWebhookEvent ?? mongoose.model('PaymentWebhookEvent', webhookEventSchema);

@@ -611,6 +611,8 @@ export default {
       authorize: 'Authorize on Mercado Pago',
       cancel: 'Cancel subscription',
       cancelConfirm: 'Cancel this subscription? Recurring charges will stop.',
+      pause: 'Pause subscription',
+      pauseConfirm: 'Pause this subscription? Recurring charges will stop until it is resumed.',
       resume: 'Resume subscription',
       confirm: 'Subscribe to the {plan} plan?',
       columns: {
@@ -641,6 +643,7 @@ export default {
     webhooksEmpty: 'No webhook events yet.',
     subscriptionsEmpty: 'No subscriptions yet.',
     sync: 'Sync',
+    pause: 'Pause',
     cancel: 'Cancel',
     reconcile: 'Reconcile a payment',
     reconcileHint:

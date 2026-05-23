@@ -52,7 +52,10 @@ const invoiceSchema = new Schema(
 
 invoiceSchema.index(
   { mercadoPagoAuthorizedPaymentId: 1 },
-  { unique: true, partialFilterExpression: { mercadoPagoAuthorizedPaymentId: { $type: 'string' } } },
+  {
+    unique: true,
+    partialFilterExpression: { mercadoPagoAuthorizedPaymentId: { $type: 'string' } },
+  },
 );
 invoiceSchema.index({ tenantId: 1, createdAt: -1 });
 
@@ -66,5 +69,4 @@ invoiceSchema.set('toJSON', { virtuals: true, versionKey: false, transform: toPu
 invoiceSchema.set('toObject', { virtuals: true, versionKey: false, transform: toPublic });
 
 export const SubscriptionInvoice =
-  mongoose.models.SubscriptionInvoice ??
-  mongoose.model('SubscriptionInvoice', invoiceSchema);
+  mongoose.models.SubscriptionInvoice ?? mongoose.model('SubscriptionInvoice', invoiceSchema);

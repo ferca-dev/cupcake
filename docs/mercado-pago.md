@@ -64,8 +64,10 @@ All Phase 24 models live under
   `provider`, `purpose`, `status`, `amountMinor`, `currency`, the
   Cupcake-controlled `externalReference`, the Mercado Pago
   `preferenceId` and `paymentId`, the package snapshot, and an
-  idempotent `tokenCredited` flag. The wallet is never credited twice
-  for the same transaction.
+  idempotent `tokenCredited` flag. Refunds and chargebacks also carry
+  `tokenReversed` and `tokenReversalLedgerEntryId` so a provider reversal
+  can debit the wallet exactly once. The wallet is never credited or
+  reversed twice for the same transaction.
 - **`payment_webhook_events`** — immutable log of every Mercado Pago
   webhook delivery. The compound unique index
   `(provider, providerEventId)` is the single guarantee that repeated
@@ -111,8 +113,16 @@ Tokens are credited only after a trusted backend confirmation:
    is created with `referenceType: 'payment_transaction'`, and
    `tokenCredited` flips to true. Any further deliveries for the same
    payment id are no-ops on the wallet.
-7. The lifecycle email (pending / approved / rejected / cancelled /
-   refunded / manual review) is dispatched with a deterministic
+7. If a previously credited payment becomes `refunded` or
+   `charged_back`, Cupcake attempts one wallet debit for the original
+   token amount and records an `adjustment_debit` ledger entry with
+   `referenceType: 'payment_transaction'`. If the tenant has already
+   spent the tokens and the debit cannot be applied without taking the
+   wallet below zero, the transaction metadata records
+   `tokenReversalStatus: 'insufficient_balance'` for operator
+   reconciliation.
+8. The lifecycle email (pending / approved / rejected / cancelled /
+   refunded / charged back / manual review) is dispatched with a deterministic
    idempotency key like `token_payment_approved:<transaction id>` so the
    same email cannot leave the system twice.
 
@@ -126,37 +136,39 @@ through the same ledger via a `credit` entry with
 
 Client (`/api/v1/billing`, requires `billing.view`):
 
-| Method | Path                                          | Purpose                                              |
-| ------ | --------------------------------------------- | ---------------------------------------------------- |
-| POST   | `/mercadopago/preferences`                    | Create a Checkout Pro preference for a token package |
-| GET    | `/payments`                                   | Tenant payment history                               |
-| GET    | `/payments/:id`                               | Single payment                                       |
-| GET    | `/subscription-plans`                         | Active recurring plans                               |
-| GET    | `/subscriptions`                              | Tenant subscriptions                                 |
-| POST   | `/subscriptions`                              | Create a Mercado Pago preapproval                    |
-| POST   | `/subscriptions/:id/cancel`                   | Cancel the preapproval and the local mirror         |
-| POST   | `/subscriptions/:id/resume`                   | Resume a paused subscription                         |
-| GET    | `/subscription-invoices`                      | Subscription invoice history                         |
+| Method | Path                        | Purpose                                              |
+| ------ | --------------------------- | ---------------------------------------------------- |
+| POST   | `/mercadopago/preferences`  | Create a Checkout Pro preference for a token package |
+| GET    | `/payments`                 | Tenant payment history                               |
+| GET    | `/payments/:id`             | Single payment                                       |
+| GET    | `/subscription-plans`       | Active recurring plans                               |
+| GET    | `/subscriptions`            | Tenant subscriptions                                 |
+| POST   | `/subscriptions`            | Create a Mercado Pago preapproval                    |
+| POST   | `/subscriptions/:id/cancel` | Cancel the preapproval and the local mirror          |
+| POST   | `/subscriptions/:id/pause`  | Pause the preapproval and the local mirror           |
+| POST   | `/subscriptions/:id/resume` | Resume a paused subscription                         |
+| GET    | `/subscription-invoices`    | Subscription invoice history                         |
 
 Webhooks (`/api/v1/webhooks`):
 
-| Method | Path             | Purpose                              |
-| ------ | ---------------- | ------------------------------------ |
-| POST   | `/mercadopago`   | Mercado Pago webhook receiver        |
+| Method | Path           | Purpose                       |
+| ------ | -------------- | ----------------------------- |
+| POST   | `/mercadopago` | Mercado Pago webhook receiver |
 
 Admin (`/api/v1/admin`, super-admin only):
 
-| Method | Path                                            | Purpose                                            |
-| ------ | ----------------------------------------------- | -------------------------------------------------- |
-| GET    | `/payments`, `/payments/:id`                    | Cross-tenant payment inspection                    |
-| GET    | `/payment-webhooks`                             | Webhook delivery log                               |
-| POST   | `/payments/reconcile`                           | Re-apply a payment by id (recover lost webhooks)   |
+| Method | Path                                                      | Purpose                                          |
+| ------ | --------------------------------------------------------- | ------------------------------------------------ |
+| GET    | `/payments`, `/payments/:id`                              | Cross-tenant payment inspection                  |
+| GET    | `/payment-webhooks`                                       | Webhook delivery log                             |
+| POST   | `/payments/reconcile`                                     | Re-apply a payment by id (recover lost webhooks) |
 | GET    | `/subscription-plans`, `POST`, `PUT`, `PATCH /:id/status` | Plan catalogue                                   |
-| GET    | `/subscriptions`                                | Cross-tenant subscription roster                   |
-| POST   | `/subscriptions/:id/sync`                       | Force-resync from Mercado Pago                     |
-| POST   | `/subscriptions/:id/cancel`                     | Cancel a tenant subscription                       |
-| POST   | `/payments/reminders/low-balance`               | Run low-balance reminder job manually              |
-| POST   | `/payments/reminders/renewals`                  | Run renewal reminder job manually                  |
+| GET    | `/subscriptions`                                          | Cross-tenant subscription roster                 |
+| POST   | `/subscriptions/:id/sync`                                 | Force-resync from Mercado Pago                   |
+| POST   | `/subscriptions/:id/cancel`                               | Cancel a tenant subscription                     |
+| POST   | `/subscriptions/:id/pause`                                | Pause a tenant subscription                      |
+| POST   | `/payments/reminders/low-balance`                         | Run low-balance reminder job manually            |
+| POST   | `/payments/reminders/renewals`                            | Run renewal reminder job manually                |
 
 ## Frontend
 
@@ -165,7 +177,7 @@ Admin (`/api/v1/admin`, super-admin only):
   MercadoPago.js v2 is mounted inline; otherwise the user is redirected
   to `init_point` in a new tab.
 - `/app/billing/subscriptions` — Plan catalogue, current subscription,
-  cancel/resume actions, and invoice history.
+  pause/cancel/resume actions, and invoice history.
 - `/app/billing/payment/{success,failure,pending}` — Read-only landing
   pages used by Mercado Pago `back_urls`. They look up the payment by
   reference but never mutate state.
@@ -247,15 +259,24 @@ Tests under
 cover:
 
 - Preference creation (success, unknown package, missing permission).
+- Preference creation rejects client-supplied status, amount, and token
+  mutation fields.
 - Webhook idempotency: same payment id replayed → tokens credited once,
-  ledger has one entry.
-- Approval, rejection, pending, cancelled, and refunded statuses.
+  ledger and email logs have one entry even across distinct webhook event ids.
+- Approval, rejection, pending, cancelled, refunded, and charged-back
+  statuses, including token reversal ledger entries for refunds and
+  chargebacks.
 - Webhook rejection on invalid signature when the secret is set.
+- Signature verification receives the Mercado Pago resource id extracted
+  from the webhook payload before any provider state is fetched.
 - Notification idempotency under the unique `idempotencyKey` index.
 - Low-balance reminder runs once per day.
 - Subscription creation, conflict on a second active subscription,
-  authorized-payment idempotent token credit, and cancellation.
-- Admin payment listing requires super-admin role.
+  authorized-payment idempotent token credit, failed-payment retry
+  reminders without token credit, pause/resume, and cancellation.
+- Admin payment listing, reconciliation, and subscription sync require
+  super-admin role. Reconciliation can be run repeatedly for the same
+  provider payment id and still re-fetches current provider state.
 
 Frontend:
 

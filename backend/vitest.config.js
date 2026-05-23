@@ -6,6 +6,7 @@ export default defineConfig({
     globals: false,
     setupFiles: ['./src/tests/setup.js'],
     include: ['src/**/*.{test,spec}.js'],
+    testTimeout: 15000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

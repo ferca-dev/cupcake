@@ -1,6 +1,6 @@
 <script setup>
 // Tenant subscriptions view. Lists available plans, the current
-// subscription state, invoice history, and exposes cancel/resume buttons.
+// subscription state, invoice history, and exposes pause/cancel/resume buttons.
 // Creating a subscription redirects the user to Mercado Pago's preapproval
 // authorisation URL — the backend mirrors the resulting state on the
 // `preapproval` webhook so this page never assumes activation locally.
@@ -64,6 +64,11 @@ const cancel = async (sub) => {
   await store.cancelSubscription(sub.id);
 };
 
+const pause = async (sub) => {
+  if (!window.confirm(t('billingPayments.subscriptions.pauseConfirm'))) return;
+  await store.pauseSubscription(sub.id);
+};
+
 const resume = async (sub) => {
   await store.resumeSubscription(sub.id);
 };
@@ -123,10 +128,7 @@ const statusVariant = (status) => {
         <p>
           <strong>{{ t('billingPayments.subscriptions.price') }}:</strong>
           {{
-            formatCurrency(
-              store.activeSubscription.priceMinor,
-              store.activeSubscription.currency,
-            )
+            formatCurrency(store.activeSubscription.priceMinor, store.activeSubscription.currency)
           }}
         </p>
         <p v-if="store.activeSubscription.nextChargeAt">
@@ -134,6 +136,14 @@ const statusVariant = (status) => {
           {{ formatDate(store.activeSubscription.nextChargeAt) }}
         </p>
         <div class="subscriptions__actions">
+          <AppButton
+            v-if="store.activeSubscription.status === 'authorized'"
+            variant="secondary"
+            :loading="store.isMutatingSubscription"
+            @click="pause(store.activeSubscription)"
+          >
+            {{ t('billingPayments.subscriptions.pause') }}
+          </AppButton>
           <AppButton
             v-if="store.activeSubscription.status === 'authorized'"
             variant="secondary"
@@ -151,8 +161,7 @@ const statusVariant = (status) => {
           </AppButton>
           <a
             v-if="
-              store.activeSubscription.status === 'pending' &&
-              store.activeSubscription.initPoint
+              store.activeSubscription.status === 'pending' && store.activeSubscription.initPoint
             "
             :href="store.activeSubscription.initPoint"
             target="_blank"
@@ -176,8 +185,8 @@ const statusVariant = (status) => {
         :empty="t('billingPayments.subscriptions.plansEmpty')"
       >
         <template #cell:price="{ row }">
-          {{ formatCurrency(row.priceMinor, row.currency) }} /
-          {{ row.intervalCount }} {{ row.intervalUnit }}
+          {{ formatCurrency(row.priceMinor, row.currency) }} / {{ row.intervalCount }}
+          {{ row.intervalUnit }}
         </template>
         <template #cell:tokens="{ row }">{{ row.includedTokens }}</template>
         <template #cell:action="{ row }">
@@ -210,9 +219,7 @@ const statusVariant = (status) => {
         <template #cell:status="{ row }">
           <AppBadge :variant="statusVariant(row.status)">{{ row.status }}</AppBadge>
         </template>
-        <template #cell:reference="{ row }">{{
-          row.mercadoPagoAuthorizedPaymentId
-        }}</template>
+        <template #cell:reference="{ row }">{{ row.mercadoPagoAuthorizedPaymentId }}</template>
       </AppTable>
     </AppCard>
   </section>

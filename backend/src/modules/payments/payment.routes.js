@@ -58,6 +58,12 @@ paymentBillingRouter.post(
 );
 
 paymentBillingRouter.post(
+  '/subscriptions/:id/pause',
+  requirePermission(PERMISSIONS.BILLING_VIEW),
+  controller.pauseClientSubscription,
+);
+
+paymentBillingRouter.post(
   '/subscriptions/:id/resume',
   requirePermission(PERMISSIONS.BILLING_VIEW),
   controller.resumeClientSubscription,

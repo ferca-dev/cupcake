@@ -43,7 +43,13 @@ const TEMPLATES = {
     subject: `Token purchase refunded`,
     text:
       `Hi ${d.recipientName ?? ''},\n\n` +
-      `Mercado Pago issued a refund for ${d.formattedPrice}. The tokens credited for purchase ${d.reference} are no longer available.`,
+      `Mercado Pago issued a refund for ${d.formattedPrice}. We recorded a ${d.tokens}-token reversal for purchase ${d.reference}.`,
+  }),
+  token_payment_charged_back: (d) => ({
+    subject: `Token purchase charged back`,
+    text:
+      `Hi ${d.recipientName ?? ''},\n\n` +
+      `Mercado Pago marked purchase ${d.reference} as charged back. We recorded a ${d.tokens}-token reversal for your workspace.`,
   }),
   token_payment_manual_review: (d) => ({
     subject: `Token purchase under manual review`,

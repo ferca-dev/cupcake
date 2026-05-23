@@ -110,4 +110,21 @@ describe('billing payments store', () => {
     await expect(store.createSubscription('plan-1')).rejects.toThrow();
     expect(store.lastError).toMatch(/Already subscribed/);
   });
+
+  it('pauses a subscription through the backend and updates local state only from the response', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: { subscription: subscriptionFixture({ status: 'paused' }) },
+      }),
+    );
+    const store = useBillingPaymentsStore();
+    store.subscriptions = [subscriptionFixture({ status: 'authorized' })];
+
+    const result = await store.pauseSubscription('sub-1');
+
+    expect(result.status).toBe('paused');
+    expect(store.subscriptions[0].status).toBe('paused');
+    expect(fetchMock.mock.calls[0][0].toString()).toContain('/billing/subscriptions/sub-1/pause');
+  });
 });

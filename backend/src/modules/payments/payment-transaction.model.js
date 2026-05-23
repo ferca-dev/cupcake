@@ -85,7 +85,7 @@ const paymentTransactionSchema = new Schema(
     },
 
     // External identifiers shared between Cupcake and the provider.
-    externalReference: { type: String, required: true, index: true },
+    externalReference: { type: String, required: true },
     providerPreferenceId: { type: String, default: null, index: true },
     providerPaymentId: { type: String, default: null, index: true, sparse: true },
     providerPayerEmail: { type: String, default: null },
@@ -96,6 +96,12 @@ const paymentTransactionSchema = new Schema(
     // touched again for this transaction.
     tokenCredited: { type: Boolean, default: false },
     tokenLedgerEntryId: { type: Types.ObjectId, ref: 'TokenLedgerEntry', default: null },
+    tokenReversed: { type: Boolean, default: false },
+    tokenReversalLedgerEntryId: {
+      type: Types.ObjectId,
+      ref: 'TokenLedgerEntry',
+      default: null,
+    },
 
     requestedBy: { type: Types.ObjectId, ref: 'User', default: null },
     paidAt: { type: Date, default: null },

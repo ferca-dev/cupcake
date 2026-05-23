@@ -133,9 +133,7 @@ export const useBillingPaymentsStore = defineStore('billingPayments', {
       try {
         const data = await billingPaymentsService.cancelSubscription(id);
         if (data?.subscription) {
-          this.subscriptions = this.subscriptions.map((s) =>
-            s.id === id ? data.subscription : s,
-          );
+          this.subscriptions = this.subscriptions.map((s) => (s.id === id ? data.subscription : s));
         }
         return data?.subscription ?? null;
       } catch (err) {
@@ -152,13 +150,28 @@ export const useBillingPaymentsStore = defineStore('billingPayments', {
       try {
         const data = await billingPaymentsService.resumeSubscription(id);
         if (data?.subscription) {
-          this.subscriptions = this.subscriptions.map((s) =>
-            s.id === id ? data.subscription : s,
-          );
+          this.subscriptions = this.subscriptions.map((s) => (s.id === id ? data.subscription : s));
         }
         return data?.subscription ?? null;
       } catch (err) {
         this.lastError = err?.message ?? 'Unable to resume subscription';
+        throw err;
+      } finally {
+        this.isMutatingSubscription = false;
+      }
+    },
+
+    async pauseSubscription(id) {
+      this.isMutatingSubscription = true;
+      this.lastError = null;
+      try {
+        const data = await billingPaymentsService.pauseSubscription(id);
+        if (data?.subscription) {
+          this.subscriptions = this.subscriptions.map((s) => (s.id === id ? data.subscription : s));
+        }
+        return data?.subscription ?? null;
+      } catch (err) {
+        this.lastError = err?.message ?? 'Unable to pause subscription';
         throw err;
       } finally {
         this.isMutatingSubscription = false;

@@ -63,9 +63,7 @@ export const createPlanSchema = z
 
 export const updatePlanSchema = createPlanSchema.partial().strict();
 
-export const updatePlanStatusSchema = z
-  .object({ status: z.enum(PLAN_STATUSES) })
-  .strict();
+export const updatePlanStatusSchema = z.object({ status: z.enum(PLAN_STATUSES) }).strict();
 
 export const createSubscriptionSchema = z
   .object({

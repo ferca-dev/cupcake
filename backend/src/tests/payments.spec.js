@@ -87,6 +87,20 @@ const installMockProvider = () => {
   return provider;
 };
 
+const scriptApprovedPayment = (provider, transaction, paymentId = 'mp_pay_1') => {
+  provider._setPaymentState(paymentId, {
+    status: 'approved',
+    rawStatus: 'approved',
+    externalReference: transaction.externalReference,
+    amountMinor: transaction.amountMinor,
+    currency: transaction.currency,
+    payerEmail: 'payer@example.com',
+    preferenceId: transaction.providerPreferenceId,
+    paidAt: new Date().toISOString(),
+    raw: { mock: true },
+  });
+};
+
 beforeAll(async () => {
   // The shared test setup keeps DEFAULT_TOKEN_BALANCE high to grandfather
   // older campaign specs. Payment tests assert wallet balances after credits,
@@ -157,6 +171,27 @@ describe('POST /api/v1/billing/mercadopago/preferences', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rejects client-supplied payment mutation fields', async () => {
+    installMockProvider();
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'acme@test.local' });
+    const pkg = await createPackage({ tokens: 1000, priceMinor: 9900 });
+    const token = await login('acme@test.local');
+
+    const res = await request(app)
+      .post('/api/v1/billing/mercadopago/preferences')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        packageId: pkg._id.toString(),
+        tokensToCredit: 500000,
+        amountMinor: 1,
+        status: 'approved',
+      });
+
+    expect(res.status).toBe(422);
+    expect(await PaymentTransaction.countDocuments()).toBe(0);
+  });
+
   it('refuses to be called by a client without billing.view permission', async () => {
     installMockProvider();
     const tenant = await makeTenant('Acme');
@@ -178,20 +213,6 @@ describe('POST /api/v1/billing/mercadopago/preferences', () => {
 // ---------------------------------------------------------------------
 
 describe('Mercado Pago webhook processing', () => {
-  const scriptApprovedPayment = (provider, transaction, paymentId = 'mp_pay_1') => {
-    provider._setPaymentState(paymentId, {
-      status: 'approved',
-      rawStatus: 'approved',
-      externalReference: transaction.externalReference,
-      amountMinor: transaction.amountMinor,
-      currency: transaction.currency,
-      payerEmail: 'payer@example.com',
-      preferenceId: transaction.providerPreferenceId,
-      paidAt: new Date().toISOString(),
-      raw: { mock: true },
-    });
-  };
-
   it('credits the wallet exactly once even when the same webhook arrives twice', async () => {
     const provider = installMockProvider();
     const tenant = await makeTenant('Acme');
@@ -232,6 +253,36 @@ describe('Mercado Pago webhook processing', () => {
     expect(ledgerAgain).toHaveLength(1);
   });
 
+  it('does not duplicate token credits, ledger entries, or emails across distinct events for the same payment', async () => {
+    const provider = installMockProvider();
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'acme@test.local' });
+    const pkg = await createPackage({ tokens: 250, priceMinor: 1000 });
+    const token = await login('acme@test.local');
+
+    const created = await request(app)
+      .post('/api/v1/billing/mercadopago/preferences')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ packageId: pkg._id.toString() });
+    const transaction = await PaymentTransaction.findById(created.body.data.transaction.id);
+    scriptApprovedPayment(provider, transaction, 'mp_pay_same_payment');
+
+    const first = await request(app)
+      .post('/api/v1/webhooks/mercadopago')
+      .send({ id: 'event-same-payment-1', type: 'payment', data: { id: 'mp_pay_same_payment' } });
+    expect(first.body.data.status).toBe('processed');
+
+    const second = await request(app)
+      .post('/api/v1/webhooks/mercadopago')
+      .send({ id: 'event-same-payment-2', type: 'payment', data: { id: 'mp_pay_same_payment' } });
+    expect(second.body.data.status).toBe('processed');
+
+    const wallet = await TokenWallet.findOne({ tenantId: tenant._id });
+    expect(wallet.balance).toBe(250);
+    expect(await TokenLedgerEntry.countDocuments({ tenantId: tenant._id })).toBe(1);
+    expect(await PaymentNotification.countDocuments({ type: 'token_payment_approved' })).toBe(1);
+  });
+
   it('does not credit tokens for rejected, pending, or cancelled statuses', async () => {
     const provider = installMockProvider();
     for (const status of ['rejected', 'pending', 'cancelled']) {
@@ -269,7 +320,7 @@ describe('Mercado Pago webhook processing', () => {
     }
   });
 
-  it('flips the transaction to refunded and never re-credits when a refund event arrives', async () => {
+  it('creates one traceable token reversal when a refund event arrives', async () => {
     const provider = installMockProvider();
     const tenant = await makeTenant('Acme');
     await makeUser({ tenant, email: 'acme@test.local' });
@@ -307,15 +358,120 @@ describe('Mercado Pago webhook processing', () => {
     const reloaded = await PaymentTransaction.findById(tx._id);
     expect(reloaded.status).toBe('refunded');
     expect(reloaded.refundedAt).toBeInstanceOf(Date);
+    expect(reloaded.tokenReversed).toBe(true);
+    expect(reloaded.tokenReversalLedgerEntryId).toBeTruthy();
 
-    // Wallet still holds the original credit — we do NOT auto-debit on refund.
-    // Operators choose whether to recover the tokens manually.
     const wallet = await TokenWallet.findOne({ tenantId: tenant._id });
-    expect(wallet.balance).toBe(300);
+    expect(wallet.balance).toBe(0);
 
-    // A refund email row exists, exactly one of them.
+    const reversals = await TokenLedgerEntry.find({
+      tenantId: tenant._id,
+      type: 'adjustment_debit',
+    });
+    expect(reversals).toHaveLength(1);
+    expect(reversals[0].amount).toBe(300);
+    expect(reversals[0].referenceType).toBe('payment_transaction');
+    expect(reversals[0].metadata.reason).toBe('refunded');
+
+    const replay = await request(app)
+      .post('/api/v1/webhooks/mercadopago')
+      .send({ id: 'event-refund-again', type: 'payment', data: { id: 'pay_refund_flow' } });
+    expect(replay.status).toBe(200);
+
     const refundEmail = await PaymentNotification.find({ type: 'token_payment_refunded' });
     expect(refundEmail).toHaveLength(1);
+    const reversalAgain = await TokenLedgerEntry.find({
+      tenantId: tenant._id,
+      type: 'adjustment_debit',
+    });
+    expect(reversalAgain).toHaveLength(1);
+  });
+
+  it('creates one traceable token reversal for a charged-back payment', async () => {
+    const provider = installMockProvider();
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'acme@test.local' });
+    const pkg = await createPackage({ tokens: 125 });
+    const token = await login('acme@test.local');
+
+    const created = await request(app)
+      .post('/api/v1/billing/mercadopago/preferences')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ packageId: pkg._id.toString() });
+    const tx = await PaymentTransaction.findById(created.body.data.transaction.id);
+
+    scriptApprovedPayment(provider, tx, 'pay_chargeback_flow');
+    await request(app)
+      .post('/api/v1/webhooks/mercadopago')
+      .send({ id: 'event-cb-approve', type: 'payment', data: { id: 'pay_chargeback_flow' } });
+
+    provider._setPaymentState('pay_chargeback_flow', {
+      status: 'charged_back',
+      rawStatus: 'charged_back',
+      externalReference: tx.externalReference,
+      amountMinor: tx.amountMinor,
+      currency: tx.currency,
+      payerEmail: 'payer@example.com',
+      preferenceId: tx.providerPreferenceId,
+      paidAt: new Date().toISOString(),
+      raw: { mock: true },
+    });
+    const chargeback = await request(app)
+      .post('/api/v1/webhooks/mercadopago')
+      .send({ id: 'event-cb', type: 'payment', data: { id: 'pay_chargeback_flow' } });
+    expect(chargeback.status).toBe(200);
+
+    const reloaded = await PaymentTransaction.findById(tx._id);
+    expect(reloaded.status).toBe('charged_back');
+    expect(reloaded.tokenReversed).toBe(true);
+
+    const wallet = await TokenWallet.findOne({ tenantId: tenant._id });
+    expect(wallet.balance).toBe(0);
+    const reversal = await TokenLedgerEntry.findOne({
+      tenantId: tenant._id,
+      type: 'adjustment_debit',
+    });
+    expect(reversal.amount).toBe(125);
+    expect(reversal.metadata.reason).toBe('charged_back');
+    expect(await PaymentNotification.countDocuments({ type: 'token_payment_charged_back' })).toBe(
+      1,
+    );
+  });
+
+  it('passes the webhook resource id into signature verification before fetching provider state', async () => {
+    const { processIncomingWebhook } = await import('../modules/payments/payment.service.js');
+    const seenResourceIds = [];
+    const provider = {
+      getProviderName: () => 'mock',
+      verifyWebhookSignature: (_rawBody, headers) => {
+        seenResourceIds.push(headers['x-resource-id']);
+        return true;
+      },
+      fetchPayment: async (id) => ({
+        id,
+        status: 'failed',
+        rawStatus: 'unknown',
+        externalReference: null,
+        amountMinor: null,
+        currency: null,
+        payerEmail: null,
+        preferenceId: null,
+        paidAt: null,
+        raw: { mock: true },
+      }),
+    };
+
+    const result = await processIncomingWebhook({
+      provider,
+      body: { id: 'event-signed', type: 'payment', data: { id: 'mp_pay_signed' } },
+      rawBody: '{}',
+      headers: {},
+      env: { ...loadEnv(), MERCADOPAGO_WEBHOOK_SECRET: 'configured' },
+    });
+
+    expect(result.status).toBe('skipped');
+    expect(result.reason).toBe('unknown_external_reference');
+    expect(seenResourceIds).toEqual(['mp_pay_signed']);
   });
 
   it('rejects a delivery with an invalid signature when MERCADOPAGO_WEBHOOK_SECRET is set', async () => {
@@ -346,9 +502,7 @@ describe('Mercado Pago webhook processing', () => {
 
 describe('PaymentNotification idempotency', () => {
   it('refuses to send the same idempotency key twice', async () => {
-    const { sendPaymentNotification } = await import(
-      '../modules/payments/notification.service.js'
-    );
+    const { sendPaymentNotification } = await import('../modules/payments/notification.service.js');
 
     const tenant = await makeTenant('Acme');
     await makeUser({ tenant, email: 'acme@test.local' });
@@ -511,6 +665,151 @@ describe('Subscriptions', () => {
     expect(walletAgain.balance).toBe(750);
   });
 
+  it('does not duplicate subscription invoices, token credits, or emails across distinct events for the same authorized payment', async () => {
+    const provider = installMockProvider();
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'acme@test.local' });
+    const plan = await seedPlan({ includedTokens: 600 });
+
+    const subscription = await subscriptionService.createSubscription({
+      tenantId: tenant._id,
+      planId: plan._id.toString(),
+      payerEmail: 'payer@example.com',
+      actor: null,
+    });
+    await TenantSubscription.updateOne(
+      { _id: subscription.subscription.id },
+      { $set: { status: 'authorized', authorizedAt: new Date() } },
+    );
+
+    provider.fetchAuthorizedPayment = async (id) => ({
+      id: String(id),
+      status: 'processed',
+      rawStatus: 'processed',
+      preapprovalId: subscription.preapproval.id,
+      amountMinor: plan.priceMinor,
+      currency: plan.currency,
+      paymentDate: new Date(),
+      periodStart: new Date(),
+      periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      paymentId: 'mp_pay_sub_once',
+      raw: { mock: true },
+    });
+
+    for (const eventId of ['event-auth-repeat-1', 'event-auth-repeat-2']) {
+      const res = await request(app)
+        .post('/api/v1/webhooks/mercadopago')
+        .send({
+          id: eventId,
+          type: 'subscription_authorized_payment',
+          data: { id: 'auth_pay_repeat' },
+        });
+      expect(res.status).toBe(200);
+    }
+
+    const wallet = await TokenWallet.findOne({ tenantId: tenant._id });
+    expect(wallet.balance).toBe(600);
+    expect(
+      await SubscriptionInvoice.countDocuments({
+        mercadoPagoAuthorizedPaymentId: 'auth_pay_repeat',
+      }),
+    ).toBe(1);
+    expect(await TokenLedgerEntry.countDocuments({ tenantId: tenant._id })).toBe(1);
+    expect(
+      await PaymentNotification.countDocuments({ type: 'subscription_payment_approved' }),
+    ).toBe(1);
+  });
+
+  it('sends retry reminders for failed subscription payments without granting tokens', async () => {
+    const provider = installMockProvider();
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'acme@test.local' });
+    const plan = await seedPlan({ includedTokens: 900 });
+
+    const subscription = await subscriptionService.createSubscription({
+      tenantId: tenant._id,
+      planId: plan._id.toString(),
+      payerEmail: 'payer@example.com',
+      actor: null,
+    });
+    await TenantSubscription.updateOne(
+      { _id: subscription.subscription.id },
+      { $set: { status: 'authorized', authorizedAt: new Date() } },
+    );
+
+    provider.fetchAuthorizedPayment = async (id) => ({
+      id: String(id),
+      status: 'recycling',
+      rawStatus: 'cc_rejected_insufficient_amount',
+      preapprovalId: subscription.preapproval.id,
+      amountMinor: plan.priceMinor,
+      currency: plan.currency,
+      paymentDate: null,
+      periodStart: new Date(),
+      periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      paymentId: null,
+      raw: { mock: true },
+    });
+
+    const res = await request(app)
+      .post('/api/v1/webhooks/mercadopago')
+      .send({
+        id: 'event-auth-retry',
+        type: 'subscription_authorized_payment',
+        data: { id: 'auth_pay_retry' },
+      });
+    expect(res.status).toBe(200);
+
+    const invoice = await SubscriptionInvoice.findOne({
+      mercadoPagoAuthorizedPaymentId: 'auth_pay_retry',
+    });
+    expect(invoice.status).toBe('recycling');
+    expect(invoice.tokenCredited).toBe(false);
+    expect(invoice.failureReason).toBe('cc_rejected_insufficient_amount');
+    expect(await TokenLedgerEntry.countDocuments({ tenantId: tenant._id })).toBe(0);
+    const wallet = await TokenWallet.findOne({ tenantId: tenant._id });
+    expect(wallet?.balance ?? 0).toBe(0);
+    expect(await PaymentNotification.countDocuments({ type: 'subscription_payment_retry' })).toBe(
+      1,
+    );
+  });
+
+  it('pauses and resumes a subscription through Mercado Pago state', async () => {
+    const provider = installMockProvider();
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'acme@test.local' });
+    const plan = await seedPlan();
+    const token = await login('acme@test.local');
+
+    const created = await request(app)
+      .post('/api/v1/billing/subscriptions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ planId: plan._id.toString() });
+    expect(created.status).toBe(201);
+
+    const subId = created.body.data.subscription.id;
+    await TenantSubscription.updateOne(
+      { _id: subId },
+      { $set: { status: 'authorized', authorizedAt: new Date() } },
+    );
+
+    const pause = await request(app)
+      .post(`/api/v1/billing/subscriptions/${subId}/pause`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(pause.status).toBe(200);
+    expect(pause.body.data.subscription.status).toBe('paused');
+
+    const preapprovalId = created.body.data.subscription.mercadoPagoPreapprovalId;
+    expect((await provider.fetchPreapproval(preapprovalId)).status).toBe('paused');
+
+    const resume = await request(app)
+      .post(`/api/v1/billing/subscriptions/${subId}/resume`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(resume.status).toBe(200);
+    expect(resume.body.data.subscription.status).toBe('authorized');
+    expect((await provider.fetchPreapproval(preapprovalId)).status).toBe('authorized');
+  });
+
   it('cancels a subscription via Mercado Pago and records the cancellation', async () => {
     const provider = installMockProvider();
     const tenant = await makeTenant('Acme');
@@ -578,5 +877,66 @@ describe('Admin payment endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.items).toHaveLength(1);
     expect(res.body.data.items[0].providerEventId).toBe('evt_1');
+  });
+
+  it('prevents client roles from calling admin payment mutation endpoints', async () => {
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'client@test.local' });
+    const clientToken = await login('client@test.local');
+
+    const reconcile = await request(app)
+      .post('/api/v1/admin/payments/reconcile')
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ paymentId: 'mp_pay_1' });
+    expect(reconcile.status).toBe(403);
+
+    const sync = await request(app)
+      .post('/api/v1/admin/subscriptions/507f1f77bcf86cd799439011/sync')
+      .set('Authorization', `Bearer ${clientToken}`);
+    expect(sync.status).toBe(403);
+  });
+
+  it('allows repeated admin reconciliation to refetch changed provider state safely', async () => {
+    const provider = installMockProvider();
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'client@test.local' });
+    await makeUser({ tenant: null, email: 'super@test.local', role: ROLES.SUPER_ADMIN });
+    const pkg = await createPackage({ tokens: 700 });
+    const clientToken = await login('client@test.local');
+    const superToken = await login('super@test.local');
+
+    const created = await request(app)
+      .post('/api/v1/billing/mercadopago/preferences')
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ packageId: pkg._id.toString() });
+    const tx = await PaymentTransaction.findById(created.body.data.transaction.id);
+
+    provider._setPaymentState('mp_pay_reconcile', {
+      status: 'pending',
+      rawStatus: 'pending',
+      externalReference: tx.externalReference,
+      amountMinor: tx.amountMinor,
+      currency: tx.currency,
+      payerEmail: 'payer@example.com',
+      preferenceId: tx.providerPreferenceId,
+      paidAt: null,
+      raw: { mock: true },
+    });
+    const first = await request(app)
+      .post('/api/v1/admin/payments/reconcile')
+      .set('Authorization', `Bearer ${superToken}`)
+      .send({ paymentId: 'mp_pay_reconcile' });
+    expect(first.status).toBe(200);
+
+    scriptApprovedPayment(provider, tx, 'mp_pay_reconcile');
+    const second = await request(app)
+      .post('/api/v1/admin/payments/reconcile')
+      .set('Authorization', `Bearer ${superToken}`)
+      .send({ paymentId: 'mp_pay_reconcile' });
+    expect(second.status).toBe(200);
+
+    const wallet = await TokenWallet.findOne({ tenantId: tenant._id });
+    expect(wallet.balance).toBe(700);
+    expect(await TokenLedgerEntry.countDocuments({ tenantId: tenant._id })).toBe(1);
   });
 });
