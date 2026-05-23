@@ -557,7 +557,8 @@ export const sendCampaign = async ({
   // toward the tenant send limits.
   const pendingByChannel = { email: 0, sms: 0, whatsapp: 0 };
   for (const doc of insertedDocs) {
-    if (doc.status === 'pending') pendingByChannel[doc.channel] = (pendingByChannel[doc.channel] ?? 0) + 1;
+    if (doc.status === 'pending')
+      pendingByChannel[doc.channel] = (pendingByChannel[doc.channel] ?? 0) + 1;
   }
 
   await tokenService.ensureWallet({ tenantId: tenant, env });

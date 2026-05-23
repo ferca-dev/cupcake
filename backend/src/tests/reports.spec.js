@@ -157,7 +157,15 @@ const createCampaign = async ({ tenantId, ownerId, survey, version, name = 'Camp
     createdBy: ownerId,
   });
 
-const createRecipient = async ({ tenantId, campaign, survey, version, channel, status, skippedReason = null }) => {
+const createRecipient = async ({
+  tenantId,
+  campaign,
+  survey,
+  version,
+  channel,
+  status,
+  skippedReason = null,
+}) => {
   const isSent = ['sent', 'delivered', 'opened', 'clicked'].includes(status);
   const recipient = await CampaignRecipient.create({
     tenantId,
@@ -568,7 +576,12 @@ describe('GET /api/v1/surveys/:id/reports/questions', () => {
       tenantId: tenant._id,
       surveyId: survey._id,
       versionNumber: 2,
-      schema: { fields: v2Fields, sections: [], logicRules: [], layout: { mode: 'single_page', showProgress: true } },
+      schema: {
+        fields: v2Fields,
+        sections: [],
+        logicRules: [],
+        layout: { mode: 'single_page', showProgress: true },
+      },
       publishedBy: user._id,
       publishedAt: new Date(),
     });
@@ -593,7 +606,9 @@ describe('GET /api/v1/surveys/:id/reports/questions', () => {
     // Default version is v2 — field_color appears as the synthetic
     // out-of-schema entry, not the v2 schema.
     expect(defaultResp.body.data.report.surveyVersion.versionNumber).toBe(2);
-    const colorInDefault = defaultResp.body.data.report.questions.find((q) => q.fieldId === 'field_color');
+    const colorInDefault = defaultResp.body.data.report.questions.find(
+      (q) => q.fieldId === 'field_color',
+    );
     expect(colorInDefault.responseCount).toBe(1);
 
     // Asking for v1 should label color from the v1 options.
@@ -603,7 +618,9 @@ describe('GET /api/v1/surveys/:id/reports/questions', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(versionedResp.status).toBe(200);
     expect(versionedResp.body.data.report.surveyVersion.versionNumber).toBe(1);
-    const v1Color = versionedResp.body.data.report.questions.find((q) => q.fieldId === 'field_color');
+    const v1Color = versionedResp.body.data.report.questions.find(
+      (q) => q.fieldId === 'field_color',
+    );
     const red = v1Color.distribution.find((d) => d.value === 'red');
     expect(red.label).toBe('Red');
   });
@@ -873,6 +890,51 @@ describe('GET /api/v1/surveys/:id/reports/export', () => {
     const blueRow = parsed.rows.find((row) => row.optionValue === 'blue');
     expect(blueRow.optionCount).toBe(1);
   });
+
+  it('refuses to export responses for a survey owned by another tenant', async () => {
+    await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    const beta = await createTenantWithAdmin({ tenantName: 'Beta', email: 'beta@test.local' });
+    const { survey, version } = await seedSurvey({
+      tenantId: beta.tenant._id,
+      ownerId: beta.user._id,
+    });
+    await createResponse({
+      tenantId: beta.tenant._id,
+      survey,
+      version,
+      answers: [{ fieldId: 'field_rating', key: 'rating', type: 'rating', value: 4 }],
+    });
+
+    const token = await login('acme@test.local');
+    const response = await request(app)
+      .get(`/api/v1/surveys/${survey._id}/reports/export`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(404);
+    // The body must not leak the other tenant's CSV header or rows.
+    expect(response.text || '').not.toMatch(/Response ID/);
+  });
+
+  it('refuses to export questions JSON for a survey owned by another tenant', async () => {
+    await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    const beta = await createTenantWithAdmin({ tenantName: 'Beta', email: 'beta@test.local' });
+    const { survey, version } = await seedSurvey({
+      tenantId: beta.tenant._id,
+      ownerId: beta.user._id,
+    });
+    await createResponse({
+      tenantId: beta.tenant._id,
+      survey,
+      version,
+      answers: [{ fieldId: 'field_color', key: 'color', type: 'select', value: 'red' }],
+    });
+
+    const token = await login('acme@test.local');
+    const response = await request(app)
+      .get(`/api/v1/surveys/${survey._id}/reports/export`)
+      .query({ type: 'questions', format: 'json' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(404);
+  });
 });
 
 describe('Report endpoints auth', () => {
@@ -882,9 +944,7 @@ describe('Report endpoints auth', () => {
       email: 'acme@test.local',
     });
     const { survey } = await seedSurvey({ tenantId: tenant._id, ownerId: user._id });
-    const response = await request(app).get(
-      `/api/v1/surveys/${survey._id}/reports/overview`,
-    );
+    const response = await request(app).get(`/api/v1/surveys/${survey._id}/reports/overview`);
     expect(response.status).toBe(401);
   });
 });

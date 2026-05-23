@@ -13,8 +13,7 @@
 
 const CRLF = '\r\n';
 
-const needsQuoting = (value) =>
-  typeof value === 'string' && /[",\r\n]/.test(value);
+const needsQuoting = (value) => typeof value === 'string' && /[",\r\n]/.test(value);
 
 const stringifyCell = (value) => {
   if (value === null || value === undefined) return '';

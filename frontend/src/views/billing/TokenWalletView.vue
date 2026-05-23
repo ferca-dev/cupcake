@@ -171,17 +171,23 @@ const onLedgerChannelChange = (value) => {
         <ul>
           <li v-for="channel in channels" :key="channel">
             <strong>{{ t(`campaigns.channels.${channel}`) }}:</strong>
-            {{ t('billingTokens.balance.tokensPerRecipient', { value: store.pricing?.[channel] ?? '—' }) }}
+            {{
+              t('billingTokens.balance.tokensPerRecipient', {
+                value: store.pricing?.[channel] ?? '—',
+              })
+            }}
           </li>
         </ul>
       </div>
       <div v-if="store.usage" class="token-wallet__usage">
         <h4>{{ t('billingTokens.usage.title') }}</h4>
         <p>
-          {{ t('billingTokens.usage.summary', {
-            month: store.usage.yearMonth,
-            total: store.usage.total,
-          }) }}
+          {{
+            t('billingTokens.usage.summary', {
+              month: store.usage.yearMonth,
+              total: store.usage.total,
+            })
+          }}
         </p>
         <ul>
           <li v-for="channel in channels" :key="channel">
@@ -232,7 +238,9 @@ const onLedgerChannelChange = (value) => {
         :empty="t('billingTokens.purchases.empty')"
       >
         <template #cell:createdAt="{ row }">{{ formatDate(row.createdAt) }}</template>
-        <template #cell:price="{ row }">{{ formatCurrency(row.priceMinor, row.currency) }}</template>
+        <template #cell:price="{ row }">{{
+          formatCurrency(row.priceMinor, row.currency)
+        }}</template>
         <template #cell:status="{ row }">
           <AppBadge :variant="purchaseVariant(row.status)">
             {{ t(`billingTokens.purchases.statuses.${row.status}`, { defaultValue: row.status }) }}

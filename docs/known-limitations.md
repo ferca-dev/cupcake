@@ -1,9 +1,9 @@
 # Known Limitations
 
-Cupcake reached its final post-delivery hardening pass (Phase 18) with a small
-set of intentionally deferred features. Each item below is intentionally
-incomplete, returns a stable but non-pretending API surface, and is tracked
-here so future work has an explicit starting point.
+Cupcake completed its post-billing, reports, media, and layout hardening pass
+(Phase 23) with a small set of intentionally deferred features. Each item
+below is intentionally incomplete, returns a stable but non-pretending API
+surface, and is tracked here so future work has an explicit starting point.
 
 If a future change implements one of these, remove the entry from this file in
 the same pull request.
@@ -62,15 +62,18 @@ unavailable`. No password can be changed through this code path.
 
 ## Real payments
 
-- **Module**: `transactions`.
+- **Module**: `transactions`, `tokens.purchases`.
 - **Behaviour today**: the `transactions` collection records billing history.
-  It is read-only from the API perspective: there is no checkout flow, no
-  webhook ingestion, and no signed-provider integration. Seed data and admin
-  CLI scripts are the only writers.
+  Token purchases use a manual approval flow when
+  `TOKEN_PURCHASE_MODE=manual` (the default): clients submit a purchase
+  request, a super admin approves it from `/api/v1/admin/token-purchases`,
+  and the wallet is credited atomically on approval. There is no checkout
+  flow, no payment-provider webhook ingestion, and no signed-provider
+  integration today.
 - **Why deferred**: a payment integration (Stripe, Mercado Pago, etc.)
   requires contractual onboarding and is out of scope.
-- **Workaround**: super admins can insert transactions manually for invoicing
-  records.
+- **Workaround**: super admins approve pending token purchases manually and
+  can also insert transactions through MongoDB for invoicing records.
 
 ## In-product user management
 
@@ -108,3 +111,28 @@ unavailable`. No password can be changed through this code path.
   the controller does not yet plumb the calling refresh-token id through.
 - **Workaround**: expect a re-login prompt immediately after a password
   change. Other sessions are revoked, which is the intended security trade.
+
+## Object storage rotation and orphan cleanup
+
+- **Module**: `media`.
+- **Behaviour today**: deleted `media_assets` documents are flipped to
+  `status: 'deleted'` and the underlying object stays in the configured
+  store. There is no background job that prunes deleted records or detects
+  orphaned uploads that were never referenced. Signed URLs use a 15-minute
+  expiry for S3 reads and are not rotated for long-lived public references.
+- **Why deferred**: an asynchronous cleanup job needs a job runner and a
+  retention policy decision that has not been signed off.
+- **Workaround**: operators can manually delete object keys from the storage
+  provider after the matching `media_assets` document has been
+  `status: 'deleted'` for the agreed retention window.
+
+## Soft-limit notifications
+
+- **Module**: `tokens` / `tenant_send_limits.enforcement: 'soft'`.
+- **Behaviour today**: a soft send-limit produces `limitWarnings` in the
+  campaign response payload and the send proceeds. There is no email, push,
+  or in-product notification that fires when a soft limit is crossed.
+- **Why deferred**: cross-channel notification routing is part of a future
+  billing/admin notifications phase.
+- **Workaround**: monitor `limitWarnings` in the campaign report or the
+  audit log entry for `campaign.sent`.

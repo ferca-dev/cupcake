@@ -17,6 +17,10 @@ import { TenantSendLimit } from '../modules/tokens/tenant-send-limit.model.js';
 import { TokenPurchase } from '../modules/tokens/token-purchase.model.js';
 import { MonthlySendUsage } from '../modules/tokens/monthly-send-usage.model.js';
 import { AuditLog } from '../modules/audit/audit-log.model.js';
+import * as tokenService from '../modules/tokens/token.service.js';
+import { sendCampaign } from '../modules/campaigns/campaign.service.js';
+import { Campaign } from '../modules/campaigns/campaign.model.js';
+import { loadEnv } from '../config/env.js';
 import { hashPassword } from '../common/auth/passwords.js';
 import { ROLES } from '../common/auth/roles.js';
 
@@ -627,6 +631,161 @@ describe('Campaign sending: token enforcement', () => {
       tokensCharged: 1,
       tokensRefunded: 0,
       remainingBalance: 4,
+    });
+  });
+});
+
+describe('Atomic debit under concurrency', () => {
+  it('never lets concurrent debit attempts drive the wallet below zero', async () => {
+    const tenant = await makeTenant('Concurrent');
+    await setWalletBalance(tenant._id, 3);
+
+    const debit = (i) =>
+      tokenService.debitForRecipient({
+        tenantId: tenant._id,
+        recipientId: `00000000000000000000${(100 + i).toString(16)}`.slice(-24),
+        campaignId: null,
+        channel: 'email',
+        tokensPerRecipient: 1,
+      });
+
+    const results = await Promise.all([debit(1), debit(2), debit(3), debit(4), debit(5)]);
+    const successes = results.filter((r) => r.debited);
+    const failures = results.filter((r) => !r.debited);
+
+    expect(successes).toHaveLength(3);
+    expect(failures).toHaveLength(2);
+    expect(failures.every((f) => f.reason === 'insufficient_balance')).toBe(true);
+
+    const wallet = await TokenWallet.findOne({ tenantId: tenant._id });
+    expect(wallet.balance).toBe(0);
+
+    // Only the successful debits produced ledger entries — the conditional
+    // update protects the ledger from drifting against the wallet.
+    const ledger = await TokenLedgerEntry.find({ tenantId: tenant._id, type: 'debit' });
+    expect(ledger).toHaveLength(3);
+    expect(ledger.reduce((sum, entry) => sum + entry.amount, 0)).toBe(3);
+  });
+});
+
+describe('Failed-send policies other than refund', () => {
+  const seedScenarioWithFailure = async () => {
+    const { tenant, user, survey } = await buildScenario();
+    await Contact.create({
+      tenantId: tenant._id,
+      fullName: 'Good',
+      email: 'good@example.com',
+      status: 'active',
+    });
+    await Contact.create({
+      tenantId: tenant._id,
+      fullName: 'Bad',
+      email: 'fail@example.com',
+      status: 'active',
+    });
+    await setWalletBalance(tenant._id, 5);
+    const contacts = await Contact.find({ tenantId: tenant._id });
+    const campaign = await Campaign.create({
+      tenantId: tenant._id,
+      surveyId: survey._id,
+      surveyVersionId: survey.publishedVersionId,
+      name: 'Policy spec',
+      channels: ['email'],
+      target: { contactIds: contacts.map((c) => c._id), groupIds: [] },
+      status: 'draft',
+      createdBy: user._id,
+    });
+    return { tenant, user, campaign };
+  };
+
+  it('charges the debit and never refunds when the policy is charge', async () => {
+    const { tenant, user, campaign } = await seedScenarioWithFailure();
+    const env = { ...loadEnv(), TOKEN_FAILED_SEND_POLICY: 'charge' };
+
+    const result = await sendCampaign({
+      id: campaign._id.toString(),
+      tenantId: tenant._id,
+      actor: { id: user._id.toString(), role: ROLES.CLIENT_ADMIN },
+      env,
+    });
+
+    expect(result.summary.sentCount).toBe(1);
+    expect(result.summary.failedCount).toBe(1);
+    expect(result.summary.tokensCharged).toBe(2);
+    expect(result.summary.tokensRefunded).toBe(0);
+    expect(result.tokens.balanceAfter).toBe(3);
+
+    const refunds = await TokenLedgerEntry.find({ tenantId: tenant._id, type: 'refund' });
+    expect(refunds).toHaveLength(0);
+  });
+
+  it('holds the debit and surfaces tokensHeld when the policy is hold', async () => {
+    const { tenant, user, campaign } = await seedScenarioWithFailure();
+    const env = { ...loadEnv(), TOKEN_FAILED_SEND_POLICY: 'hold' };
+
+    const result = await sendCampaign({
+      id: campaign._id.toString(),
+      tenantId: tenant._id,
+      actor: { id: user._id.toString(), role: ROLES.CLIENT_ADMIN },
+      env,
+    });
+
+    expect(result.summary.tokensCharged).toBe(2);
+    expect(result.summary.tokensRefunded).toBe(0);
+    expect(result.summary.tokensHeld).toBe(1);
+    expect(result.tokens.balanceAfter).toBe(3);
+
+    const refunds = await TokenLedgerEntry.find({ tenantId: tenant._id, type: 'refund' });
+    expect(refunds).toHaveLength(0);
+  });
+});
+
+describe('Role-based access to pricing and send limits', () => {
+  it('rejects client users from editing channel pricing', async () => {
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'client@test.local' });
+    const token = await login('client@test.local');
+    const res = await request(app)
+      .put('/api/v1/admin/channel-pricing')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ channel: 'email', tokensPerRecipient: 9 });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects client users from editing tenant send limits', async () => {
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'client@test.local' });
+    const token = await login('client@test.local');
+    const res = await request(app)
+      .put(`/api/v1/admin/tenants/${tenant._id.toString()}/send-limits`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        monthlyTotal: 100,
+        monthlyPerChannel: { email: null, sms: null, whatsapp: null },
+        enforcement: 'hard',
+      });
+    expect(res.status).toBe(403);
+  });
+
+  it('exposes read-only pricing and limits to client billing.view users', async () => {
+    const tenant = await makeTenant('Acme');
+    await makeUser({ tenant, email: 'client@test.local' });
+    await setWalletBalance(tenant._id, 25);
+
+    const token = await login('client@test.local');
+    const res = await request(app)
+      .get('/api/v1/billing/tokens/balance')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.pricing).toMatchObject({
+      email: expect.any(Number),
+      sms: expect.any(Number),
+      whatsapp: expect.any(Number),
+    });
+    expect(res.body.data.limits).toMatchObject({
+      monthlyTotal: null,
+      monthlyPerChannel: { email: null, sms: null, whatsapp: null },
+      enforcement: 'hard',
     });
   });
 });

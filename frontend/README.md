@@ -251,12 +251,12 @@ Every authenticated view renders inside a centered `.app-page` shell so the dash
 
 The width cap is driven by `route.meta.layout`:
 
-| `meta.layout`     | Max width                                                | Use for                                              |
-| ----------------- | -------------------------------------------------------- | ---------------------------------------------------- |
-| _(omitted)_       | `--layout-content-max-width` (110rem)                    | Default lists, dashboards, reports, data-heavy views |
-| `'reading'`       | `--layout-reading-max-width` (64rem)                     | Settings, single-record forms, tenant edit screens   |
-| `'narrow'`        | `--layout-narrow-max-width` (36rem)                      | Single-column forms (public form layout uses this)   |
-| `'full'`          | unbounded                                                | Builder / multi-pane workspaces                      |
+| `meta.layout` | Max width                             | Use for                                              |
+| ------------- | ------------------------------------- | ---------------------------------------------------- |
+| _(omitted)_   | `--layout-content-max-width` (110rem) | Default lists, dashboards, reports, data-heavy views |
+| `'reading'`   | `--layout-reading-max-width` (64rem)  | Settings, single-record forms, tenant edit screens   |
+| `'narrow'`    | `--layout-narrow-max-width` (36rem)   | Single-column forms (public form layout uses this)   |
+| `'full'`      | unbounded                             | Builder / multi-pane workspaces                      |
 
 How it works:
 
@@ -280,13 +280,13 @@ To pick a layout, set the meta on the route definition:
 
 Verified visually and via component tests at the canonical breakpoints:
 
-| Breakpoint        | Width band       | Expectation                                                                                  |
-| ----------------- | ---------------- | -------------------------------------------------------------------------------------------- |
-| Mobile            | ≤480px           | Single column; sidebar hidden behind the hamburger; main padding shrinks to `--space-4`.     |
-| Small tablet      | 481px – 768px    | Same mobile chrome; tables scroll horizontally inside their container.                       |
-| Tablet / laptop   | 769px – 1199px   | Sidebar visible; content fills available width up to 110rem; default and reading layouts visibly centered. |
-| Desktop           | 1200px – 1599px  | Default layout still tracks viewport width minus padding; reading layout caps at 64rem.       |
-| Large desktop     | ≥1600px          | Default layout caps at 110rem with auto gutters; builder (`full`) breaks out and uses full width minus block padding. |
+| Breakpoint      | Width band      | Expectation                                                                                                           |
+| --------------- | --------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Mobile          | ≤480px          | Single column; sidebar hidden behind the hamburger; main padding shrinks to `--space-4`.                              |
+| Small tablet    | 481px – 768px   | Same mobile chrome; tables scroll horizontally inside their container.                                                |
+| Tablet / laptop | 769px – 1199px  | Sidebar visible; content fills available width up to 110rem; default and reading layouts visibly centered.            |
+| Desktop         | 1200px – 1599px | Default layout still tracks viewport width minus padding; reading layout caps at 64rem.                               |
+| Large desktop   | ≥1600px         | Default layout caps at 110rem with auto gutters; builder (`full`) breaks out and uses full width minus block padding. |
 
 Manual checks per surface:
 

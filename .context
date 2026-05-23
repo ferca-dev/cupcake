@@ -132,6 +132,47 @@ all user-facing strings in `frontend/src/i18n/{en,es}.js`.
   the shared `AppTable` component for responsive horizontal/vertical
   scrolling with sticky headers.
 
+## Phase 19–23 surfaces
+
+- **Token wallet, send limits, and admin pricing** (Phase 19) — Each tenant
+  owns a `token_wallets` document plus an immutable `token_ledger_entries`
+  history. Super admins curate `token_packages`, `channel_pricing_rules`,
+  and `tenant_send_limits`; clients hit `/api/v1/billing/tokens/*` to read
+  balance, pricing, ledger, and request purchases. The campaign send
+  pipeline does a balance + limit preflight before any provider call,
+  debits per recipient through an atomic conditional `$gte` update, and
+  applies the failure policy from `TOKEN_FAILED_SEND_POLICY`
+  (`refund` | `charge` | `hold`). Skipped recipients never consume tokens
+  and never affect monthly usage. See
+  [docs/billing-architecture.md](docs/billing-architecture.md).
+- **Survey statistical reports** (Phase 20) — Tenant-scoped reports under
+  `/api/v1/surveys/:id/reports/{overview,channels,questions,trends,drop-off,timing,versions,export}`.
+  Reports use immutable published schemas to label historical answers,
+  distinguish anonymous public links from campaign channels, and return
+  zero-filled shapes for empty surveys. CSV exports and JSON aggregates
+  share the same tenant filter — cross-tenant export attempts return 404.
+  See [docs/survey-reports.md](docs/survey-reports.md).
+- **Media storage for images** (Phase 21) — A `StorageProvider` interface
+  with `LocalStorageProvider` and `S3StorageProvider` implementations.
+  `STORAGE_DRIVER=local` is allowed only outside production; production
+  must select `s3` with `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and
+  `S3_SECRET_ACCESS_KEY` — env validation fails fast when any of those is
+  missing. Only image metadata and object keys live in MongoDB; binaries
+  go to disk or the configured object store. Uploaded files validate file
+  type, size, dimensions, and tenant ownership. See
+  [docs/media-storage.md](docs/media-storage.md).
+- **Centered fill-width layout system** (Phase 22) — `layout.css` exposes
+  the `.app-page` shell plus the modifiers `--reading`, `--narrow`, and
+  `--full`. `DashboardLayout` and `PublicFormLayout` consume the modifier
+  from route meta; individual views never declare their own page-level
+  `max-width`. The mobile breakpoint at 768px collapses the dashboard to
+  a single column and unhides the menu toggle without changing any view
+  internals.
+- **Hardening pass** (Phase 23) — Verified atomic debits under concurrent
+  send attempts, the `charge` and `hold` variants of the failure policy,
+  cross-tenant safety for report exports, role enforcement on admin
+  pricing/limits endpoints, and the production storage env contract.
+
 ## Deferred features
 
 Intentionally deferred past Phase 18 and documented in

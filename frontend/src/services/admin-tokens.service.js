@@ -14,8 +14,7 @@ export const adminTokensService = Object.freeze({
     apiClient.patch(`/admin/token-packages/${id}/status`, payload).then(unwrap),
 
   listChannelPricing: () => apiClient.get('/admin/channel-pricing').then(unwrap),
-  updateChannelPricing: (payload) =>
-    apiClient.put('/admin/channel-pricing', payload).then(unwrap),
+  updateChannelPricing: (payload) => apiClient.put('/admin/channel-pricing', payload).then(unwrap),
 
   getTenantWallet: (tenantId) =>
     apiClient.get(`/admin/tenants/${tenantId}/token-wallet`).then(unwrap),

@@ -218,9 +218,9 @@ export const incrementMonthlySendUsage = ({
 }) => {
   const update = { $inc: { total: delta } };
   update.$inc[`perChannel.${channel}`] = delta;
-  return MonthlySendUsage.findOneAndUpdate(
-    { tenantId, yearMonth },
-    update,
-    { upsert: true, new: true, setDefaultsOnInsert: true },
-  );
+  return MonthlySendUsage.findOneAndUpdate({ tenantId, yearMonth }, update, {
+    upsert: true,
+    new: true,
+    setDefaultsOnInsert: true,
+  });
 };

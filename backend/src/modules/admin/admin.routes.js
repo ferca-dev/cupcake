@@ -43,10 +43,7 @@ adminRouter.put('/channel-pricing', tokenAdminController.updateChannelPricing);
 adminRouter.get('/tenants/:tenantId/token-wallet', tokenAdminController.getTenantWallet);
 adminRouter.get('/tenants/:tenantId/send-limits', tokenAdminController.getTenantSendLimits);
 adminRouter.put('/tenants/:tenantId/send-limits', tokenAdminController.updateTenantSendLimits);
-adminRouter.post(
-  '/tenants/:tenantId/token-adjustments',
-  tokenAdminController.adjustTenantWallet,
-);
+adminRouter.post('/tenants/:tenantId/token-adjustments', tokenAdminController.adjustTenantWallet);
 
 // Token purchases (cross-tenant queue + approval flow)
 adminRouter.get('/token-purchases', tokenAdminController.listPurchases);

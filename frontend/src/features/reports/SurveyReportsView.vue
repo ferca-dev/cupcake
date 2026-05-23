@@ -323,17 +323,23 @@ watch(
         {{ t('reports.questions.empty') }}
       </div>
       <ul v-else class="survey-reports-view__questions">
-        <li v-for="question in questions" :key="question.fieldId" class="survey-reports-view__question">
+        <li
+          v-for="question in questions"
+          :key="question.fieldId"
+          class="survey-reports-view__question"
+        >
           <div class="survey-reports-view__question-header">
             <h4>{{ question.label || question.key || question.fieldId }}</h4>
             <AppBadge variant="info">{{ question.type }}</AppBadge>
           </div>
           <p class="survey-reports-view__question-meta">
-            {{ t('reports.questions.summary', {
-              responses: question.responseCount,
-              skipped: question.skipCount,
-              rate: formatPercent(question.responseRate),
-            }) }}
+            {{
+              t('reports.questions.summary', {
+                responses: question.responseCount,
+                skipped: question.skipCount,
+                rate: formatPercent(question.responseRate),
+              })
+            }}
           </p>
           <ReportBarChart
             v-if="question.distribution && question.distribution.length"
@@ -342,17 +348,28 @@ watch(
           />
           <div v-if="question.nps" class="survey-reports-view__nps">
             <div>
-              <strong>{{ t('reports.questions.nps.score') }}</strong>: {{ question.nps.score ?? '—' }}
+              <strong>{{ t('reports.questions.nps.score') }}</strong
+              >: {{ question.nps.score ?? '—' }}
             </div>
             <div>{{ t('reports.questions.nps.promoters') }}: {{ question.nps.promoters }}</div>
             <div>{{ t('reports.questions.nps.passives') }}: {{ question.nps.passives }}</div>
             <div>{{ t('reports.questions.nps.detractors') }}: {{ question.nps.detractors }}</div>
           </div>
           <div v-if="question.numericSummary" class="survey-reports-view__numeric">
-            <div>{{ t('reports.questions.numeric.average') }}: {{ question.numericSummary.average ?? '—' }}</div>
-            <div>{{ t('reports.questions.numeric.median') }}: {{ question.numericSummary.median ?? '—' }}</div>
-            <div>{{ t('reports.questions.numeric.min') }}: {{ question.numericSummary.min ?? '—' }}</div>
-            <div>{{ t('reports.questions.numeric.max') }}: {{ question.numericSummary.max ?? '—' }}</div>
+            <div>
+              {{ t('reports.questions.numeric.average') }}:
+              {{ question.numericSummary.average ?? '—' }}
+            </div>
+            <div>
+              {{ t('reports.questions.numeric.median') }}:
+              {{ question.numericSummary.median ?? '—' }}
+            </div>
+            <div>
+              {{ t('reports.questions.numeric.min') }}: {{ question.numericSummary.min ?? '—' }}
+            </div>
+            <div>
+              {{ t('reports.questions.numeric.max') }}: {{ question.numericSummary.max ?? '—' }}
+            </div>
           </div>
         </li>
       </ul>
@@ -384,11 +401,26 @@ watch(
       <AppLoader v-if="store.loading.timing && !timing" />
       <template v-else-if="timing">
         <DashboardKpiGrid>
-          <DashboardKpi :label="t('reports.timing.average')" :value="formatSeconds(timing.duration.averageSeconds)" />
-          <DashboardKpi :label="t('reports.timing.median')" :value="formatSeconds(timing.duration.medianSeconds)" />
-          <DashboardKpi :label="t('reports.timing.min')" :value="formatSeconds(timing.duration.minSeconds)" />
-          <DashboardKpi :label="t('reports.timing.max')" :value="formatSeconds(timing.duration.maxSeconds)" />
-          <DashboardKpi :label="t('reports.timing.trimmedMean')" :value="formatSeconds(timing.duration.trimmedMeanSeconds)" />
+          <DashboardKpi
+            :label="t('reports.timing.average')"
+            :value="formatSeconds(timing.duration.averageSeconds)"
+          />
+          <DashboardKpi
+            :label="t('reports.timing.median')"
+            :value="formatSeconds(timing.duration.medianSeconds)"
+          />
+          <DashboardKpi
+            :label="t('reports.timing.min')"
+            :value="formatSeconds(timing.duration.minSeconds)"
+          />
+          <DashboardKpi
+            :label="t('reports.timing.max')"
+            :value="formatSeconds(timing.duration.maxSeconds)"
+          />
+          <DashboardKpi
+            :label="t('reports.timing.trimmedMean')"
+            :value="formatSeconds(timing.duration.trimmedMeanSeconds)"
+          />
         </DashboardKpiGrid>
         <AppTable
           :columns="timingColumns"
@@ -411,7 +443,11 @@ watch(
       >
         <template #cell:isCurrentlyPublished="{ row }">
           <AppBadge :variant="row.isCurrentlyPublished ? 'success' : 'neutral'">
-            {{ row.isCurrentlyPublished ? t('reports.versions.current') : t('reports.versions.historical') }}
+            {{
+              row.isCurrentlyPublished
+                ? t('reports.versions.current')
+                : t('reports.versions.historical')
+            }}
           </AppBadge>
         </template>
       </AppTable>

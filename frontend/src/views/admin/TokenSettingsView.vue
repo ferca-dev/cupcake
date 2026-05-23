@@ -151,18 +151,22 @@ const loadTenant = async () => {
 const saveLimits = async () => {
   if (!tenantIdInput.value) return;
   await store.updateTenantSendLimits(tenantIdInput.value.trim(), {
-    monthlyTotal: limitsDraft.monthlyTotal === null || limitsDraft.monthlyTotal === ''
-      ? null
-      : Number(limitsDraft.monthlyTotal),
+    monthlyTotal:
+      limitsDraft.monthlyTotal === null || limitsDraft.monthlyTotal === ''
+        ? null
+        : Number(limitsDraft.monthlyTotal),
     monthlyPerChannel: {
-      email: limitsDraft.monthlyPerChannel.email === '' || limitsDraft.monthlyPerChannel.email === null
-        ? null
-        : Number(limitsDraft.monthlyPerChannel.email),
-      sms: limitsDraft.monthlyPerChannel.sms === '' || limitsDraft.monthlyPerChannel.sms === null
-        ? null
-        : Number(limitsDraft.monthlyPerChannel.sms),
+      email:
+        limitsDraft.monthlyPerChannel.email === '' || limitsDraft.monthlyPerChannel.email === null
+          ? null
+          : Number(limitsDraft.monthlyPerChannel.email),
+      sms:
+        limitsDraft.monthlyPerChannel.sms === '' || limitsDraft.monthlyPerChannel.sms === null
+          ? null
+          : Number(limitsDraft.monthlyPerChannel.sms),
       whatsapp:
-        limitsDraft.monthlyPerChannel.whatsapp === '' || limitsDraft.monthlyPerChannel.whatsapp === null
+        limitsDraft.monthlyPerChannel.whatsapp === '' ||
+        limitsDraft.monthlyPerChannel.whatsapp === null
           ? null
           : Number(limitsDraft.monthlyPerChannel.whatsapp),
     },
@@ -248,7 +252,9 @@ const rejectPurchase = async (purchase) => {
         row-key="id"
         :empty="t('adminTokens.packages.empty')"
       >
-        <template #cell:price="{ row }">{{ formatCurrency(row.priceMinor, row.currency) }}</template>
+        <template #cell:price="{ row }">{{
+          formatCurrency(row.priceMinor, row.currency)
+        }}</template>
         <template #cell:status="{ row }">
           <AppBadge :variant="row.status === 'active' ? 'success' : 'neutral'">
             {{ t(`adminTokens.packages.statuses.${row.status}`) }}
@@ -295,7 +301,9 @@ const rejectPurchase = async (purchase) => {
           :label="t('adminTokens.tenant.tenantIdLabel')"
           :placeholder="t('adminTokens.tenant.tenantIdPlaceholder')"
         />
-        <AppButton variant="secondary" @click="loadTenant">{{ t('adminTokens.tenant.load') }}</AppButton>
+        <AppButton variant="secondary" @click="loadTenant">{{
+          t('adminTokens.tenant.load')
+        }}</AppButton>
       </div>
       <div v-if="store.tenantWallet" class="token-settings__tenant-data">
         <div class="token-settings__kpis">
@@ -357,7 +365,9 @@ const rejectPurchase = async (purchase) => {
             rows="2"
           />
           <div class="token-settings__form-actions">
-            <AppButton :loading="store.isMutating" @click="saveLimits">{{ t('common.save') }}</AppButton>
+            <AppButton :loading="store.isMutating" @click="saveLimits">{{
+              t('common.save')
+            }}</AppButton>
           </div>
         </div>
 
@@ -400,7 +410,9 @@ const rejectPurchase = async (purchase) => {
         :empty="t('adminTokens.purchases.empty')"
       >
         <template #cell:createdAt="{ row }">{{ formatDate(row.createdAt) }}</template>
-        <template #cell:price="{ row }">{{ formatCurrency(row.priceMinor, row.currency) }}</template>
+        <template #cell:price="{ row }">{{
+          formatCurrency(row.priceMinor, row.currency)
+        }}</template>
         <template #cell:actions="{ row }">
           <AppButton size="sm" :loading="store.isMutating" @click="approvePurchase(row)">
             {{ t('adminTokens.purchases.approve') }}

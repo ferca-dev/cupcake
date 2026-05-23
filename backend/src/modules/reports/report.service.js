@@ -224,9 +224,7 @@ const resolveResponseMatch = async ({ survey, filters }) => {
       tenantId: survey.tenantId,
       surveyId: survey._id,
       channel: filters.channel,
-      ...(filters.campaignId
-        ? { campaignId: toObjectId(filters.campaignId, 'campaignId') }
-        : {}),
+      ...(filters.campaignId ? { campaignId: toObjectId(filters.campaignId, 'campaignId') } : {}),
     })
       .select('_id')
       .lean();
@@ -342,7 +340,16 @@ const aggregateResponseCountsByChannel = async ({ survey, filters }) => {
 const aggregateDurationStats = async ({ survey, filters }) => {
   const match = await resolveResponseMatch({ survey, filters });
   if (match._id === null) {
-    return { count: 0, averageSeconds: null, medianSeconds: null, minSeconds: null, maxSeconds: null, p25Seconds: null, p75Seconds: null, trimmedMeanSeconds: null };
+    return {
+      count: 0,
+      averageSeconds: null,
+      medianSeconds: null,
+      minSeconds: null,
+      maxSeconds: null,
+      p25Seconds: null,
+      p75Seconds: null,
+      trimmedMeanSeconds: null,
+    };
   }
   const durations = await Response.find(
     {
@@ -525,12 +532,8 @@ export const getOverviewReport = async ({ surveyId, tenantId, filters = {} }) =>
     }
   }
   const sentCount =
-    totalsByStatus.sent +
-    totalsByStatus.delivered +
-    totalsByStatus.opened +
-    totalsByStatus.clicked;
-  const deliveredCount =
-    totalsByStatus.delivered + totalsByStatus.opened + totalsByStatus.clicked;
+    totalsByStatus.sent + totalsByStatus.delivered + totalsByStatus.opened + totalsByStatus.clicked;
+  const deliveredCount = totalsByStatus.delivered + totalsByStatus.opened + totalsByStatus.clicked;
   const openedCount = totalsByStatus.opened + totalsByStatus.clicked;
   const clickedCount = totalsByStatus.clicked;
   const failedCount = totalsByStatus.failed;
@@ -612,8 +615,7 @@ export const getChannelsReport = async ({ surveyId, tenantId, filters = {} }) =>
     }
     const row = grid[channel] ?? {};
     const attempted = RECIPIENT_STATUSES.reduce((acc, s) => acc + (row[s] ?? 0), 0);
-    const sent =
-      (row.sent ?? 0) + (row.delivered ?? 0) + (row.opened ?? 0) + (row.clicked ?? 0);
+    const sent = (row.sent ?? 0) + (row.delivered ?? 0) + (row.opened ?? 0) + (row.clicked ?? 0);
     const delivered = (row.delivered ?? 0) + (row.opened ?? 0) + (row.clicked ?? 0);
     const opened = (row.opened ?? 0) + (row.clicked ?? 0);
     const clicked = row.clicked ?? 0;
@@ -667,7 +669,10 @@ const computeQuestionStats = (descriptor, accumulator, totalResponses) => {
     responseRate: totalResponses > 0 ? roundTo(responseCount / totalResponses, 4) : null,
   };
 
-  if (OPTIONED_FIELD_TYPES.has(descriptor.type) || SCALAR_BOOLEAN_FIELD_TYPES.has(descriptor.type)) {
+  if (
+    OPTIONED_FIELD_TYPES.has(descriptor.type) ||
+    SCALAR_BOOLEAN_FIELD_TYPES.has(descriptor.type)
+  ) {
     base.distribution = distribution;
   }
 
@@ -698,9 +703,7 @@ const computeQuestionStats = (descriptor, accumulator, totalResponses) => {
         passiveRate: total > 0 ? roundTo(buckets.passives / total, 4) : null,
         detractorRate: total > 0 ? roundTo(buckets.detractors / total, 4) : null,
         score:
-          total > 0
-            ? roundTo(((buckets.promoters - buckets.detractors) / total) * 100, 2)
-            : null,
+          total > 0 ? roundTo(((buckets.promoters - buckets.detractors) / total) * 100, 2) : null,
       };
     }
     if (descriptor.type === 'rating') {
@@ -876,7 +879,11 @@ export const getTrendsReport = async ({ surveyId, tenantId, filters = {} }) => {
     const channel = row?._id?.channel;
     if (!day || !channel) continue;
     if (!totalsByDay.has(day)) {
-      totalsByDay.set(day, { date: day, total: 0, channels: Object.fromEntries(ALL_REPORT_CHANNELS.map((c) => [c, 0])) });
+      totalsByDay.set(day, {
+        date: day,
+        total: 0,
+        channels: Object.fromEntries(ALL_REPORT_CHANNELS.map((c) => [c, 0])),
+      });
     }
     const entry = totalsByDay.get(day);
     entry.total += row.count ?? 0;
@@ -1109,8 +1116,7 @@ export const getVersionsReport = async ({ surveyId, tenantId, filters = {} }) =>
       publishedBy: safeToString(version.publishedBy),
       fieldCount: Array.isArray(version.schema?.fields) ? version.schema.fields.length : 0,
       responseCount: countMap.get(version._id.toString()) ?? 0,
-      isCurrentlyPublished:
-        survey.publishedVersionId?.toString() === version._id.toString(),
+      isCurrentlyPublished: survey.publishedVersionId?.toString() === version._id.toString(),
     })),
     filters: { ...filters },
   };
@@ -1230,8 +1236,7 @@ export const buildExport = async ({ surveyId, tenantId, filters = {}, options = 
         ? new Date(response.metadata.submittedAt).toISOString()
         : '',
       channel:
-        recipientChannelMap.get(response.campaignRecipientId?.toString() ?? '') ??
-        'public_link',
+        recipientChannelMap.get(response.campaignRecipientId?.toString() ?? '') ?? 'public_link',
       surveyVersionId: safeToString(response.surveyVersionId),
       campaignId: safeToString(response.campaignId) ?? '',
       campaignRecipientId: safeToString(response.campaignRecipientId) ?? '',

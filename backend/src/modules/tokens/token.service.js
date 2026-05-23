@@ -304,11 +304,7 @@ export const getMonthlyUsage = async ({ tenantId, yearMonth = currentYearMonth()
  *   - Soft limits never set `allowed: false`; they only populate
  *     `limitWarnings` so the caller can surface them in metadata.
  */
-export const preflightCampaignSend = async ({
-  tenantId,
-  channelCounts,
-  env = loadEnv(),
-}) => {
+export const preflightCampaignSend = async ({ tenantId, channelCounts, env = loadEnv() }) => {
   const tenant = ensureTenant(tenantId);
   const pricing = await getPricingMap({ env });
   const limits = await getTenantSendLimits({ tenantId: tenant });
@@ -590,7 +586,12 @@ export const createPackage = async ({ payload, actor, ip = null, userAgent = nul
     entityType: 'token_package',
     entityId: pkg._id.toString(),
     userId: actor?.id ?? null,
-    metadata: { name: pkg.name, tokens: pkg.tokens, priceMinor: pkg.priceMinor, currency: pkg.currency },
+    metadata: {
+      name: pkg.name,
+      tokens: pkg.tokens,
+      priceMinor: pkg.priceMinor,
+      currency: pkg.currency,
+    },
     ip,
     userAgent,
   });

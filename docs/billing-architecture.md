@@ -210,7 +210,7 @@ runs the preflight + dispatch with these guarantees:
    against the tenant's limits. If a check fails, every pending recipient
    is flipped to `failed` with `failureReason: 'insufficient_balance'` or
    `'send_limit_exceeded'`, the campaign status becomes `failed`, and the
-   service throws a `ConflictError` *before* any provider call.
+   service throws a `ConflictError` _before_ any provider call.
 3. **Atomic debit** — for each pending recipient,
    `tokenService.debitForRecipient` runs a single `findOneAndUpdate` with
    `balance: { $gte: cost }`. If a concurrent send drained the wallet, the

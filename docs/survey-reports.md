@@ -25,29 +25,29 @@ All endpoints sit under `/api/v1/surveys/:id/reports/` and require the
 `x-impersonate-tenant: <tenantId>` — the reports router enforces
 `requireTenantContext({ allowSuperAdminGlobal: false })`.
 
-| Method | Path                                | Notes                                                                                                |
-| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| GET    | `/:id/reports/overview`             | Top-line totals, funnel counts, completion rate, duration stats, first/last response.                |
-| GET    | `/:id/reports/channels`             | Per-channel funnel (attempted, sent, delivered, opened, clicked, failed, skipped) plus responses.    |
-| GET    | `/:id/reports/questions`            | Per-question response/skip counts, option distributions, numeric stats, NPS, rating breakdowns.      |
-| GET    | `/:id/reports/trends`               | Daily response totals plus per-channel breakdown.                                                    |
-| GET    | `/:id/reports/drop-off`             | Page-level and field-level reach counts based on the published schema.                               |
-| GET    | `/:id/reports/timing`               | Average, median, min, max, p25, p75, trimmed mean, duration buckets, hourly/weekday distribution.    |
-| GET    | `/:id/reports/versions`             | List of versions with response counts and current-published flag.                                    |
-| GET    | `/:id/reports/export`               | CSV or JSON download (responses or aggregate question summaries).                                    |
+| Method | Path                     | Notes                                                                                             |
+| ------ | ------------------------ | ------------------------------------------------------------------------------------------------- |
+| GET    | `/:id/reports/overview`  | Top-line totals, funnel counts, completion rate, duration stats, first/last response.             |
+| GET    | `/:id/reports/channels`  | Per-channel funnel (attempted, sent, delivered, opened, clicked, failed, skipped) plus responses. |
+| GET    | `/:id/reports/questions` | Per-question response/skip counts, option distributions, numeric stats, NPS, rating breakdowns.   |
+| GET    | `/:id/reports/trends`    | Daily response totals plus per-channel breakdown.                                                 |
+| GET    | `/:id/reports/drop-off`  | Page-level and field-level reach counts based on the published schema.                            |
+| GET    | `/:id/reports/timing`    | Average, median, min, max, p25, p75, trimmed mean, duration buckets, hourly/weekday distribution. |
+| GET    | `/:id/reports/versions`  | List of versions with response counts and current-published flag.                                 |
+| GET    | `/:id/reports/export`    | CSV or JSON download (responses or aggregate question summaries).                                 |
 
 ## Shared Filters
 
 Every endpoint accepts the same filter set as query parameters:
 
-| Param              | Type   | Behaviour                                                                                                                        |
-| ------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| `from`             | date   | ISO timestamp; filters `metadata.submittedAt >= from`.                                                                           |
-| `to`               | date   | ISO timestamp; filters `metadata.submittedAt <= to`. Must be greater than or equal to `from`.                                    |
-| `channel`          | enum   | `email`, `sms`, `whatsapp`, or `public_link`. Campaign channels resolve through `campaign_recipients`; `public_link` matches responses without a `campaignRecipientId`. |
-| `campaignId`       | id     | Restrict to a specific campaign.                                                                                                 |
-| `surveyVersionId`  | id     | Pin reports to a specific published version. The schema for that version is used to label answers.                               |
-| `completionStatus` | enum   | Currently `all` or `completed` (the data model only persists completed responses; `partial` is reserved for future use).         |
+| Param              | Type | Behaviour                                                                                                                                                               |
+| ------------------ | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `from`             | date | ISO timestamp; filters `metadata.submittedAt >= from`.                                                                                                                  |
+| `to`               | date | ISO timestamp; filters `metadata.submittedAt <= to`. Must be greater than or equal to `from`.                                                                           |
+| `channel`          | enum | `email`, `sms`, `whatsapp`, or `public_link`. Campaign channels resolve through `campaign_recipients`; `public_link` matches responses without a `campaignRecipientId`. |
+| `campaignId`       | id   | Restrict to a specific campaign.                                                                                                                                        |
+| `surveyVersionId`  | id   | Pin reports to a specific published version. The schema for that version is used to label answers.                                                                      |
+| `completionStatus` | enum | Currently `all` or `completed` (the data model only persists completed responses; `partial` is reserved for future use).                                                |
 
 ## Tenant Isolation
 
@@ -98,7 +98,7 @@ schemas.
 
 ## Limitations
 
-- The current data model only persists *completed* responses, so completion
+- The current data model only persists _completed_ responses, so completion
   rate is necessarily a function of `audienceSize` and `sentCount`, not of
   partial response tracking. Drop-off based on per-field non-response should
   be read as "non-response by question" rather than "true abandonment".

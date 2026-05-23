@@ -75,16 +75,8 @@ const onReset = () => {
     <template #title>{{ t('reports.filters.title') }}</template>
     <form class="report-filters" @submit.prevent="onApply">
       <div class="report-filters__grid">
-        <AppInput
-          v-model="local.from"
-          type="date"
-          :label="t('reports.filters.from')"
-        />
-        <AppInput
-          v-model="local.to"
-          type="date"
-          :label="t('reports.filters.to')"
-        />
+        <AppInput v-model="local.from" type="date" :label="t('reports.filters.from')" />
+        <AppInput v-model="local.to" type="date" :label="t('reports.filters.to')" />
         <AppSelect
           v-model="local.channel"
           :label="t('reports.filters.channel')"

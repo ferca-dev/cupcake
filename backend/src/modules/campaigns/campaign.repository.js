@@ -62,15 +62,12 @@ export const markCampaignRecipientsStatus = async ({
   toStatus,
   failureReason = null,
 }) =>
-  CampaignRecipient.updateMany(
-    tenantFilter({ campaignId, status: fromStatus }, tenantId),
-    {
-      $set: {
-        status: toStatus,
-        failureReason,
-      },
+  CampaignRecipient.updateMany(tenantFilter({ campaignId, status: fromStatus }, tenantId), {
+    $set: {
+      status: toStatus,
+      failureReason,
     },
-  );
+  });
 
 export const findRecipientByProviderMessageId = async ({ providerMessageId, channel = null }) => {
   if (!providerMessageId) return null;

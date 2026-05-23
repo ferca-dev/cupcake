@@ -60,9 +60,7 @@ export const useReportsStore = defineStore('reports', {
   getters: {
     activeFilters: (state) => cleanFilters(state.filters),
     hasAnyData: (state) =>
-      Boolean(
-        state.overview || state.channels || state.questions || state.trends || state.timing,
-      ),
+      Boolean(state.overview || state.channels || state.questions || state.trends || state.timing),
   },
 
   actions: {
