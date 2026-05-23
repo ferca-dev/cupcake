@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 18 — final post-delivery hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin panel) is feature-complete for the closed beta. Phases 15–17 added the campaign delivery surface backed by Twilio SMS/WhatsApp and Twilio SendGrid email (with environment-driven provider selection), per-survey response limits enforced from the published snapshot, the authenticated account-settings area, and the responsive dashboard shell with a collapsible sticky sidenav and sticky-header data grids. Phase 18 ran the final quality pass: full backend and frontend test runs, provider-config regression tests, prettier formatting parity, and documentation alignment with the current behaviour. Deferred features (real password-reset emails, bulk contact import, payment-provider integration) are documented openly in [docs/known-limitations.md](docs/known-limitations.md).
+Phase 23 — post billing, reports, media, and layout hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin panel) is feature-complete for the closed beta. Phases 15–18 added the Twilio-backed campaign delivery surface (SMS, WhatsApp, SendGrid email), per-survey response limits enforced from the published snapshot, the authenticated account-settings area, and the responsive dashboard shell with a collapsible sticky sidenav and sticky-header data grids. Phases 19–22 layered the internal token wallet with admin-controlled pricing and tenant send limits, per-survey statistical reports with tenant-safe CSV/JSON exports, an interchangeable image storage layer (local for development, S3-compatible for production), and a centered fill-width layout system shared by the dashboard and public form shells. Phase 23 ran the final quality pass: full backend and frontend test runs, atomic-debit and refund-policy regression coverage, cross-tenant guards on report exports and media reads, the production storage env contract, prettier formatting parity, and documentation alignment with the current behaviour. Deferred features (real password-reset emails, bulk contact import, payment-provider integration, webhook signature verification) are documented openly in [docs/known-limitations.md](docs/known-limitations.md).
 
 ## Stack
 
@@ -297,7 +297,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 ## Troubleshooting and operational docs
 
 - [docs/troubleshooting.md](docs/troubleshooting.md) — common local issues, seeder, env, and first-deploy smoke test.
-- [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 14.
+- [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 23.
 - [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
 - [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md) — response-limit configuration and account-settings API.
 - [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
@@ -334,6 +334,11 @@ Phase index:
 - `16` — Response limits and account settings.
 - `17` — Navigation and responsive data grids.
 - `18` — Final post-delivery hardening.
+- `19` — Token wallet, send limits, and admin pricing.
+- `20` — Survey statistical reports.
+- `21` — Media storage for images.
+- `22` — Centered fill-width layout system.
+- `23` — Post billing, reports, media, and layout hardening.
 
 ## Continuous integration
 
