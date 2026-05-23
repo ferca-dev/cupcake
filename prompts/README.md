@@ -39,6 +39,19 @@ This folder splits the original `promt.md` master prompt into execution-ready ph
 - `phase-23-post-billing-reports-media-layout-hardening.md`: final verification pass for token billing, survey reports, media storage, and layout changes.
 - `phase-24-mercado-pago-online-payments.md`: Mercado Pago online payments for token purchases, subscriptions, payment webhooks, reminders, receipts, and billing emails.
 - `phase-25-post-mercado-pago-payment-hardening.md`: final verification pass for Mercado Pago payments, subscriptions, token crediting, webhooks, and payment emails.
+- `phase-26-team-management-and-invitations.md`: tenant team management, invitations, user lifecycle, granular permissions, and owner transfer.
+- `phase-27-plans-feature-gating-and-quotas.md`: plan definitions, feature gates, quota enforcement, upgrade prompts, and admin plan management.
+- `phase-28-consent-unsubscribe-and-suppression.md`: channel consent, unsubscribe/STOP flows, suppression lists, and compliant campaign filtering.
+- `phase-29-background-jobs-queues-and-scheduling.md`: workers, queues, retries, scheduled jobs, dead-letter handling, and async processing.
+- `phase-30-contact-import-export-system.md`: real CSV/XLSX contact import, column mapping, validation reports, deduplication, and exports.
+- `phase-31-public-form-anti-abuse.md`: CAPTCHA/Turnstile-ready protection, honeypots, public rate limits, and suspicious submission controls.
+- `phase-32-client-api-keys-and-webhooks.md`: tenant API keys, scoped API access, outbound webhooks, delivery logs, retries, and signing.
+- `phase-33-custom-branding-and-domains.md`: tenant branding, white-label options, custom public form domains, DNS verification, and SSL readiness.
+- `phase-34-production-readiness-observability-and-backups.md`: observability, backups, monitoring, incident readiness, operational runbooks, and production launch checks.
+- `phase-35-surveyor-role-and-verified-response-access.md`: tenant-created surveyor users, restricted survey visibility, and verified response submission without public restrictions.
+- `phase-36-response-ip-and-geolocation-capture.md`: response IP/geolocation metadata, survey-level location requirements, consent UX, and validation.
+- `phase-37-surveyor-fieldwork-monitoring.md`: mandatory surveyor location, surveyor response tracking, fieldwork monitoring, maps, and supervisor reports.
+- `phase-38-post-surveyor-location-hardening.md`: final verification for surveyor permissions, location enforcement, privacy, reporting, and regression coverage.
 
 ## Execution rule
 

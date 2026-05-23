@@ -26,6 +26,7 @@ export default {
     error: 'Something went wrong.',
     edit: 'Edit',
     delete: 'Delete',
+    refresh: 'Refresh',
   },
   auth: {
     login: {
@@ -557,6 +558,100 @@ export default {
       subtitle: '{count} contacts currently in this group.',
       noContacts: 'No contacts to assign yet.',
     },
+  },
+  billingPayments: {
+    nav: 'Buy tokens',
+    subscriptionsNav: 'Subscriptions',
+    buy: {
+      title: 'Buy tokens with Mercado Pago',
+      subtitle: 'Pick a package and complete payment through Mercado Pago Checkout Pro.',
+      packages: 'Available packages',
+      tokensLine: '{tokens} tokens',
+      checkout: 'Pay with Mercado Pago',
+      checkoutTitle: 'Complete your payment',
+      checkoutHint:
+        'Your tokens will be credited automatically once Mercado Pago confirms the payment.',
+      openMercadoPago: 'Open Mercado Pago in a new tab',
+      empty: 'No packages available yet.',
+    },
+    status: {
+      reference: 'Reference',
+      statusLabel: 'Status',
+      tokens: 'Tokens to credit',
+      backToWallet: 'Back to wallet',
+      lookupHint: 'We could not find a payment for reference {ref} yet. Try again in a moment.',
+      success: {
+        title: 'Payment received',
+        message:
+          'Mercado Pago is finalising your payment. Tokens are credited as soon as we confirm it on our side.',
+      },
+      failure: {
+        title: 'Payment failed',
+        message:
+          'Mercado Pago could not complete the payment. You can try again from the wallet at any time.',
+      },
+      pending: {
+        title: 'Payment pending',
+        message:
+          'Mercado Pago is still processing your payment. We will email you when it resolves.',
+      },
+    },
+    subscriptions: {
+      title: 'Subscriptions',
+      subtitle: 'Recurring plans billed through Mercado Pago.',
+      activeTitle: 'Current subscription',
+      none: 'You do not have an active subscription yet.',
+      plan: 'Plan',
+      price: 'Price',
+      status: 'Status',
+      nextCharge: 'Next charge',
+      plansTitle: 'Available plans',
+      plansEmpty: 'No subscription plans defined yet.',
+      subscribe: 'Subscribe',
+      authorize: 'Authorize on Mercado Pago',
+      cancel: 'Cancel subscription',
+      cancelConfirm: 'Cancel this subscription? Recurring charges will stop.',
+      resume: 'Resume subscription',
+      confirm: 'Subscribe to the {plan} plan?',
+      columns: {
+        plan: 'Plan',
+        price: 'Price',
+        tokens: 'Included tokens',
+      },
+    },
+    invoices: {
+      title: 'Invoice history',
+      empty: 'No invoices yet.',
+      columns: {
+        date: 'Date',
+        amount: 'Amount',
+        status: 'Status',
+        reference: 'Reference',
+      },
+    },
+  },
+  adminPayments: {
+    nav: 'Mercado Pago',
+    title: 'Mercado Pago payments',
+    subtitle: 'Review payments, webhook deliveries, subscriptions, and reconciliation tools.',
+    payments: 'Payments',
+    webhooks: 'Webhook events',
+    subscriptions: 'Subscriptions',
+    empty: 'No Mercado Pago payments yet.',
+    webhooksEmpty: 'No webhook events yet.',
+    subscriptionsEmpty: 'No subscriptions yet.',
+    sync: 'Sync',
+    cancel: 'Cancel',
+    reconcile: 'Reconcile a payment',
+    reconcileHint:
+      'Paste a Mercado Pago payment id to refetch its state and apply the webhook logic again.',
+    paymentIdLabel: 'Mercado Pago payment id',
+    run: 'Run',
+    reminders: 'Reminder jobs',
+    remindersHint:
+      'Trigger the same reminder jobs the scheduler runs. Notifications are idempotent — no duplicates will be sent.',
+    runLowBalance: 'Run low-balance reminders',
+    runRenewals: 'Run renewal reminders',
   },
   billingTokens: {
     nav: 'Tokens',

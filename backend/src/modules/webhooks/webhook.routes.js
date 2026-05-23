@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import express from 'express';
+import express, { Router } from 'express';
 
 import { asyncHandler } from '../../common/utils/async-handler.js';
 import { sendSuccess } from '../../common/responses/index.js';
 import { recordSendGridEvent, recordTwilioStatusEvent } from './webhook.service.js';
+import { receiveMercadoPagoWebhook } from '../payments/webhook.controller.js';
 
 export const webhooksRouter = Router();
 
@@ -51,3 +51,13 @@ webhooksRouter.post(
     });
   }),
 );
+
+/**
+ * Mercado Pago webhook receiver. Mercado Pago retries deliveries with the
+ * same `id` until we acknowledge them, so the handler stores the event with a
+ * unique `(provider, providerEventId)` index and processes it idempotently.
+ * Signature verification (header `x-signature`) is enforced when
+ * `MERCADOPAGO_WEBHOOK_SECRET` is set; without the secret the delivery is
+ * still acknowledged but flagged for operator review.
+ */
+webhooksRouter.post('/mercadopago', receiveMercadoPagoWebhook);

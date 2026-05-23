@@ -20,6 +20,7 @@ export const API_BASE_URL = trimTrailingSlash(
   env.VITE_API_BASE_URL?.trim() || 'http://localhost:4000/api/v1',
 );
 export const PUBLIC_FORM_BASE_URL = resolvePublicFormBaseUrl();
+export const MERCADOPAGO_PUBLIC_KEY = env.VITE_MERCADOPAGO_PUBLIC_KEY?.trim() || '';
 export const IS_DEV = Boolean(env.DEV);
 export const IS_PROD = Boolean(env.PROD);
 
@@ -27,6 +28,7 @@ export const appConfig = Object.freeze({
   appName: APP_NAME,
   apiBaseUrl: API_BASE_URL,
   publicFormBaseUrl: PUBLIC_FORM_BASE_URL,
+  mercadoPagoPublicKey: MERCADOPAGO_PUBLIC_KEY,
   isDev: IS_DEV,
   isProd: IS_PROD,
 });

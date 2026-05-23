@@ -83,6 +83,39 @@ const envSchema = z
     //   - `hold`: keep the debit and surface the recipient for manual review.
     TOKEN_FAILED_SEND_POLICY: z.enum(['refund', 'charge', 'hold']).default('refund'),
 
+    // Mercado Pago online payments configuration. The provider mode controls
+    // how preferences and subscriptions are created. `mock` keeps the flow
+    // self-contained for local development and tests; `mercadopago` requires
+    // real credentials and is asserted below.
+    MERCADOPAGO_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+    MERCADOPAGO_PUBLIC_KEY: z.string().trim().default(''),
+    MERCADOPAGO_ACCESS_TOKEN: z.string().trim().default(''),
+    MERCADOPAGO_WEBHOOK_SECRET: z.string().trim().default(''),
+    MERCADOPAGO_SUCCESS_URL: z
+      .string()
+      .trim()
+      .url()
+      .default('http://localhost:5173/billing/payment/success'),
+    MERCADOPAGO_FAILURE_URL: z
+      .string()
+      .trim()
+      .url()
+      .default('http://localhost:5173/billing/payment/failure'),
+    MERCADOPAGO_PENDING_URL: z
+      .string()
+      .trim()
+      .url()
+      .default('http://localhost:5173/billing/payment/pending'),
+    MERCADOPAGO_NOTIFICATION_URL: z
+      .string()
+      .trim()
+      .url()
+      .default('http://localhost:4000/api/v1/webhooks/mercadopago'),
+    MERCADOPAGO_STATEMENT_DESCRIPTOR: stringWithDefault('CUPCAKE'),
+    PAYMENT_PROVIDER: z.enum(['mock', 'mercadopago']).default('mock'),
+    PAYMENT_REMINDER_DAYS_BEFORE: z.coerce.number().int().min(0).max(60).default(3),
+    LOW_TOKEN_BALANCE_THRESHOLD: z.coerce.number().int().min(0).default(100),
+
     STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
     STORAGE_PUBLIC_BASE_URL: z.string().trim().url().default('http://localhost:4000/uploads'),
     LOCAL_UPLOADS_DIR: stringWithDefault('./uploads'),
@@ -124,6 +157,18 @@ const envSchema = z
             code: z.ZodIssueCode.custom,
             path: [key],
             message: `${key} is required when STORAGE_DRIVER=s3`,
+          });
+        }
+      }
+    }
+
+    if (value.PAYMENT_PROVIDER === 'mercadopago') {
+      for (const key of ['MERCADOPAGO_PUBLIC_KEY', 'MERCADOPAGO_ACCESS_TOKEN']) {
+        if (!value[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${key} is required when PAYMENT_PROVIDER=mercadopago`,
           });
         }
       }

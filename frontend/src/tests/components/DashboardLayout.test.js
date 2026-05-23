@@ -31,6 +31,8 @@ const buildRouter = () => {
           { path: 'campaigns', name: 'campaigns.list', component: Empty },
           { path: 'billing/transactions', name: 'billing.transactions', component: Empty },
           { path: 'billing/tokens', name: 'billing.tokens', component: Empty },
+          { path: 'billing/buy-tokens', name: 'billing.buyTokens', component: Empty },
+          { path: 'billing/subscriptions', name: 'billing.subscriptions', component: Empty },
           {
             path: 'settings',
             name: 'settings.account',
@@ -46,6 +48,7 @@ const buildRouter = () => {
             meta: { layout: 'reading' },
           },
           { path: 'admin/tokens', name: 'admin.tokens', component: Empty },
+          { path: 'admin/payments', name: 'admin.payments', component: Empty },
         ],
       },
       { path: '/auth/login', name: 'auth.login', component: Empty },

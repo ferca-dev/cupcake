@@ -93,6 +93,7 @@ Initial roles:
 - `super_admin`
 - `client_admin`
 - `client_member`
+- `surveyor`
 
 Initial permissions:
 
@@ -104,6 +105,9 @@ Initial permissions:
 - `surveys.delete`
 - `surveys.view`
 - `responses.view`
+- `responses.submit_verified`
+- `surveyor.responses.submit`
+- `surveyor.activity.view`
 - `contacts.manage`
 - `groups.manage`
 - `campaigns.send`
@@ -113,6 +117,36 @@ Initial permissions:
 - `admin.dashboard.view`
 
 Authorization must be enforced in the backend.
+
+## Surveyor Role Rules
+
+Clients can create verified surveyor users inside their own tenant.
+
+Rules:
+
+- Surveyors belong to one tenant and can only see surveys from that tenant.
+- Surveyors can answer tenant surveys as verified internal users.
+- Surveyor submissions bypass public respondent restrictions such as anonymous response limits, public CAPTCHA, public device limits, public IP limits, campaign token requirements, and anonymous-only restrictions.
+- Surveyor submissions must still respect survey status, tenant isolation, authorization, schema validation, required fields, conditional logic, and any survey-specific rule explicitly marked as applying to surveyors.
+- Surveyors cannot manage surveys, contacts, campaigns, billing, tokens, plans, templates, or admin settings unless another role/permission explicitly grants it.
+- Surveyor users must be created, invited, disabled, and audited through tenant team management.
+- Surveyor responses must be marked with `respondentType: 'surveyor'` and `submittedByUserId`.
+- Surveyor activity must be monitorable by client admins and authorized supervisors.
+
+## Response IP and Geolocation Rules
+
+Every survey response must retain location provenance metadata.
+
+Rules:
+
+- Responses must record server-observed IP metadata unless a stricter privacy mode explicitly forbids storing raw IP; if raw IP is not stored, store a hashed IP and country/region-level metadata when available.
+- If browser geolocation permission is granted, responses should store latitude, longitude, accuracy, and permission metadata.
+- Survey settings must allow admins/clients to configure geolocation as optional or required.
+- If geolocation is required, the public form must request browser permission and block submission when permission is denied or unavailable.
+- Surveyor users must always submit geolocation. Surveyor submission must be blocked if valid geolocation is missing.
+- Geolocation capture must be transparent to users through clear, i18n-ready UI copy.
+- Store geolocation precision intentionally. Do not collect continuous tracking unless a later phase explicitly approves it.
+- IP/geolocation data must be tenant-scoped, permission-protected, and excluded from aggregate reports unless explicitly needed.
 
 ## Survey Lifecycle
 
@@ -362,7 +396,18 @@ Indexes: `tenantId`, `status`.
   ],
   metadata: {
     ip: String | null,
+    ipHash: String | null,
     userAgent: String | null,
+    location: {
+      latitude: Number | null,
+      longitude: Number | null,
+      accuracyMeters: Number | null,
+      permissionStatus: 'granted' | 'denied' | 'prompt' | 'unavailable' | null,
+      source: 'browser' | 'ip' | 'surveyor_required' | null,
+      capturedAt: Date | null
+    },
+    respondentType: 'anonymous' | 'contact' | 'surveyor' | 'authenticated_user',
+    submittedByUserId: ObjectId | null,
     startedAt: Date | null,
     submittedAt: Date,
     completionTimeSeconds: Number | null
@@ -727,6 +772,120 @@ Rules:
 - Builder and dashboard layouts may use full-width multi-column layouts.
 - Mobile behavior must remain intact.
 
+## Team Management Rules
+
+Tenants must support more than one user.
+
+Rules:
+
+- Client admins can invite users to their tenant when their plan allows it.
+- Invitations must expire and be revocable.
+- Tenant users can be active, invited, disabled, or removed.
+- Permissions must be enforced in the backend.
+- Ownership transfer must be explicit, audited, and restricted to authorized admins.
+- Super admins can inspect tenant user membership for support and audit purposes.
+
+## Plans, Feature Gates, and Quota Rules
+
+Plans define what a tenant can use.
+
+Rules:
+
+- Super admins configure plans, limits, and feature availability.
+- Feature gates must be enforced on backend APIs, not only hidden in the UI.
+- Quotas can cover users, surveys, responses, contacts, campaigns, tokens, storage, templates, exports, branding, and reports.
+- Clients should see clear upgrade prompts when a blocked feature or quota limit is reached.
+- Paid plan changes should integrate with the payment/subscription system.
+- Historical data must remain readable if a tenant downgrades, unless a data retention policy says otherwise.
+
+## Consent, Unsubscribe, and Suppression Rules
+
+Campaign sending must respect channel consent.
+
+Rules:
+
+- Contacts must track consent status per channel: email, SMS, and WhatsApp.
+- Campaign sends must exclude contacts without required consent unless the tenant has a documented lawful basis and admin override.
+- Email unsubscribe links must be unique, secure, and public.
+- SMS STOP/opt-out handling must be supported through provider callbacks when available.
+- WhatsApp opt-in/opt-out state must be tracked.
+- Suppression lists must prevent future sends even if contact data is re-imported.
+- Consent changes must be auditable.
+
+## Background Jobs and Scheduling Rules
+
+Long-running or retryable work must run outside request/response paths.
+
+Rules:
+
+- Campaign sending should be queued.
+- Payment reminders, subscription renewals, low-token reminders, exports, contact imports, webhook retries, and cleanup tasks should run as jobs.
+- Jobs need retry policies with backoff.
+- Failed jobs need dead-letter or failed-state tracking.
+- Job processors must be idempotent.
+- Job status should be visible to admins and, when relevant, clients.
+
+## Contact Import and Export Rules
+
+Contacts and responses need robust import/export workflows.
+
+Rules:
+
+- CSV and XLSX imports must support preview, column mapping, row validation, deduplication, and downloadable error reports.
+- Imports must run asynchronously when files are large.
+- Import jobs must never partially hide failures.
+- Exports should support CSV and XLSX where practical.
+- Export permissions must prevent cross-tenant data leakage.
+
+## Public Form Anti-Abuse Rules
+
+Public forms need abuse controls.
+
+Rules:
+
+- Public forms should support CAPTCHA/Cloudflare Turnstile or an equivalent adapter.
+- Honeypot fields and rate limits should be available before CAPTCHA is required.
+- Suspicious submissions should be rejected or flagged with clear backend reasons.
+- Anti-abuse checks must not break accessibility.
+- Tenant-level and survey-level anti-abuse settings should be configurable.
+
+## Client API and Webhook Rules
+
+Tenants may need integrations with external systems.
+
+Rules:
+
+- API keys must be scoped, revocable, hashed at rest, and tied to a tenant.
+- API key permissions must be narrower than full user access.
+- Outbound webhooks must be signed.
+- Webhook deliveries must be retried with backoff.
+- Webhook delivery logs must be visible to tenant admins.
+- Webhook payloads must avoid unnecessary personal data.
+
+## Custom Branding and Domain Rules
+
+Tenants should be able to brand public-facing forms based on plan.
+
+Rules:
+
+- Tenant branding may include logo, colors, public form theme, and optional white-label behavior.
+- Custom domains require DNS verification before activation.
+- Public form domain routing must resolve tenant and survey safely.
+- SSL/TLS provisioning must be documented or integrated with the deployment platform.
+- Branding must be version-safe for published public forms where practical.
+
+## Production Readiness Rules
+
+Production launch requires operational readiness.
+
+Rules:
+
+- Add structured logs, metrics, tracing-ready correlation IDs, and error monitoring hooks.
+- Define backup and restore procedures for MongoDB and object storage.
+- Add health checks, readiness checks, and dependency checks.
+- Add operational runbooks for payment incidents, webhook failures, campaign send failures, restore, and compromised credentials.
+- Add security headers, dependency scanning, secret rotation guidance, and production configuration validation.
+
 ## Account Settings Rules
 
 The application must include a settings area for authenticated users.
@@ -837,6 +996,22 @@ MERCADOPAGO_NOTIFICATION_URL="http://localhost:4000/api/v1/webhooks/mercadopago"
 MERCADOPAGO_STATEMENT_DESCRIPTOR="CUPCAKE"
 PAYMENT_REMINDER_DAYS_BEFORE=3
 LOW_TOKEN_BALANCE_THRESHOLD=100
+
+JOB_QUEUE_DRIVER="memory"
+REDIS_URL=""
+JOB_CONCURRENCY=5
+JOB_MAX_ATTEMPTS=5
+JOB_BACKOFF_SECONDS=30
+
+TURNSTILE_SITE_KEY=""
+TURNSTILE_SECRET_KEY=""
+PUBLIC_FORM_CAPTCHA_PROVIDER="none"
+
+WEBHOOK_SIGNING_SECRET=""
+API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE=60
+
+CUSTOM_DOMAIN_VERIFICATION_RECORD_PREFIX="_cupcake"
+CUSTOM_DOMAIN_SSL_MODE="platform"
 
 STORAGE_DRIVER="local"
 STORAGE_PUBLIC_BASE_URL="http://localhost:4000/uploads"

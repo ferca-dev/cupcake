@@ -62,18 +62,19 @@ unavailable`. No password can be changed through this code path.
 
 ## Real payments
 
-- **Module**: `transactions`, `tokens.purchases`.
-- **Behaviour today**: the `transactions` collection records billing history.
-  Token purchases use a manual approval flow when
-  `TOKEN_PURCHASE_MODE=manual` (the default): clients submit a purchase
-  request, a super admin approves it from `/api/v1/admin/token-purchases`,
-  and the wallet is credited atomically on approval. There is no checkout
-  flow, no payment-provider webhook ingestion, and no signed-provider
-  integration today.
-- **Why deferred**: a payment integration (Stripe, Mercado Pago, etc.)
-  requires contractual onboarding and is out of scope.
-- **Workaround**: super admins approve pending token purchases manually and
-  can also insert transactions through MongoDB for invoicing records.
+- **Status**: implemented in Phase 24 via Mercado Pago Checkout Pro
+  (one-time token-package purchases) and Mercado Pago Preapproval
+  (recurring subscriptions). The manual approval flow under
+  `TOKEN_PURCHASE_MODE=manual` is still available for tenants who do not
+  pay online — it stays the path of least resistance for invoiced
+  customers. See [mercado-pago.md](mercado-pago.md) for setup,
+  configuration, webhook semantics, and verification steps.
+- **Behaviour today**: with `PAYMENT_PROVIDER=mercadopago` configured,
+  clients can buy token packages or subscribe to a recurring plan from
+  `/app/billing/buy-tokens` and `/app/billing/subscriptions`. Tokens are
+  credited through the existing Phase 19 ledger exactly once per
+  Mercado Pago confirmation. With `PAYMENT_PROVIDER=mock` (the default),
+  the flow stays self-contained for local dev and tests.
 
 ## In-product user management
 

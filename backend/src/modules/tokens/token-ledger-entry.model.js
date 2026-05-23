@@ -16,6 +16,9 @@ export const TOKEN_LEDGER_REFERENCES = Object.freeze([
   'campaign',
   'manual_adjustment',
   'token_purchase',
+  // Mercado Pago (and future provider) entries.
+  'payment_transaction',
+  'subscription_invoice',
   'system',
 ]);
 

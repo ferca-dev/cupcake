@@ -150,6 +150,18 @@ const navItems = computed(() => {
       visible: auth.hasPermission('billing.view'),
     },
     {
+      to: { name: 'billing.buyTokens' },
+      label: t('billingPayments.nav'),
+      icon: 'M5 7h14l-1 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1Zm3 0V5a4 4 0 0 1 8 0v2',
+      visible: auth.hasPermission('billing.view'),
+    },
+    {
+      to: { name: 'billing.subscriptions' },
+      label: t('billingPayments.subscriptionsNav'),
+      icon: 'M4 4h16v4H4Zm0 6h16v4H4Zm0 6h16v4H4Z',
+      visible: auth.hasPermission('billing.view'),
+    },
+    {
       to: { name: 'settings.account' },
       label: t('settings.nav'),
       icon: 'M12 8a4 4 0 1 0 4 4 4 4 0 0 0-4-4Zm9 4-2 1 1 2-2 2-2-1-1 2h-4l-1-2-2 1-2-2 1-2-2-1v-2l2-1-1-2 2-2 2 1 1-2h4l1 2 2-1 2 2-1 2 2 1Z',
@@ -177,6 +189,12 @@ const adminItems = computed(() => {
       to: { name: 'admin.tokens' },
       label: t('adminTokens.nav'),
       icon: 'M12 2 4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7Z',
+      nested: true,
+    },
+    {
+      to: { name: 'admin.payments' },
+      label: t('adminPayments.nav'),
+      icon: 'M3 7h18v10H3Zm6 5h6m-3-3v6',
       nested: true,
     },
   ];

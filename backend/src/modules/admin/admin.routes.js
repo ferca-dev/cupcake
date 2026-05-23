@@ -6,6 +6,7 @@ import { ROLES } from '../../common/auth/roles.js';
 import * as adminTenantController from '../tenants/admin-tenant.controller.js';
 import * as dashboardController from '../dashboard/dashboard.controller.js';
 import * as tokenAdminController from '../tokens/token-admin.controller.js';
+import * as paymentAdminController from '../payments/admin-payment.controller.js';
 
 /**
  * Single Express router that owns every `/api/v1/admin/*` endpoint. We mount
@@ -49,3 +50,30 @@ adminRouter.post('/tenants/:tenantId/token-adjustments', tokenAdminController.ad
 adminRouter.get('/token-purchases', tokenAdminController.listPurchases);
 adminRouter.post('/token-purchases/:id/approve', tokenAdminController.approvePurchase);
 adminRouter.post('/token-purchases/:id/reject', tokenAdminController.rejectPurchase);
+
+// Mercado Pago payments, webhook events, and reconciliation
+adminRouter.get('/payments', paymentAdminController.listPayments);
+adminRouter.get('/payments/:id', paymentAdminController.getPayment);
+adminRouter.get('/payment-webhooks', paymentAdminController.listWebhookEvents);
+adminRouter.post('/payments/reconcile', paymentAdminController.reconcilePayment);
+
+// Subscription plans
+adminRouter.get('/subscription-plans', paymentAdminController.listPlans);
+adminRouter.post('/subscription-plans', paymentAdminController.createPlan);
+adminRouter.put('/subscription-plans/:id', paymentAdminController.updatePlan);
+adminRouter.patch('/subscription-plans/:id/status', paymentAdminController.updatePlanStatus);
+
+// Tenant subscriptions
+adminRouter.get('/subscriptions', paymentAdminController.listSubscriptions);
+adminRouter.post('/subscriptions/:id/sync', paymentAdminController.syncSubscription);
+adminRouter.post('/subscriptions/:id/cancel', paymentAdminController.cancelSubscriptionAsAdmin);
+
+// Reminder triggers (callable from a scheduled job or operator console)
+adminRouter.post(
+  '/payments/reminders/low-balance',
+  paymentAdminController.triggerLowBalanceReminders,
+);
+adminRouter.post(
+  '/payments/reminders/renewals',
+  paymentAdminController.triggerRenewalReminders,
+);

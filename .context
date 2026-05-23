@@ -173,13 +173,41 @@ all user-facing strings in `frontend/src/i18n/{en,es}.js`.
   cross-tenant safety for report exports, role enforcement on admin
   pricing/limits endpoints, and the production storage env contract.
 
+## Phase 24 surfaces
+
+- **Mercado Pago online payments** (Phase 24) — One-time token-package
+  purchases use Mercado Pago Checkout Pro
+  (`POST /api/v1/billing/mercadopago/preferences` returns an
+  `init_point`), and recurring billing uses Mercado Pago Preapproval
+  (`POST /api/v1/billing/subscriptions`). All persistent state lives in
+  `payment_transactions`, `payment_webhook_events`, `subscription_plans`,
+  `tenant_subscriptions`, `subscription_invoices`, and
+  `payment_notifications` under
+  [backend/src/modules/payments/](backend/src/modules/payments/). The
+  provider boundary at `providers/provider.types.js` hides the official
+  `mercadopago` SDK behind a small adapter; `PAYMENT_PROVIDER=mock`
+  keeps the flow network-free for tests and local dev. Webhooks land at
+  `POST /api/v1/webhooks/mercadopago`, verify the `x-signature` header
+  when `MERCADOPAGO_WEBHOOK_SECRET` is set, refetch the resource from
+  Mercado Pago, dedupe by `(provider, providerEventId)`, and credit
+  tokens through the existing Phase 19 ledger exactly once per approved
+  payment or authorized subscription invoice. Payment / subscription /
+  reminder emails are idempotent via the unique
+  `payment_notifications.idempotencyKey` index. The admin surface
+  (`/api/v1/admin/payments`, `/payment-webhooks`, `/subscriptions`,
+  `/payments/reconcile`, `/payments/reminders/*`) plus the Vue admin
+  inspector under `/app/admin/payments` give operators visibility into
+  every Mercado Pago event and a manual reconciliation path when
+  webhook delivery is lost. See [docs/mercado-pago.md](docs/mercado-pago.md).
+
 ## Deferred features
 
 Intentionally deferred past Phase 18 and documented in
 [docs/known-limitations.md](docs/known-limitations.md): password reset by
-email, bulk contact import, real payment-provider integration, in-product
-user management UI, webhook signature verification for the Twilio/SendGrid
-callback routes, an email-verification flow for staged email changes, and
-calling-session preservation on password change. Each surface either returns
-a stable "temporarily unavailable" response or stays inert until its
-configuration is provided — never a silent success.
+email, bulk contact import, in-product user management UI, webhook signature
+verification for the Twilio/SendGrid callback routes, an email-verification
+flow for staged email changes, and calling-session preservation on password
+change. Each surface either returns a stable "temporarily unavailable"
+response or stays inert until its configuration is provided — never a silent
+success. Real payment-provider integration moved out of this list in
+Phase 24 with the Mercado Pago wiring above.

@@ -6,7 +6,7 @@ Cupcake is a multi-tenant SaaS platform for creating, sending, answering, and an
 
 ## Status
 
-Phase 23 — post billing, reports, media, and layout hardening. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin panel) is feature-complete for the closed beta. Phases 15–18 added the Twilio-backed campaign delivery surface (SMS, WhatsApp, SendGrid email), per-survey response limits enforced from the published snapshot, the authenticated account-settings area, and the responsive dashboard shell with a collapsible sticky sidenav and sticky-header data grids. Phases 19–22 layered the internal token wallet with admin-controlled pricing and tenant send limits, per-survey statistical reports with tenant-safe CSV/JSON exports, an interchangeable image storage layer (local for development, S3-compatible for production), and a centered fill-width layout system shared by the dashboard and public form shells. Phase 23 ran the final quality pass: full backend and frontend test runs, atomic-debit and refund-policy regression coverage, cross-tenant guards on report exports and media reads, the production storage env contract, prettier formatting parity, and documentation alignment with the current behaviour. Deferred features (real password-reset emails, bulk contact import, payment-provider integration, webhook signature verification) are documented openly in [docs/known-limitations.md](docs/known-limitations.md).
+Phase 24 — Mercado Pago online payments. The product foundation (auth, surveys, public forms, contacts, campaigns, dashboard, templates, billing, admin panel) is feature-complete for the closed beta. Phases 15–18 added the Twilio-backed campaign delivery surface (SMS, WhatsApp, SendGrid email), per-survey response limits enforced from the published snapshot, the authenticated account-settings area, and the responsive dashboard shell with a collapsible sticky sidenav and sticky-header data grids. Phases 19–22 layered the internal token wallet with admin-controlled pricing and tenant send limits, per-survey statistical reports with tenant-safe CSV/JSON exports, an interchangeable image storage layer (local for development, S3-compatible for production), and a centered fill-width layout system shared by the dashboard and public form shells. Phase 23 ran the final quality pass on those surfaces. Phase 24 wires Mercado Pago Checkout Pro for one-time token-package purchases and Mercado Pago Preapproval for recurring subscriptions, with idempotent webhook processing, signature verification, ledger-backed token crediting, and idempotent transactional emails for payment and subscription lifecycle events — see [docs/mercado-pago.md](docs/mercado-pago.md).
 
 ## Stack
 
@@ -243,7 +243,8 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
   docs/
     admin-panel.md                  # Admin panel contract (Phase 13)
     architecture-decisions.md       # ADRs for stack and tooling choices
-    billing-architecture.md         # Transactions and billing history (Phase 12)
+    billing-architecture.md         # Transactions, token wallet, send limits
+    mercado-pago.md                 # Mercado Pago online payments (Phase 24)
     dashboard-analytics.md          # Dashboard endpoints and aggregations (Phase 10)
     known-limitations.md            # Deferred features
     media-storage.md                # Image upload/storage driver contract

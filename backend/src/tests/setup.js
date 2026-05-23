@@ -28,3 +28,14 @@ process.env.STORAGE_PUBLIC_BASE_URL =
   process.env.STORAGE_PUBLIC_BASE_URL ?? 'http://localhost:4000/uploads';
 process.env.LOCAL_UPLOADS_DIR = process.env.LOCAL_UPLOADS_DIR ?? './tmp/test-uploads';
 process.env.MAX_IMAGE_UPLOAD_MB = process.env.MAX_IMAGE_UPLOAD_MB ?? '5';
+
+// Mercado Pago defaults. Tests always run with PAYMENT_PROVIDER=mock so the
+// real Mercado Pago SDK is never exercised, and webhook signature verification
+// can be exercised by overriding MERCADOPAGO_WEBHOOK_SECRET in specific specs.
+process.env.PAYMENT_PROVIDER = process.env.PAYMENT_PROVIDER ?? 'mock';
+process.env.MERCADOPAGO_ENV = process.env.MERCADOPAGO_ENV ?? 'sandbox';
+process.env.MERCADOPAGO_PUBLIC_KEY = process.env.MERCADOPAGO_PUBLIC_KEY ?? '';
+process.env.MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN ?? '';
+process.env.MERCADOPAGO_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET ?? '';
+process.env.PAYMENT_REMINDER_DAYS_BEFORE = process.env.PAYMENT_REMINDER_DAYS_BEFORE ?? '3';
+process.env.LOW_TOKEN_BALANCE_THRESHOLD = process.env.LOW_TOKEN_BALANCE_THRESHOLD ?? '100';

@@ -10,6 +10,7 @@ import { dashboardRouter } from '../modules/dashboard/dashboard.routes.js';
 import { templatesRouter } from '../modules/templates/template.routes.js';
 import { transactionsRouter } from '../modules/transactions/transaction.routes.js';
 import { tokenBillingRouter } from '../modules/tokens/token-billing.routes.js';
+import { paymentBillingRouter } from '../modules/payments/payment.routes.js';
 import { adminRouter } from '../modules/admin/admin.routes.js';
 import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
@@ -94,6 +95,14 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/billing/tokens/ledger',
         '/api/v1/billing/token-packages',
         '/api/v1/billing/token-purchases',
+        '/api/v1/billing/mercadopago/preferences',
+        '/api/v1/billing/payments',
+        '/api/v1/billing/payments/:id',
+        '/api/v1/billing/subscription-plans',
+        '/api/v1/billing/subscriptions',
+        '/api/v1/billing/subscriptions/:id/cancel',
+        '/api/v1/billing/subscriptions/:id/resume',
+        '/api/v1/billing/subscription-invoices',
         '/api/v1/admin/token-packages',
         '/api/v1/admin/token-packages/:id',
         '/api/v1/admin/token-packages/:id/status',
@@ -104,8 +113,21 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/admin/token-purchases',
         '/api/v1/admin/token-purchases/:id/approve',
         '/api/v1/admin/token-purchases/:id/reject',
+        '/api/v1/admin/payments',
+        '/api/v1/admin/payments/:id',
+        '/api/v1/admin/payment-webhooks',
+        '/api/v1/admin/payments/reconcile',
+        '/api/v1/admin/subscription-plans',
+        '/api/v1/admin/subscription-plans/:id',
+        '/api/v1/admin/subscription-plans/:id/status',
+        '/api/v1/admin/subscriptions',
+        '/api/v1/admin/subscriptions/:id/sync',
+        '/api/v1/admin/subscriptions/:id/cancel',
+        '/api/v1/admin/payments/reminders/low-balance',
+        '/api/v1/admin/payments/reminders/renewals',
         '/api/v1/webhooks/twilio/messages',
         '/api/v1/webhooks/sendgrid/events',
+        '/api/v1/webhooks/mercadopago',
       ],
     },
     message: 'API metadata',
@@ -127,4 +149,5 @@ apiV1Router.use('/media', mediaRouter);
 apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
 apiV1Router.use('/billing', tokenBillingRouter);
+apiV1Router.use('/billing', paymentBillingRouter);
 apiV1Router.use('/webhooks', webhooksRouter);

@@ -22,11 +22,15 @@ import CampaignDetailView from '../views/campaigns/CampaignDetailView.vue';
 import TemplateListView from '../views/templates/TemplateListView.vue';
 import TransactionHistoryView from '../views/billing/TransactionHistoryView.vue';
 import TokenWalletView from '../views/billing/TokenWalletView.vue';
+import BuyTokensView from '../views/billing/BuyTokensView.vue';
+import SubscriptionsView from '../views/billing/SubscriptionsView.vue';
+import PaymentStatusView from '../views/billing/PaymentStatusView.vue';
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue';
 import TenantListView from '../views/admin/TenantListView.vue';
 import TenantCreateView from '../views/admin/TenantCreateView.vue';
 import TenantDetailView from '../views/admin/TenantDetailView.vue';
 import TokenSettingsView from '../views/admin/TokenSettingsView.vue';
+import PaymentsAdminView from '../views/admin/PaymentsAdminView.vue';
 import SettingsView from '../views/settings/SettingsView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
@@ -189,6 +193,59 @@ export const routes = [
         },
       },
       {
+        path: 'billing/buy-tokens',
+        name: 'billing.buyTokens',
+        component: BuyTokensView,
+        meta: {
+          title: 'Buy tokens',
+          requiresAuth: true,
+          permissions: ['billing.view'],
+        },
+      },
+      {
+        path: 'billing/subscriptions',
+        name: 'billing.subscriptions',
+        component: SubscriptionsView,
+        meta: {
+          title: 'Subscriptions',
+          requiresAuth: true,
+          permissions: ['billing.view'],
+        },
+      },
+      {
+        path: 'billing/payment/success',
+        name: 'billing.payment.success',
+        component: PaymentStatusView,
+        props: { outcome: 'success' },
+        meta: {
+          title: 'Payment successful',
+          requiresAuth: true,
+          permissions: ['billing.view'],
+        },
+      },
+      {
+        path: 'billing/payment/failure',
+        name: 'billing.payment.failure',
+        component: PaymentStatusView,
+        props: { outcome: 'failure' },
+        meta: {
+          title: 'Payment failed',
+          requiresAuth: true,
+          permissions: ['billing.view'],
+        },
+      },
+      {
+        path: 'billing/payment/pending',
+        name: 'billing.payment.pending',
+        component: PaymentStatusView,
+        props: { outcome: 'pending' },
+        meta: {
+          title: 'Payment pending',
+          requiresAuth: true,
+          permissions: ['billing.view'],
+        },
+      },
+      {
         path: 'settings',
         name: 'settings.account',
         component: SettingsView,
@@ -246,6 +303,16 @@ export const routes = [
         component: TokenSettingsView,
         meta: {
           title: 'Token settings',
+          requiresAuth: true,
+          roles: ['super_admin'],
+        },
+      },
+      {
+        path: 'admin/payments',
+        name: 'admin.payments',
+        component: PaymentsAdminView,
+        meta: {
+          title: 'Mercado Pago',
           requiresAuth: true,
           roles: ['super_admin'],
         },

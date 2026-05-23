@@ -26,6 +26,7 @@ export default {
     error: 'Algo salió mal.',
     edit: 'Editar',
     delete: 'Eliminar',
+    refresh: 'Actualizar',
   },
   auth: {
     login: {
@@ -559,6 +560,102 @@ export default {
       subtitle: '{count} contactos actualmente en este grupo.',
       noContacts: 'No hay contactos para asignar todavía.',
     },
+  },
+  billingPayments: {
+    nav: 'Comprar tokens',
+    subscriptionsNav: 'Suscripciones',
+    buy: {
+      title: 'Comprar tokens con Mercado Pago',
+      subtitle: 'Elige un paquete y completa el pago con Mercado Pago Checkout Pro.',
+      packages: 'Paquetes disponibles',
+      tokensLine: '{tokens} tokens',
+      checkout: 'Pagar con Mercado Pago',
+      checkoutTitle: 'Completa tu pago',
+      checkoutHint:
+        'Tus tokens se acreditarán automáticamente cuando Mercado Pago confirme el pago.',
+      openMercadoPago: 'Abrir Mercado Pago en una pestaña nueva',
+      empty: 'Aún no hay paquetes disponibles.',
+    },
+    status: {
+      reference: 'Referencia',
+      statusLabel: 'Estado',
+      tokens: 'Tokens por acreditar',
+      backToWallet: 'Volver a la cartera',
+      lookupHint:
+        'Aún no encontramos un pago para la referencia {ref}. Inténtalo de nuevo en unos minutos.',
+      success: {
+        title: 'Pago recibido',
+        message:
+          'Mercado Pago está finalizando tu pago. Acreditaremos los tokens en cuanto lo confirmemos.',
+      },
+      failure: {
+        title: 'Pago fallido',
+        message:
+          'Mercado Pago no pudo completar el pago. Puedes intentarlo otra vez desde la cartera.',
+      },
+      pending: {
+        title: 'Pago pendiente',
+        message:
+          'Mercado Pago aún está procesando tu pago. Te avisaremos por correo cuando se resuelva.',
+      },
+    },
+    subscriptions: {
+      title: 'Suscripciones',
+      subtitle: 'Planes recurrentes facturados a través de Mercado Pago.',
+      activeTitle: 'Suscripción actual',
+      none: 'Aún no tienes una suscripción activa.',
+      plan: 'Plan',
+      price: 'Precio',
+      status: 'Estado',
+      nextCharge: 'Próximo cobro',
+      plansTitle: 'Planes disponibles',
+      plansEmpty: 'No hay planes de suscripción definidos.',
+      subscribe: 'Suscribirme',
+      authorize: 'Autorizar en Mercado Pago',
+      cancel: 'Cancelar suscripción',
+      cancelConfirm: '¿Cancelar esta suscripción? Los cobros recurrentes se detendrán.',
+      resume: 'Reanudar suscripción',
+      confirm: '¿Suscribirte al plan {plan}?',
+      columns: {
+        plan: 'Plan',
+        price: 'Precio',
+        tokens: 'Tokens incluidos',
+      },
+    },
+    invoices: {
+      title: 'Historial de facturas',
+      empty: 'Aún no hay facturas.',
+      columns: {
+        date: 'Fecha',
+        amount: 'Importe',
+        status: 'Estado',
+        reference: 'Referencia',
+      },
+    },
+  },
+  adminPayments: {
+    nav: 'Mercado Pago',
+    title: 'Pagos con Mercado Pago',
+    subtitle:
+      'Revisa pagos, entregas de webhook, suscripciones y herramientas de reconciliación.',
+    payments: 'Pagos',
+    webhooks: 'Eventos de webhook',
+    subscriptions: 'Suscripciones',
+    empty: 'Aún no hay pagos con Mercado Pago.',
+    webhooksEmpty: 'Aún no hay eventos de webhook.',
+    subscriptionsEmpty: 'Aún no hay suscripciones.',
+    sync: 'Sincronizar',
+    cancel: 'Cancelar',
+    reconcile: 'Reconciliar un pago',
+    reconcileHint:
+      'Pega un id de pago de Mercado Pago para volver a leer su estado y reaplicar la lógica del webhook.',
+    paymentIdLabel: 'Id de pago de Mercado Pago',
+    run: 'Ejecutar',
+    reminders: 'Trabajos de recordatorios',
+    remindersHint:
+      'Dispara los mismos trabajos que ejecuta el planificador. Las notificaciones son idempotentes — no se envían duplicados.',
+    runLowBalance: 'Ejecutar recordatorios de saldo bajo',
+    runRenewals: 'Ejecutar recordatorios de renovación',
   },
   billingTokens: {
     nav: 'Tokens',
