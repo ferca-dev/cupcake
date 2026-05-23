@@ -150,7 +150,6 @@ const submit = async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 48rem;
 }
 
 .tenant-create__header h2 {

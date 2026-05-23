@@ -318,7 +318,6 @@ const surveyTitle = (id) => surveys.value.find((s) => s.id === id)?.title ?? 'â€
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: var(--layout-content-max-width);
 }
 
 .campaigns__header {

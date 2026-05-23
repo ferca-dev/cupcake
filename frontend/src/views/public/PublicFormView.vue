@@ -245,8 +245,6 @@ watch(slug, (next, prev) => {
 <style scoped>
 .public-form {
   width: 100%;
-  max-width: 36rem;
-  margin: 0 auto;
   background: var(--color-surface);
   padding: var(--space-6);
   border-radius: var(--radius-lg);

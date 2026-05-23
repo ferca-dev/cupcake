@@ -419,7 +419,6 @@ const rejectPurchase = async (purchase) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: var(--layout-content-max-width);
 }
 
 .token-settings__header {

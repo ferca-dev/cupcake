@@ -221,7 +221,6 @@ const isSuperAdmin = computed(() => Boolean(auth.isSuperAdmin));
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: var(--layout-content-max-width);
 }
 
 .transactions__header {

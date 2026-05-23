@@ -366,7 +366,6 @@ onMounted(refresh);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 64rem;
 }
 
 .tenant-detail__header {

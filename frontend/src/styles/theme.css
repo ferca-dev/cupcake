@@ -94,7 +94,11 @@
   /* Layout */
   --layout-max-width: 80rem;
   --layout-content-max-width: 110rem;
+  --layout-reading-max-width: 64rem;
+  --layout-narrow-max-width: 36rem;
   --layout-gap: var(--space-5);
+  --layout-page-padding-x: var(--space-6);
+  --layout-page-padding-x-sm: var(--space-4);
   --layout-topbar-height: 4rem;
   --layout-sidebar-width: 16rem;
   --layout-sidebar-collapsed-width: 4.5rem;

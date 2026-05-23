@@ -61,7 +61,6 @@ onMounted(refresh);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  max-width: var(--layout-content-max-width);
 }
 
 .admin-dashboard-view__header {

@@ -1,6 +1,23 @@
 /*
  * Layout primitives. Use these classes instead of repeating flex/grid setups
  * across components.
+ *
+ * Centered fill-width layout system
+ * ---------------------------------
+ * `.app-page` is the single source of truth for centering page content inside
+ * an app shell. It fills the available width and centers itself horizontally
+ * so content never sticks to the left edge on large desktops. Width caps are
+ * expressed through modifiers so each view picks a readable density:
+ *
+ *   .app-page              → default cap (data-heavy lists, dashboards)
+ *   .app-page--reading     → narrower cap for forms/settings
+ *   .app-page--narrow      → narrowest cap for single-column forms
+ *   .app-page--full        → no cap (builder workspaces, full-bleed editors)
+ *
+ * The shell is consumed by `DashboardLayout` (which reads the modifier from
+ * route meta) and by `PublicFormLayout` (which always uses the narrow cap).
+ * Individual views must NOT redeclare a page-level `max-width` — pick the
+ * right shell modifier instead.
  */
 
 .container {
@@ -8,6 +25,25 @@
   max-width: var(--layout-max-width);
   margin-inline: auto;
   padding-inline: var(--space-5);
+}
+
+.app-page {
+  width: 100%;
+  max-width: var(--layout-content-max-width);
+  margin-inline: auto;
+  min-width: 0;
+}
+
+.app-page--reading {
+  max-width: var(--layout-reading-max-width);
+}
+
+.app-page--narrow {
+  max-width: var(--layout-narrow-max-width);
+}
+
+.app-page--full {
+  max-width: none;
 }
 
 .stack {

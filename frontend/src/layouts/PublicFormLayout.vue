@@ -12,7 +12,9 @@ const year = computed(() => new Date().getFullYear());
 <template>
   <div class="public-form-layout">
     <main id="main" class="public-form-layout__content">
-      <RouterView />
+      <div class="public-form-layout__shell app-page app-page--narrow">
+        <RouterView />
+      </div>
     </main>
     <footer class="public-form-layout__footer">
       <small>
@@ -32,9 +34,14 @@ const year = computed(() => new Date().getFullYear());
 
 .public-form-layout__content {
   flex: 1;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-6) var(--layout-page-padding-x-sm);
   display: flex;
   justify-content: center;
+}
+
+.public-form-layout__shell {
+  display: flex;
+  flex-direction: column;
 }
 
 .public-form-layout__footer {

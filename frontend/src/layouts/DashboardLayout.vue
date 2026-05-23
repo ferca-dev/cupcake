@@ -1,5 +1,5 @@
 <script setup>
-import { RouterLink, RouterView, useRouter } from 'vue-router';
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { useAuthStore } from '../stores/auth.store.js';
@@ -7,12 +7,30 @@ import { useI18n } from '../i18n/index.js';
 import { APP_NAME } from '../config/env.js';
 import AppButton from '../components/ui/AppButton.vue';
 
+const SHELL_MODIFIERS = {
+  default: '',
+  reading: 'app-page--reading',
+  narrow: 'app-page--narrow',
+  full: 'app-page--full',
+};
+
 const STORAGE_KEY = 'cupcake.layout.sidebarCollapsed';
 const DESKTOP_QUERY = '(min-width: 769px)';
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 const { t } = useI18n();
+
+const shellLayout = computed(() => {
+  const layout = route.meta?.layout;
+  return Object.hasOwn(SHELL_MODIFIERS, layout) ? layout : 'default';
+});
+
+const shellClasses = computed(() => {
+  const modifier = SHELL_MODIFIERS[shellLayout.value];
+  return ['dashboard-layout__shell', 'app-page', modifier].filter(Boolean);
+});
 
 const readPersistedCollapsed = () => {
   if (typeof window === 'undefined') return false;
@@ -287,8 +305,10 @@ const sidebarLabel = computed(() =>
       @click="closeMobileSidebar"
     ></div>
 
-    <main id="main" class="dashboard-layout__main">
-      <RouterView />
+    <main id="main" class="dashboard-layout__main" :data-layout="shellLayout">
+      <div :class="shellClasses">
+        <RouterView />
+      </div>
     </main>
   </div>
 </template>
@@ -471,8 +491,20 @@ const sidebarLabel = computed(() =>
 
 .dashboard-layout__main {
   grid-area: main;
-  padding: var(--space-6);
+  padding-block: var(--space-6);
+  padding-inline: var(--layout-page-padding-x);
   min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.dashboard-layout__main[data-layout='full'] {
+  padding-inline: 0;
+}
+
+.dashboard-layout__shell {
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-layout__scrim {
@@ -508,6 +540,13 @@ const sidebarLabel = computed(() =>
     grid-template-areas:
       'topbar'
       'main';
+  }
+  .dashboard-layout__main {
+    padding-block: var(--space-4);
+    padding-inline: var(--layout-page-padding-x-sm);
+  }
+  .dashboard-layout__main[data-layout='full'] {
+    padding-inline: 0;
   }
   .dashboard-layout__nav-toggle {
     display: inline-flex;

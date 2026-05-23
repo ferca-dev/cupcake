@@ -19,15 +19,32 @@ const buildRouter = () => {
         children: [
           { path: '', name: 'dashboard.home', component: Empty },
           { path: 'surveys', name: 'surveys.list', component: Empty },
+          {
+            path: 'surveys/:id/edit',
+            name: 'surveys.builder',
+            component: Empty,
+            meta: { layout: 'full' },
+          },
           { path: 'templates', name: 'templates.list', component: Empty },
           { path: 'contacts', name: 'contacts.list', component: Empty },
           { path: 'contact-groups', name: 'contact-groups.list', component: Empty },
           { path: 'campaigns', name: 'campaigns.list', component: Empty },
           { path: 'billing/transactions', name: 'billing.transactions', component: Empty },
           { path: 'billing/tokens', name: 'billing.tokens', component: Empty },
-          { path: 'settings', name: 'settings.account', component: Empty },
+          {
+            path: 'settings',
+            name: 'settings.account',
+            component: Empty,
+            meta: { layout: 'reading' },
+          },
           { path: 'admin', name: 'admin.home', component: Empty },
           { path: 'admin/tenants', name: 'admin.tenants.list', component: Empty },
+          {
+            path: 'admin/tenants/new',
+            name: 'admin.tenants.create',
+            component: Empty,
+            meta: { layout: 'reading' },
+          },
           { path: 'admin/tokens', name: 'admin.tokens', component: Empty },
         ],
       },
@@ -153,5 +170,74 @@ describe('DashboardLayout', () => {
       global: { plugins: [router], stubs: { RouterView: true } },
     });
     expect(wrapper.text()).toContain('Admin panel');
+  });
+
+  describe('centered fill-width shell', () => {
+    it('renders content inside an .app-page shell with the default cap on standard routes', async () => {
+      const router = buildRouter();
+      const wrapper = await mountLayout(router);
+      const shell = wrapper.find('.dashboard-layout__shell');
+      expect(shell.exists()).toBe(true);
+      expect(shell.classes()).toContain('app-page');
+      expect(shell.classes()).not.toContain('app-page--full');
+      expect(shell.classes()).not.toContain('app-page--reading');
+      expect(shell.classes()).not.toContain('app-page--narrow');
+      expect(wrapper.find('.dashboard-layout__main').attributes('data-layout')).toBe('default');
+    });
+
+    it('switches the shell to full-bleed when the route opts in to layout=full', async () => {
+      const router = buildRouter();
+      installMatchMedia();
+      await router.push('/app/surveys/abc/edit');
+      await router.isReady();
+      setActivePinia(createPinia());
+      seedAuthStore();
+      const wrapper = mount(DashboardLayout, {
+        global: { plugins: [router], stubs: { RouterView: true } },
+      });
+      const shell = wrapper.find('.dashboard-layout__shell');
+      expect(shell.classes()).toContain('app-page');
+      expect(shell.classes()).toContain('app-page--full');
+      expect(wrapper.find('.dashboard-layout__main').attributes('data-layout')).toBe('full');
+    });
+
+    it('switches the shell to reading width on settings-style routes', async () => {
+      const router = buildRouter();
+      installMatchMedia();
+      await router.push('/app/settings');
+      await router.isReady();
+      setActivePinia(createPinia());
+      seedAuthStore();
+      const wrapper = mount(DashboardLayout, {
+        global: { plugins: [router], stubs: { RouterView: true } },
+      });
+      const shell = wrapper.find('.dashboard-layout__shell');
+      expect(shell.classes()).toContain('app-page--reading');
+      expect(wrapper.find('.dashboard-layout__main').attributes('data-layout')).toBe('reading');
+    });
+
+    it('falls back to the default shell when the route declares an unknown layout', async () => {
+      const router = buildRouter();
+      router.addRoute('shell', {
+        path: 'mystery',
+        name: 'mystery',
+        component: Empty,
+        meta: { layout: 'made-up-mode' },
+      });
+      installMatchMedia();
+      await router.push('/app/mystery');
+      await router.isReady();
+      setActivePinia(createPinia());
+      seedAuthStore();
+      const wrapper = mount(DashboardLayout, {
+        global: { plugins: [router], stubs: { RouterView: true } },
+      });
+      const shell = wrapper.find('.dashboard-layout__shell');
+      expect(shell.classes()).toContain('app-page');
+      expect(shell.classes()).not.toContain('app-page--full');
+      expect(shell.classes()).not.toContain('app-page--reading');
+      expect(shell.classes()).not.toContain('app-page--narrow');
+      expect(wrapper.find('.dashboard-layout__main').attributes('data-layout')).toBe('default');
+    });
   });
 });

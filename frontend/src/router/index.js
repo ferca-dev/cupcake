@@ -95,6 +95,7 @@ export const routes = [
           title: 'Edit survey',
           requiresAuth: true,
           permissions: ['surveys.update'],
+          layout: 'full',
         },
       },
       {
@@ -194,6 +195,7 @@ export const routes = [
         meta: {
           title: 'Account settings',
           requiresAuth: true,
+          layout: 'reading',
         },
       },
       {
@@ -224,6 +226,7 @@ export const routes = [
           title: 'New client',
           requiresAuth: true,
           roles: ['super_admin'],
+          layout: 'reading',
         },
       },
       {
@@ -234,6 +237,7 @@ export const routes = [
           title: 'Client',
           requiresAuth: true,
           roles: ['super_admin'],
+          layout: 'reading',
         },
       },
       {

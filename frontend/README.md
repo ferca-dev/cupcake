@@ -245,6 +245,59 @@ Column options: `key`, `label`, `align`, `width`, `minWidth`, and `sticky: 'left
 - On mobile (≤768px) the sidebar slides in over the content via the existing hamburger button; the desktop collapse toggle is hidden.
 - Nav items honour the existing role/permission guards, so only the routes the user can reach are rendered.
 
+### Centered fill-width layout system
+
+Every authenticated view renders inside a centered `.app-page` shell so the dashboard never sticks to the left edge on wide monitors and never overflows on phones. The shell is owned by `DashboardLayout` (and mirrored by `PublicFormLayout` for unauthenticated surveys); individual views must not declare a page-level `max-width`.
+
+The width cap is driven by `route.meta.layout`:
+
+| `meta.layout`     | Max width                                                | Use for                                              |
+| ----------------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| _(omitted)_       | `--layout-content-max-width` (110rem)                    | Default lists, dashboards, reports, data-heavy views |
+| `'reading'`       | `--layout-reading-max-width` (64rem)                     | Settings, single-record forms, tenant edit screens   |
+| `'narrow'`        | `--layout-narrow-max-width` (36rem)                      | Single-column forms (public form layout uses this)   |
+| `'full'`          | unbounded                                                | Builder / multi-pane workspaces                      |
+
+How it works:
+
+- `DashboardLayout.__main` is a flex row with `justify-content: center` and responsive `padding-inline` (`--layout-page-padding-x` desktop, `--layout-page-padding-x-sm` mobile). The `full` layout drops inline padding so the builder fills the screen.
+- The inner `dashboard-layout__shell` always carries `.app-page` plus the modifier derived from `route.meta.layout`. An unknown value falls back to default.
+- Views render their flex column inside the shell with `width: 100%` (default flex behaviour) so they always fill the centered band.
+- `PublicFormLayout` reuses the same `.app-page` primitive with the `narrow` modifier and applies its own background; `AuthLayout` keeps its bespoke 28rem auth panel since it predates the system and serves a different chrome.
+
+To pick a layout, set the meta on the route definition:
+
+```js
+{
+  path: 'surveys/:id/edit',
+  name: 'surveys.builder',
+  component: SurveyBuilderView,
+  meta: { layout: 'full', requiresAuth: true, permissions: ['surveys.update'] },
+}
+```
+
+### Responsive layout QA notes
+
+Verified visually and via component tests at the canonical breakpoints:
+
+| Breakpoint        | Width band       | Expectation                                                                                  |
+| ----------------- | ---------------- | -------------------------------------------------------------------------------------------- |
+| Mobile            | ≤480px           | Single column; sidebar hidden behind the hamburger; main padding shrinks to `--space-4`.     |
+| Small tablet      | 481px – 768px    | Same mobile chrome; tables scroll horizontally inside their container.                       |
+| Tablet / laptop   | 769px – 1199px   | Sidebar visible; content fills available width up to 110rem; default and reading layouts visibly centered. |
+| Desktop           | 1200px – 1599px  | Default layout still tracks viewport width minus padding; reading layout caps at 64rem.       |
+| Large desktop     | ≥1600px          | Default layout caps at 110rem with auto gutters; builder (`full`) breaks out and uses full width minus block padding. |
+
+Manual checks per surface:
+
+- **Dashboard / list views** (default) — header row stays right-aligned with the action button on the right; data tables scroll horizontally inside their card.
+- **Builder** (`full`) — three-pane workspace fills the viewport; collapsing the sidebar increases the canvas width as before.
+- **Settings / tenant create / tenant detail** (`reading`) — forms stay centered with readable line lengths even at 2560px.
+- **Public form** (`narrow`) — the form card stays centered with breathing room above the footer at any viewport.
+- **NotFound / Forbidden** — render outside the dashboard shell (top-level routes); kept as-is.
+
+`tests/components/DashboardLayout.test.js` asserts that the `app-page` modifier follows `route.meta.layout` for default, full, reading, and unknown values so accidental layout regressions surface in CI.
+
 ### Public survey links
 
 Authenticated views build shareable public form URLs via `buildPublicSurveyUrl(slug, { status })` from `src/config/env.js`. The helper:
