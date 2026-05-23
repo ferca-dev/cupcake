@@ -4,6 +4,7 @@ export {
   PERMISSIONS,
   PERMISSION_VALUES,
   ROLE_PERMISSIONS,
+  TENANT_INVITABLE_ROLES,
   getPermissionsForRole,
   roleHasPermission,
   isSuperAdmin,

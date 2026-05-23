@@ -162,6 +162,12 @@ const navItems = computed(() => {
       visible: auth.hasPermission('billing.view'),
     },
     {
+      to: { name: 'team.manage' },
+      label: t('team.nav'),
+      icon: 'M7 7a3 3 0 1 1 3 3 3 3 0 0 1-3-3Zm10 0a3 3 0 1 1 3 3 3 3 0 0 1-3-3Zm-7 11a5 5 0 0 1 10 0Zm-5 0a4 4 0 0 1 6-3.4',
+      visible: auth.hasPermission('users.manage'),
+    },
+    {
       to: { name: 'settings.account' },
       label: t('settings.nav'),
       icon: 'M12 8a4 4 0 1 0 4 4 4 4 0 0 0-4-4Zm9 4-2 1 1 2-2 2-2-1-1 2h-4l-1-2-2 1-2-2 1-2-2-1v-2l2-1-1-2 2-2 2 1 1-2h4l1 2 2-1 2 2-1 2 2 1Z',

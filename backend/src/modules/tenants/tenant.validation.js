@@ -33,6 +33,7 @@ const settingsSchema = z
     timezone: z.string().trim().min(1).max(80).optional(),
     locale: z.string().trim().min(2).max(20).optional(),
     branding: brandingSchema,
+    maxTeamMembers: z.coerce.number().int().min(1).max(10_000).nullable().optional(),
   })
   .strict()
   .partial()

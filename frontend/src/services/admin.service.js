@@ -21,4 +21,7 @@ export const adminService = Object.freeze({
     apiClient.patch(`/admin/tenants/${id}/status`, payload).then(unwrap),
 
   listTenantUsers: (id) => apiClient.get(`/admin/tenants/${id}/users`).then(unwrap),
+
+  listTenantInvitations: (id, query) =>
+    apiClient.get(`/admin/tenants/${id}/invitations`, { query }).then(unwrap),
 });

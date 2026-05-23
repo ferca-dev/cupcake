@@ -23,6 +23,7 @@ const { t } = useI18n();
 const tenantId = computed(() => route.params.id);
 const tenant = computed(() => store.selectedTenant);
 const users = computed(() => store.selectedUsers);
+const invitations = computed(() => store.selectedInvitations);
 const isLoading = computed(() => store.isLoadingDetail);
 const isMutating = computed(() => store.isMutating);
 
@@ -46,6 +47,7 @@ const refresh = async () => {
     const [doc] = await Promise.all([
       store.fetchTenant(tenantId.value),
       store.fetchTenantUsers(tenantId.value),
+      store.fetchTenantInvitations(tenantId.value).catch(() => null),
     ]);
     if (doc) {
       form.name = doc.name ?? '';
@@ -88,6 +90,13 @@ const userColumns = computed(() => [
   { key: 'role', label: t('adminPanel.detail.userColumns.role') },
   { key: 'status', label: t('adminPanel.detail.userColumns.status') },
   { key: 'lastLoginAt', label: t('adminPanel.detail.userColumns.lastLoginAt'), align: 'right' },
+]);
+
+const invitationColumns = computed(() => [
+  { key: 'email', label: t('adminPanel.detail.invitationColumns.email') },
+  { key: 'role', label: t('adminPanel.detail.invitationColumns.role') },
+  { key: 'status', label: t('adminPanel.detail.invitationColumns.status') },
+  { key: 'expiresAt', label: t('adminPanel.detail.invitationColumns.expires'), align: 'right' },
 ]);
 
 const buildUpdatePayload = () => {
@@ -355,6 +364,24 @@ onMounted(refresh);
               row.lastLoginAt ? formatDate(row.lastLoginAt) : t('adminPanel.detail.neverLoggedIn')
             }}
           </template>
+        </AppTable>
+      </AppCard>
+
+      <AppCard>
+        <template #title>{{ t('adminPanel.detail.sectionInvitations') }}</template>
+        <AppTable
+          :columns="invitationColumns"
+          :rows="invitations"
+          row-key="id"
+          :empty="t('adminPanel.detail.noInvitations')"
+          max-height="60vh"
+        >
+          <template #cell:status="{ row }">
+            <AppBadge :variant="row.status === 'pending' ? 'warning' : 'neutral'">
+              {{ row.status }}
+            </AppBadge>
+          </template>
+          <template #cell:expiresAt="{ row }">{{ formatDate(row.expiresAt) }}</template>
         </AppTable>
       </AppCard>
     </template>

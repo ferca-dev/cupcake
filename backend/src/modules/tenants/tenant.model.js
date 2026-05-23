@@ -17,6 +17,10 @@ const settingsSchema = new Schema(
     timezone: { type: String, default: 'UTC' },
     locale: { type: String, default: 'en-US' },
     branding: { type: brandingSchema, default: () => ({}) },
+    // Maximum number of active tenant members allowed (admins + members +
+    // surveyors). `null` means unlimited. Super admins manage this from the
+    // tenant detail UI until plans drive it natively.
+    maxTeamMembers: { type: Number, default: null, min: 1 },
   },
   { _id: false },
 );

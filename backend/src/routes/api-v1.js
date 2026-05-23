@@ -15,6 +15,7 @@ import { adminRouter } from '../modules/admin/admin.routes.js';
 import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
 import { mediaRouter } from '../modules/media/media.routes.js';
+import { teamRouter, teamPublicRouter } from '../modules/team/team.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -127,6 +128,16 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/admin/subscriptions/:id/pause',
         '/api/v1/admin/payments/reminders/low-balance',
         '/api/v1/admin/payments/reminders/renewals',
+        '/api/v1/team/members',
+        '/api/v1/team/members/:id',
+        '/api/v1/team/members/:id/role',
+        '/api/v1/team/members/:id/status',
+        '/api/v1/team/invitations',
+        '/api/v1/team/invitations/:id/resend',
+        '/api/v1/team/invitations/:id/revoke',
+        '/api/v1/team/invitations/accept',
+        '/api/v1/team/owner-transfer',
+        '/api/v1/admin/tenants/:id/invitations',
         '/api/v1/webhooks/twilio/messages',
         '/api/v1/webhooks/sendgrid/events',
         '/api/v1/webhooks/mercadopago',
@@ -152,4 +163,6 @@ apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
 apiV1Router.use('/billing', tokenBillingRouter);
 apiV1Router.use('/billing', paymentBillingRouter);
+apiV1Router.use('/team', teamPublicRouter);
+apiV1Router.use('/team', teamRouter);
 apiV1Router.use('/webhooks', webhooksRouter);

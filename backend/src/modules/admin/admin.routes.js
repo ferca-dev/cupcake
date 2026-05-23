@@ -29,6 +29,7 @@ adminRouter.get('/tenants/:id', adminTenantController.getTenant);
 adminRouter.put('/tenants/:id', adminTenantController.updateTenant);
 adminRouter.patch('/tenants/:id/status', adminTenantController.updateTenantStatus);
 adminRouter.get('/tenants/:id/users', adminTenantController.listTenantUsers);
+adminRouter.get('/tenants/:id/invitations', adminTenantController.listTenantInvitations);
 
 // Token packages
 adminRouter.get('/token-packages', tokenAdminController.listPackages);

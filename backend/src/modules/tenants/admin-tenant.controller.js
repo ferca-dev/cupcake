@@ -1,4 +1,5 @@
 import * as service from './admin-tenant.service.js';
+import * as teamService from '../team/team.service.js';
 import {
   listTenantsQuerySchema,
   createTenantSchema,
@@ -64,4 +65,16 @@ export const updateTenantStatus = asyncHandler(async (req, res) => {
 export const listTenantUsers = asyncHandler(async (req, res) => {
   const result = await service.listTenantUsers({ id: req.params.id });
   return sendSuccess(res, { data: result, message: 'Tenant users fetched' });
+});
+
+export const listTenantInvitations = asyncHandler(async (req, res) => {
+  const result = await teamService.listInvitationsForTenantAsAdmin({
+    tenantId: req.params.id,
+    query: {
+      page: req.query?.page ? Number(req.query.page) : 1,
+      limit: req.query?.limit ? Number(req.query.limit) : 50,
+      status: req.query?.status,
+    },
+  });
+  return sendSuccess(res, { data: result, message: 'Tenant invitations fetched' });
 });

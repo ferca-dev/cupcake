@@ -32,6 +32,8 @@ import TenantDetailView from '../views/admin/TenantDetailView.vue';
 import TokenSettingsView from '../views/admin/TokenSettingsView.vue';
 import PaymentsAdminView from '../views/admin/PaymentsAdminView.vue';
 import SettingsView from '../views/settings/SettingsView.vue';
+import TeamManagementView from '../views/team/TeamManagementView.vue';
+import AcceptInvitationView from '../views/auth/AcceptInvitationView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 import PublicFormView from '../views/public/PublicFormView.vue';
@@ -67,6 +69,14 @@ export const routes = [
         name: 'auth.forgot',
         component: ForgotPasswordView,
         meta: { title: 'Recover account', requiresGuest: true },
+      },
+      {
+        path: 'accept-invitation',
+        name: 'auth.acceptInvitation',
+        component: AcceptInvitationView,
+        // No `requiresGuest` — the page handles the "already signed in" case
+        // itself so a deep-linked invite from email still renders.
+        meta: { title: 'Accept invitation' },
       },
     ],
   },
@@ -253,6 +263,16 @@ export const routes = [
           title: 'Account settings',
           requiresAuth: true,
           layout: 'reading',
+        },
+      },
+      {
+        path: 'team',
+        name: 'team.manage',
+        component: TeamManagementView,
+        meta: {
+          title: 'Team',
+          requiresAuth: true,
+          permissions: ['users.manage'],
         },
       },
       {

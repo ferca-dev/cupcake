@@ -305,6 +305,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md) — response-limit configuration and account-settings API.
 - [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
 - [docs/media-storage.md](docs/media-storage.md) — image upload validation, local/S3 storage, and cleanup policy.
+- [docs/team-management.md](docs/team-management.md) — tenant team membership, invitations, and ownership transfer.
 
 ## Phase workflow
 
@@ -342,6 +343,9 @@ Phase index:
 - `21` — Media storage for images.
 - `22` — Centered fill-width layout system.
 - `23` — Post billing, reports, media, and layout hardening.
+- `24` — Mercado Pago online payments.
+- `25` — Survey response IP and geolocation tracking.
+- `26` — Team management and invitations.
 
 ## Continuous integration
 

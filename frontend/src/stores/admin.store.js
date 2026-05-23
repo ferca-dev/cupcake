@@ -17,6 +17,7 @@ export const useAdminStore = defineStore('admin', {
     listQuery: { ...DEFAULT_LIST_QUERY },
     selectedTenant: null,
     selectedUsers: [],
+    selectedInvitations: [],
     metrics: null,
     isLoadingList: false,
     isLoadingDetail: false,
@@ -83,6 +84,18 @@ export const useAdminStore = defineStore('admin', {
         return this.selectedUsers;
       } catch (err) {
         this.lastError = err?.message ?? 'Unable to load tenant users';
+        throw err;
+      }
+    },
+
+    async fetchTenantInvitations(id, query) {
+      this.lastError = null;
+      try {
+        const data = await adminService.listTenantInvitations(id, query);
+        this.selectedInvitations = data?.items ?? [];
+        return this.selectedInvitations;
+      } catch (err) {
+        this.lastError = err?.message ?? 'Unable to load tenant invitations';
         throw err;
       }
     },
@@ -173,6 +186,7 @@ export const useAdminStore = defineStore('admin', {
       this.pagination = null;
       this.selectedTenant = null;
       this.selectedUsers = [];
+      this.selectedInvitations = [];
       this.metrics = null;
       this.lastError = null;
       this.resetListQuery();
