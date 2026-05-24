@@ -7,6 +7,7 @@ import {
   CONTACT_CONSENT_STATUSES,
   CONSENT_CHANNELS,
 } from './consent.utils.js';
+import { CONTACT_IMPORT_DEDUPE_KEYS, CONTACT_IMPORT_FIELDS } from './contact-import.parser.js';
 
 const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, 'Must be a valid ObjectId');
 
@@ -191,3 +192,35 @@ export const contactImportPlaceholderSchema = z
   })
   .strict()
   .optional();
+
+const contactImportMappingFieldSchema = z
+  .union([z.string().trim().max(200), z.null()])
+  .optional()
+  .transform((value) => (value === undefined ? undefined : value || null));
+
+export const contactImportMappingSchema = z
+  .object({
+    mapping: z
+      .object(
+        Object.fromEntries(
+          CONTACT_IMPORT_FIELDS.map((field) => [field, contactImportMappingFieldSchema]),
+        ),
+      )
+      .strict()
+      .optional(),
+    dedupeKeys: z
+      .array(z.enum(CONTACT_IMPORT_DEDUPE_KEYS))
+      .min(1)
+      .max(CONTACT_IMPORT_DEDUPE_KEYS.length)
+      .optional(),
+    updateExisting: z.boolean().optional(),
+  })
+  .strict();
+
+export const contactExportQuerySchema = listContactsQuerySchema
+  .omit({ page: true, limit: true })
+  .extend({
+    format: z.enum(['csv', 'xlsx']).optional().default('csv'),
+    limit: z.coerce.number().int().min(1).max(50000).optional().default(50000),
+  })
+  .strict();

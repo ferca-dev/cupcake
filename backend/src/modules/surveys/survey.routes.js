@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import * as surveyController from './survey.controller.js';
+import * as reportController from '../reports/report.controller.js';
 import { reportsRouter } from '../reports/report.routes.js';
 import { authenticate } from '../../common/middlewares/authenticate.js';
 import {
@@ -19,6 +20,12 @@ surveysRouter.use(requireTenantContext());
 // The reports router re-applies `authenticate` and `requireTenantContext`
 // internally so it can be reused if mounted at the API root in the future.
 surveysRouter.use('/:id/reports', reportsRouter);
+
+surveysRouter.get(
+  '/:id/responses/export',
+  requirePermission(PERMISSIONS.RESPONSES_VIEW),
+  reportController.exportReport,
+);
 
 surveysRouter.get('/', requirePermission(PERMISSIONS.SURVEYS_VIEW), surveyController.listSurveys);
 

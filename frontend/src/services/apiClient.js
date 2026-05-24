@@ -91,6 +91,18 @@ const parseResponse = async (response) => {
   }
 };
 
+const filenameFromDisposition = (header) => {
+  if (!header) return null;
+  const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(header);
+  const value = match?.[1] ?? match?.[2] ?? null;
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
 const ensureRefresh = async () => {
   if (!refreshHandler) return false;
   if (!refreshInFlight) {
@@ -173,10 +185,64 @@ const performRequest = async (method, path, options = {}) => {
   return parsed;
 };
 
+const performDownload = async (path, options = {}) => {
+  const { query, headers = {}, skipAuth = false, signal, _retry = false } = options;
+  const finalHeaders = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (value !== undefined && value !== null) finalHeaders.set(key, String(value));
+  }
+  if (!skipAuth && authProvider) {
+    const token = authProvider.getAccessToken?.();
+    if (token) finalHeaders.set('authorization', `Bearer ${token}`);
+  }
+
+  let response;
+  try {
+    response = await fetch(buildUrl(path, query), {
+      method: 'GET',
+      headers: finalHeaders,
+      signal,
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err;
+    throw new ApiError({
+      status: 0,
+      code: 'NETWORK_ERROR',
+      message: 'Network error',
+      isNetwork: true,
+    });
+  }
+
+  if (response.status === 401 && !skipAuth && !_retry && refreshHandler) {
+    const refreshed = await ensureRefresh();
+    if (refreshed) return performDownload(path, { ...options, _retry: true });
+    authProvider?.onUnauthorized?.();
+  }
+
+  if (!response.ok) {
+    const parsed = await parseResponse(response);
+    const errorBody = parsed && typeof parsed === 'object' ? parsed.error || {} : {};
+    throw new ApiError({
+      status: response.status,
+      code: errorBody.code,
+      message: errorBody.message || response.statusText || 'Request failed',
+      details: errorBody.details || [],
+    });
+  }
+
+  return {
+    blob: await response.blob(),
+    filename:
+      filenameFromDisposition(response.headers.get('content-disposition')) ?? 'download.bin',
+    contentType: response.headers.get('content-type') ?? 'application/octet-stream',
+  };
+};
+
 export const apiClient = Object.freeze({
   get: (path, options) => performRequest('GET', path, options),
   post: (path, body, options = {}) => performRequest('POST', path, { ...options, body }),
   put: (path, body, options = {}) => performRequest('PUT', path, { ...options, body }),
   patch: (path, body, options = {}) => performRequest('PATCH', path, { ...options, body }),
   delete: (path, options) => performRequest('DELETE', path, options),
+  download: (path, options) => performDownload(path, options),
 });

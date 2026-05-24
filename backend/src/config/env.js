@@ -144,6 +144,22 @@ const envSchema = z
       .positive()
       .default(15 * 60 * 1000),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+
+    // Background job queue. `memory` is a Mongo-backed in-process queue safe
+    // for local development and single-node deployments. `redis` is reserved
+    // for the future Redis adapter (not yet implemented; selecting it fails
+    // fast at startup). `inline` skips queueing entirely and runs each job
+    // synchronously inside the enqueueing process — only intended for tests.
+    JOB_QUEUE_DRIVER: z.enum(['memory', 'redis', 'inline']).default('memory'),
+    REDIS_URL: z.string().trim().default(''),
+    JOB_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(5),
+    JOB_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+    JOB_BACKOFF_SECONDS: z.coerce.number().int().min(1).max(86400).default(30),
+    // How often the worker polls the job collection. Kept short so jobs
+    // dispatched from the API are picked up promptly without busy-looping.
+    JOB_POLL_INTERVAL_MS: z.coerce.number().int().min(50).max(60000).default(500),
+    // Lock TTL — if a worker dies mid-job the lock is reclaimable after this.
+    JOB_LOCK_TIMEOUT_MS: z.coerce.number().int().min(1000).max(3_600_000).default(60_000),
   })
   .superRefine((value, ctx) => {
     if (value.APP_ENV === 'production' && value.STORAGE_DRIVER === 'local') {
@@ -176,6 +192,25 @@ const envSchema = z
           });
         }
       }
+    }
+
+    if (value.JOB_QUEUE_DRIVER === 'redis') {
+      // The Redis-backed driver is documented as a future adapter. Until it
+      // ships, selecting it must fail fast rather than silently fall back
+      // because losing job state would be much worse than refusing to boot.
+      if (!value.REDIS_URL) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['REDIS_URL'],
+          message: 'REDIS_URL is required when JOB_QUEUE_DRIVER=redis',
+        });
+      }
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JOB_QUEUE_DRIVER'],
+        message:
+          'JOB_QUEUE_DRIVER=redis is not implemented yet; use `memory` for production single-node or `inline` for tests',
+      });
     }
   });
 

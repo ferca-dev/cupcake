@@ -21,9 +21,24 @@ export const contactService = Object.freeze({
   remove: (id, { hard = false } = {}) =>
     apiClient.delete(`/contacts/${id}`, { query: { hard } }).then(unwrap),
 
-  requestImport: (payload) => apiClient.post('/contacts/import', payload ?? {}).then(unwrap),
+  createImport: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post('/contacts/imports', formData).then(unwrap);
+  },
 
-  getImportReport: (id) => apiClient.get(`/contacts/imports/${id}/report`).then(unwrap),
+  getImport: (id) => apiClient.get(`/contacts/imports/${id}`).then(unwrap),
+
+  previewImport: (id) => apiClient.post(`/contacts/imports/${id}/preview`, {}).then(unwrap),
+
+  updateImportMapping: (id, payload) =>
+    apiClient.put(`/contacts/imports/${id}/mapping`, payload).then(unwrap),
+
+  confirmImport: (id) => apiClient.post(`/contacts/imports/${id}/confirm`, {}).then(unwrap),
+
+  downloadImportErrors: (id) => apiClient.download(`/contacts/imports/${id}/errors`),
+
+  exportContacts: (query) => apiClient.download('/contacts/export', { query }),
 });
 
 export const contactGroupService = Object.freeze({

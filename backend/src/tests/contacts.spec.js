@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
+import * as XLSX from 'xlsx';
 
 import { createApp } from '../app.js';
 import { startInMemoryMongo, stopInMemoryMongo, clearCollections } from './helpers/mongo.js';
@@ -7,6 +8,8 @@ import { User } from '../modules/users/user.model.js';
 import { Tenant } from '../modules/tenants/tenant.model.js';
 import { Contact } from '../modules/contacts/contact.model.js';
 import { ContactGroup } from '../modules/contacts/contact-group.model.js';
+import { ContactImportJob } from '../modules/contacts/contact-import-job.model.js';
+import { SuppressionListEntry } from '../modules/suppression/suppression-list.model.js';
 import { hashPassword } from '../common/auth/passwords.js';
 import { ROLES } from '../common/auth/roles.js';
 
@@ -470,24 +473,222 @@ describe('Contact groups CRUD and membership', () => {
   });
 });
 
-describe('Import placeholder endpoints', () => {
-  it('returns a structured pending response without faking a completed import', async () => {
-    await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+describe('Contact imports and exports', () => {
+  it('imports CSV rows with validation, dedupe, suppression preservation, and error reports', async () => {
+    const { tenant } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
+    const group = await ContactGroup.create({ tenantId: tenant._id, name: 'Customers' });
+    await SuppressionListEntry.create({
+      tenantId: tenant._id,
+      channel: 'email',
+      value: 'suppressed@example.com',
+      email: 'suppressed@example.com',
+      reason: 'manual',
+      source: 'manual',
+      status: 'active',
+    });
+    const token = await login('acme@test.local');
+    const csv = [
+      'full name,email,groups,tags,email consent',
+      'Ada Lovelace,ada@example.com,Customers,"vip; beta",subscribed',
+      'Invalid Person,not-an-email,Customers,,subscribed',
+      'Duplicate Ada,ada@example.com,Customers,,subscribed',
+      'Suppressed Person,suppressed@example.com,Customers,,subscribed',
+    ].join('\n');
+
+    const upload = await request(app)
+      .post('/api/v1/contacts/imports')
+      .set('Authorization', `Bearer ${token}`)
+      .attach('file', Buffer.from(csv), { filename: 'contacts.csv', contentType: 'text/csv' });
+
+    expect(upload.status).toBe(201);
+    const jobId = upload.body.data.job.id;
+    expect(upload.body.data.job.headers).toContain('email');
+    expect(upload.body.data.job.suggestedMapping.email).toBe('email');
+
+    const mapping = await request(app)
+      .put(`/api/v1/contacts/imports/${jobId}/mapping`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        mapping: upload.body.data.job.suggestedMapping,
+        dedupeKeys: ['email'],
+        updateExisting: true,
+      });
+    expect(mapping.status).toBe(200);
+
+    const confirmed = await request(app)
+      .post(`/api/v1/contacts/imports/${jobId}/confirm`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(confirmed.status).toBe(202);
+    expect(confirmed.body.data.job.status).toBe('completed');
+    expect(confirmed.body.data.job.counts).toMatchObject({
+      totalRows: 4,
+      acceptedRows: 2,
+      rejectedRows: 2,
+      duplicateRows: 1,
+      createdRows: 2,
+    });
+
+    const contacts = await Contact.find({ tenantId: tenant._id }).sort('email');
+    expect(contacts).toHaveLength(2);
+    expect(contacts[0].email).toBe('ada@example.com');
+    expect(contacts[0].groupIds.map((id) => id.toString())).toContain(group._id.toString());
+    const suppressed = contacts.find((contact) => contact.email === 'suppressed@example.com');
+    expect(suppressed.consent.email.status).toBe('unsubscribed');
+
+    const errors = await request(app)
+      .get(`/api/v1/contacts/imports/${jobId}/errors`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(errors.status).toBe(200);
+    expect(errors.headers['content-type']).toMatch(/text\/csv/);
+    expect(errors.text).toContain('Invalid email format');
+    expect(errors.text).toContain('Duplicate row in import file');
+  });
+
+  it('imports XLSX files with explicit column mapping and updates existing contacts', async () => {
+    const { tenant } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
+    await Contact.create({
+      tenantId: tenant._id,
+      fullName: 'Old Name',
+      email: 'mapped@example.com',
+      status: 'active',
+    });
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ['Primary address', 'Display name', 'Status'],
+      ['mapped@example.com', 'Mapped Person', 'active'],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contacts');
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
     const token = await login('acme@test.local');
 
-    const requested = await request(app)
-      .post('/api/v1/contacts/import')
+    const upload = await request(app)
+      .post('/api/v1/contacts/imports')
       .set('Authorization', `Bearer ${token}`)
-      .send({ source: 'csv', note: 'Phase 09 work pending' });
-    expect(requested.status).toBe(202);
-    expect(requested.body.data.job.status).toBe('pending_implementation');
-    const jobId = requested.body.data.job.id;
+      .attach('file', buffer, {
+        filename: 'contacts.xlsx',
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+    expect(upload.status).toBe(201);
+    const jobId = upload.body.data.job.id;
 
-    const report = await request(app)
-      .get(`/api/v1/contacts/imports/${jobId}/report`)
+    const mapping = await request(app)
+      .put(`/api/v1/contacts/imports/${jobId}/mapping`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        mapping: {
+          email: 'Primary address',
+          fullName: 'Display name',
+          status: 'Status',
+        },
+        dedupeKeys: ['email'],
+        updateExisting: true,
+      });
+    expect(mapping.status).toBe(200);
+
+    const confirmed = await request(app)
+      .post(`/api/v1/contacts/imports/${jobId}/confirm`)
       .set('Authorization', `Bearer ${token}`);
-    expect(report.status).toBe(200);
-    expect(report.body.data.report.placeholder).toBe(true);
-    expect(report.body.data.report.summary.total).toBe(0);
+    expect(confirmed.status).toBe(202);
+    expect(confirmed.body.data.job.counts.updatedRows).toBe(1);
+    const reloaded = await Contact.findOne({ tenantId: tenant._id, email: 'mapped@example.com' });
+    expect(reloaded.fullName).toBe('Mapped Person');
+  });
+
+  it('rejects cross-tenant group IDs during import', async () => {
+    await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    const beta = await createTenantWithAdmin({ tenantName: 'Beta', email: 'beta@test.local' });
+    const betaGroup = await ContactGroup.create({ tenantId: beta.tenant._id, name: 'Foreign' });
+    const token = await login('acme@test.local');
+    const csv = ['full name,email,groups', `Leak Test,leak@example.com,${betaGroup._id}`].join(
+      '\n',
+    );
+
+    const upload = await request(app)
+      .post('/api/v1/contacts/imports')
+      .set('Authorization', `Bearer ${token}`)
+      .attach('file', Buffer.from(csv), { filename: 'contacts.csv', contentType: 'text/csv' });
+    expect(upload.status).toBe(201);
+    const confirmed = await request(app)
+      .post(`/api/v1/contacts/imports/${upload.body.data.job.id}/confirm`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(confirmed.status).toBe(202);
+    expect(confirmed.body.data.job.counts.rejectedRows).toBe(1);
+    expect(await Contact.countDocuments({ email: 'leak@example.com' })).toBe(0);
+  });
+
+  it('exports tenant-scoped contacts and enforces contact permissions', async () => {
+    const acme = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
+    const beta = await createTenantWithAdmin({
+      tenantName: 'Beta',
+      email: 'beta@test.local',
+    });
+    const surveyor = await createTenantWithAdmin({
+      tenantName: 'Surveyor Tenant',
+      email: 'surveyor@test.local',
+      role: ROLES.SURVEYOR,
+    });
+    await Contact.create({
+      tenantId: acme.tenant._id,
+      fullName: 'Acme Person',
+      email: 'acme-export@example.com',
+      status: 'active',
+    });
+    await Contact.create({
+      tenantId: beta.tenant._id,
+      fullName: 'Beta Person',
+      email: 'beta-export@example.com',
+      status: 'active',
+    });
+
+    const token = await login('acme@test.local');
+    const csv = await request(app)
+      .get('/api/v1/contacts/export')
+      .set('Authorization', `Bearer ${token}`);
+    expect(csv.status).toBe(200);
+    expect(csv.headers['content-type']).toMatch(/text\/csv/);
+    expect(csv.text).toContain('acme-export@example.com');
+    expect(csv.text).not.toContain('beta-export@example.com');
+
+    const xlsx = await request(app)
+      .get('/api/v1/contacts/export')
+      .query({ format: 'xlsx' })
+      .set('Authorization', `Bearer ${token}`);
+    expect(xlsx.status).toBe(200);
+    expect(xlsx.headers['content-type']).toMatch(/spreadsheetml/);
+
+    expect(surveyor.user.role).toBe(ROLES.SURVEYOR);
+    const surveyorToken = await login('surveyor@test.local');
+    const forbidden = await request(app)
+      .get('/api/v1/contacts/export')
+      .set('Authorization', `Bearer ${surveyorToken}`);
+    expect(forbidden.status).toBe(403);
+  });
+
+  it('keeps import jobs tenant-scoped', async () => {
+    await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
+    await createTenantWithAdmin({ tenantName: 'Beta', email: 'beta@test.local' });
+    const acmeToken = await login('acme@test.local');
+    const betaToken = await login('beta@test.local');
+    const csv = ['full name,email', 'Ada,ada@example.com'].join('\n');
+    const upload = await request(app)
+      .post('/api/v1/contacts/imports')
+      .set('Authorization', `Bearer ${acmeToken}`)
+      .attach('file', Buffer.from(csv), { filename: 'contacts.csv', contentType: 'text/csv' });
+    expect(upload.status).toBe(201);
+    expect(await ContactImportJob.countDocuments()).toBe(1);
+
+    const crossTenant = await request(app)
+      .get(`/api/v1/contacts/imports/${upload.body.data.job.id}`)
+      .set('Authorization', `Bearer ${betaToken}`);
+    expect(crossTenant.status).toBe(404);
   });
 });

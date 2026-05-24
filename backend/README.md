@@ -24,13 +24,15 @@ The development server reloads on file changes (`node --watch`). It listens on `
 
 | Script            | Purpose                                             |
 | ----------------- | --------------------------------------------------- |
-| `pnpm dev`        | Start the API with file watching and `.env` loaded. |
-| `pnpm start`      | Start the API once (production-style local boot).   |
-| `pnpm lint`       | Run ESLint over `src/`.                             |
-| `pnpm lint:fix`   | ESLint with autofix.                                |
-| `pnpm test`       | Run Vitest test suite once.                         |
-| `pnpm test:watch` | Run Vitest in watch mode.                           |
-| `pnpm seed`       | Run all seeders (idempotent).                       |
+| `pnpm dev`         | Start the API with file watching and `.env` loaded.            |
+| `pnpm start`       | Start the API once (production-style local boot).              |
+| `pnpm worker`      | Start the background job worker (memory driver).               |
+| `pnpm worker:dev`  | Worker with file watching for local development.               |
+| `pnpm lint`        | Run ESLint over `src/`.                                        |
+| `pnpm lint:fix`    | ESLint with autofix.                                           |
+| `pnpm test`        | Run Vitest test suite once.                                    |
+| `pnpm test:watch`  | Run Vitest in watch mode.                                      |
+| `pnpm seed`        | Run all seeders (idempotent).                                  |
 
 Run any script via the workspace from the repo root with `pnpm --filter ./backend run <script>` or use the root aliases (`pnpm dev:backend`, `pnpm lint:backend`, `pnpm test:backend`).
 
@@ -81,8 +83,29 @@ All variables are validated at startup by `src/config/env.js`. The server **fail
 | `REQUEST_BODY_LIMIT`                   | no          | `100kb`                         | Maximum request body size.                                                          |
 | `RATE_LIMIT_WINDOW_MS`                 | no          | `900000`                        | Global rate-limit window (15 min).                                                  |
 | `RATE_LIMIT_MAX`                       | no          | `300`                           | Global rate-limit request count per window.                                         |
+| `JOB_QUEUE_DRIVER`                     | no          | `memory`                        | Background job driver: `memory` (Mongo-backed), `inline` (tests), or `redis` (reserved). |
+| `REDIS_URL`                            | conditional | —                               | Required if `JOB_QUEUE_DRIVER=redis` (not yet implemented).                          |
+| `JOB_CONCURRENCY`                      | no          | `5`                             | Polling loops per worker process.                                                   |
+| `JOB_MAX_ATTEMPTS`                     | no          | `5`                             | Default retry budget for jobs that do not override it.                              |
+| `JOB_BACKOFF_SECONDS`                  | no          | `30`                            | Base seconds for the exponential backoff curve (capped at 1 hour).                  |
+| `JOB_POLL_INTERVAL_MS`                 | no          | `500`                           | Worker sleep when no jobs are ready.                                                |
+| `JOB_LOCK_TIMEOUT_MS`                  | no          | `60000`                         | Lock TTL; crashed workers reclaim their job after this.                             |
 
 The full template lives in [`.env.example`](./.env.example).
+
+### Background jobs
+
+Long-running and retryable work runs through a Mongo-backed job queue with
+configurable retry/backoff/dead-letter behaviour. Operationally:
+
+- API process: enqueues jobs (campaign sends, payment reminders, etc.).
+- Worker process: `pnpm worker` claims and runs them. Run one per host.
+- Admin visibility: super-admin endpoints under `/api/v1/admin/jobs`.
+
+Test suite uses the `inline` driver so HTTP responses observe the job's
+result synchronously. See [`docs/background-jobs.md`](../docs/background-jobs.md)
+for the full operations runbook (job types, retry policies, dead-letter
+recovery).
 
 ## Project layout
 
@@ -458,8 +481,13 @@ caller's tenant; cross-tenant ids never resolve.
 | PUT    | `/api/v1/contacts/:id`                           | `contacts.manage` | Partial update. Updates that would leave the contact unreachable are rejected.                                   |
 | PATCH  | `/api/v1/contacts/:id/consent`                   | `contacts.manage` | Update one channel consent state with source and metadata.                                                       |
 | DELETE | `/api/v1/contacts/:id`                           | `contacts.manage` | Soft-archive by default. Pass `?hard=true` to remove the record.                                                 |
-| POST   | `/api/v1/contacts/import`                        | `contacts.manage` | Bulk import placeholder. Returns `202` with a `pending_implementation` job.                                      |
-| GET    | `/api/v1/contacts/imports/:id/report`            | `contacts.manage` | Bulk import report placeholder. Returns the empty schema with `placeholder: true`.                               |
+| POST   | `/api/v1/contacts/imports`                       | `contacts.manage` | Multipart CSV/XLSX upload using field `file`; creates an import job with headers and sample rows.                |
+| GET    | `/api/v1/contacts/imports/:id`                   | `contacts.manage` | Fetch import job status, counts, mapping, headers, and error availability.                                       |
+| POST   | `/api/v1/contacts/imports/:id/preview`           | `contacts.manage` | Return the detected preview and suggested mapping for an uploaded import.                                        |
+| PUT    | `/api/v1/contacts/imports/:id/mapping`           | `contacts.manage` | Save column mapping, dedupe keys, and `updateExisting`.                                                          |
+| POST   | `/api/v1/contacts/imports/:id/confirm`           | `contacts.manage` | Validate rows and create or update contacts.                                                                     |
+| GET    | `/api/v1/contacts/imports/:id/errors`            | `contacts.manage` | Download a row-level CSV error report.                                                                           |
+| GET    | `/api/v1/contacts/export`                        | `contacts.manage` | Download tenant-scoped contacts as CSV or XLSX using contact-list filters.                                       |
 | GET    | `/api/v1/suppression-list`                       | `contacts.manage` | List tenant suppression entries with channel, status, reason, source, and search filters.                        |
 | POST   | `/api/v1/suppression-list`                       | `contacts.manage` | Create a manual tenant suppression entry for email, SMS, or WhatsApp.                                            |
 | DELETE | `/api/v1/suppression-list/:id`                   | `contacts.manage` | Release a suppression entry. Provider/legal entries require super-admin access.                                  |
@@ -502,6 +530,10 @@ Reasons use the campaign-skip vocabulary defined in `00-shared-context.md`
 `contact_archived`, plus the Phase 28 consent/suppression reasons). The
 frontend uses these to render channel pills and explain why a contact is
 incomplete for a given delivery method.
+
+Detailed import/export behaviour, row validation, dedupe rules, and response
+export formats are documented in
+[`docs/contact-import-export.md`](../docs/contact-import-export.md).
 
 ### Audit events (contacts)
 
@@ -648,7 +680,8 @@ the `responses.view` permission. Super admins must impersonate a tenant via
 | GET    | `/api/v1/surveys/:id/reports/drop-off`  | Page-level and field-level reach counts derived from the published schema.                       |
 | GET    | `/api/v1/surveys/:id/reports/timing`    | Average, median, min, max, p25/p75, trimmed mean plus duration / hourly / weekday distributions. |
 | GET    | `/api/v1/surveys/:id/reports/versions`  | Each version with response counts and a `isCurrentlyPublished` flag.                             |
-| GET    | `/api/v1/surveys/:id/reports/export`    | CSV (default) or JSON download of raw responses (default) or aggregate question summaries.       |
+| GET    | `/api/v1/surveys/:id/reports/export`    | CSV, XLSX, or JSON download of raw responses (default) or aggregate question summaries.          |
+| GET    | `/api/v1/surveys/:id/responses/export`  | Alias for raw response export with the same filters and formats.                                 |
 
 Every endpoint accepts the same filter set: `from`, `to`, `channel`,
 `campaignId`, `surveyVersionId`, `completionStatus`. Aggregations are scoped

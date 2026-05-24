@@ -18,6 +18,18 @@ const DEFAULT_PAGINATION = Object.freeze({
   totalPages: 1,
 });
 
+const saveDownload = ({ blob, filename }) => {
+  if (typeof document === 'undefined' || typeof URL === 'undefined') return;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename || 'download';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
 const cleanQuery = (filters, pagination) => {
   const params = {
     page: pagination.page,
@@ -38,6 +50,9 @@ export const useContactsStore = defineStore('contacts', {
     pagination: { ...DEFAULT_PAGINATION },
     isLoadingContacts: false,
     isLoadingGroups: false,
+    isImportingContacts: false,
+    isExportingContacts: false,
+    importJob: null,
     lastError: null,
   }),
 
@@ -126,6 +141,60 @@ export const useContactsStore = defineStore('contacts', {
     async deleteContactHard(id) {
       await contactService.remove(id, { hard: true });
       this.contacts = this.contacts.filter((c) => c.id !== id);
+    },
+
+    async uploadContactImport(file) {
+      this.isImportingContacts = true;
+      this.lastError = null;
+      try {
+        const data = await contactService.createImport(file);
+        this.importJob = data?.job ?? null;
+        return this.importJob;
+      } catch (err) {
+        this.lastError = err?.message ?? 'Unable to upload contact import';
+        throw err;
+      } finally {
+        this.isImportingContacts = false;
+      }
+    },
+
+    async saveContactImportMapping(id, payload) {
+      const data = await contactService.updateImportMapping(id, payload);
+      this.importJob = data?.job ?? this.importJob;
+      return this.importJob;
+    },
+
+    async confirmContactImport(id) {
+      this.isImportingContacts = true;
+      try {
+        const data = await contactService.confirmImport(id);
+        this.importJob = data?.job ?? this.importJob;
+        await this.fetchContacts();
+        return this.importJob;
+      } finally {
+        this.isImportingContacts = false;
+      }
+    },
+
+    async downloadContactImportErrors(id) {
+      const download = await contactService.downloadImportErrors(id);
+      saveDownload(download);
+      return download;
+    },
+
+    async downloadContacts(format = 'csv') {
+      this.isExportingContacts = true;
+      try {
+        const download = await contactService.exportContacts({
+          ...cleanQuery(this.filters, { ...this.pagination, page: 1, limit: 50000 }),
+          format,
+          limit: 50000,
+        });
+        saveDownload(download);
+        return download;
+      } finally {
+        this.isExportingContacts = false;
+      }
     },
 
     async createGroup(payload) {

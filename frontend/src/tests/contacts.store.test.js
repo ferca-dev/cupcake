@@ -128,4 +128,31 @@ describe('contacts store', () => {
     expect(store.groups).toHaveLength(0);
     expect(store.contacts[0].groupIds).toEqual(['group-2']);
   });
+
+  it('uploads a contact import as multipart form data', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          job: {
+            id: 'import-1',
+            status: 'previewed',
+            headers: ['email'],
+            suggestedMapping: { email: 'email' },
+            counts: { totalRows: 1 },
+          },
+        },
+      }),
+    );
+
+    const store = useContactsStore();
+    const file = new File(['email\nada@example.com'], 'contacts.csv', { type: 'text/csv' });
+    const job = await store.uploadContactImport(file);
+
+    expect(job.id).toBe('import-1');
+    expect(store.importJob.id).toBe('import-1');
+    expect(fetchMock.mock.calls[0][0]).toContain('/contacts/imports');
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+    expect(fetchMock.mock.calls[0][1].body).toBeInstanceOf(FormData);
+  });
 });

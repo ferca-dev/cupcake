@@ -74,6 +74,25 @@ deployment. Every item must be either checked off or explicitly waived
 - [ ] TTL index on `refresh_tokens.expiresAt` is active. Expired records are
       purged automatically.
 
+## Background workers
+
+- [ ] At least one `pnpm worker` process is running per host. The API alone
+      cannot send campaigns or fire scheduled reminders.
+- [ ] Worker process is supervised (systemd, Kubernetes Deployment,
+      PM2…) so SIGTERM/SIGKILL trigger a restart. The worker reclaims
+      crashed locks automatically after `JOB_LOCK_TIMEOUT_MS`.
+- [ ] Monitor `GET /api/v1/admin/jobs/stats` (or the underlying Mongo
+      collection) for `dead_letter` growth. A non-empty dead-letter queue
+      requires operator triage.
+- [ ] Scheduled jobs (low-balance / renewal reminders, media cleanup) are
+      visible in the jobs collection with a `recurrence` value. If they
+      disappear after a redeploy, verify the worker process is running and
+      that no incompatible env override is masking the calendar-day dedupe
+      key.
+
+See [`docs/background-jobs.md`](background-jobs.md) for the full
+operations runbook.
+
 ## Smoke test
 
 After every deploy, run the manual checks described in

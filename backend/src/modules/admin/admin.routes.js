@@ -8,6 +8,7 @@ import * as dashboardController from '../dashboard/dashboard.controller.js';
 import * as tokenAdminController from '../tokens/token-admin.controller.js';
 import * as paymentAdminController from '../payments/admin-payment.controller.js';
 import * as planAdminController from '../plans/plan-admin.controller.js';
+import * as jobAdminController from '../jobs/job-admin.controller.js';
 
 /**
  * Single Express router that owns every `/api/v1/admin/*` endpoint. We mount
@@ -77,6 +78,12 @@ adminRouter.post(
   paymentAdminController.triggerLowBalanceReminders,
 );
 adminRouter.post('/payments/reminders/renewals', paymentAdminController.triggerRenewalReminders);
+
+// Background jobs (queue visibility + retry).
+adminRouter.get('/jobs', jobAdminController.listJobs);
+adminRouter.get('/jobs/stats', jobAdminController.getJobStats);
+adminRouter.get('/jobs/:id', jobAdminController.getJob);
+adminRouter.post('/jobs/:id/retry', jobAdminController.retryJob);
 
 // Plans, feature gates, and tenant assignment
 adminRouter.get('/plans', planAdminController.listPlans);

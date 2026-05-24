@@ -13,6 +13,7 @@ import {
   sanitizeInput,
   createGlobalRateLimiter,
 } from './common/middlewares/index.js';
+import { registerAllProcessors } from './modules/jobs/processors/index.js';
 
 /**
  * Creates and configures the Express application. The factory pattern keeps
@@ -21,6 +22,13 @@ import {
  */
 export const createApp = () => {
   const env = loadEnv();
+
+  // Make sure every job type is wired before the HTTP layer goes online.
+  // In the test suite (which uses the inline driver) this is also what
+  // makes enqueue-from-controller cycles complete synchronously inside a
+  // request.
+  registerAllProcessors();
+
   const app = express();
 
   app.disable('x-powered-by');

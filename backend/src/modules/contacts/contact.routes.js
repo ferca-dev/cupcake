@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import * as contactController from './contact.controller.js';
+import { parseContactImportUpload } from './contact-import-upload.middleware.js';
 import { authenticate } from '../../common/middlewares/authenticate.js';
 import { requirePermission, requireTenantContext } from '../../common/middlewares/authorize.js';
 import { PERMISSIONS } from '../../common/auth/roles.js';
@@ -23,15 +24,46 @@ contactsRouter.post(
 );
 
 contactsRouter.post(
-  '/import',
+  '/imports',
   requirePermission(PERMISSIONS.CONTACTS_MANAGE),
-  contactController.requestContactImport,
+  parseContactImportUpload,
+  contactController.createContactImport,
 );
 
 contactsRouter.get(
-  '/imports/:id/report',
+  '/imports/:id',
   requirePermission(PERMISSIONS.CONTACTS_MANAGE),
-  contactController.getContactImportReport,
+  contactController.getContactImport,
+);
+
+contactsRouter.post(
+  '/imports/:id/preview',
+  requirePermission(PERMISSIONS.CONTACTS_MANAGE),
+  contactController.previewContactImport,
+);
+
+contactsRouter.put(
+  '/imports/:id/mapping',
+  requirePermission(PERMISSIONS.CONTACTS_MANAGE),
+  contactController.updateContactImportMapping,
+);
+
+contactsRouter.post(
+  '/imports/:id/confirm',
+  requirePermission(PERMISSIONS.CONTACTS_MANAGE),
+  contactController.confirmContactImport,
+);
+
+contactsRouter.get(
+  '/imports/:id/errors',
+  requirePermission(PERMISSIONS.CONTACTS_MANAGE),
+  contactController.downloadContactImportErrors,
+);
+
+contactsRouter.get(
+  '/export',
+  requirePermission(PERMISSIONS.CONTACTS_MANAGE),
+  contactController.exportContacts,
 );
 
 contactsRouter.get(

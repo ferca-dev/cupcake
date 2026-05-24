@@ -34,7 +34,8 @@ All endpoints sit under `/api/v1/surveys/:id/reports/` and require the
 | GET    | `/:id/reports/drop-off`  | Page-level and field-level reach counts based on the published schema.                            |
 | GET    | `/:id/reports/timing`    | Average, median, min, max, p25, p75, trimmed mean, duration buckets, hourly/weekday distribution. |
 | GET    | `/:id/reports/versions`  | List of versions with response counts and current-published flag.                                 |
-| GET    | `/:id/reports/export`    | CSV or JSON download (responses or aggregate question summaries).                                 |
+| GET    | `/:id/reports/export`    | CSV, XLSX, or JSON download (responses or aggregate question summaries).                          |
+| GET    | `/:id/responses/export`  | Alias for raw response exports; accepts the same filters and formats.                             |
 
 ## Shared Filters
 
@@ -108,15 +109,18 @@ schemas.
 - Reports query the live collections directly. For very large datasets the
   caller should rely on filters (date range, channel, version) to keep the
   working set bounded — there is no materialised report cache yet.
-- The `export` endpoint streams a single in-memory CSV/JSON document and is
+- The `export` endpoint streams a single in-memory CSV/XLSX/JSON document and is
   capped at `limit` rows (default 10000, max 50000). A streaming export
   pipeline is a candidate for a future phase.
 
-## CSV Export
+## CSV and XLSX Export
 
 The CSV serialiser lives in `report.csv.js` and follows RFC-4180: quoted
 cells, doubled internal quotes, CRLF line endings, and JSON-stringified
 arrays/objects so checkbox group answers survive the round trip.
+
+XLSX exports use the same column descriptors and row values as CSV exports,
+with one worksheet per downloaded file.
 
 - `?type=responses` (default) produces one row per response with one column
   per schema field plus delivery/channel metadata.

@@ -6,6 +6,7 @@ import { Response } from '../responses/response.model.js';
 import { CampaignRecipient } from '../campaigns/campaign-recipient.model.js';
 import { ValidationError, NotFoundError } from '../../common/errors/index.js';
 import { buildCsv } from './report.csv.js';
+import { buildXlsx } from '../../common/utils/tabular-export.js';
 import { assertFeature, assertQuota, consumeMonthlyQuota } from '../plans/plan.service.js';
 import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
 
@@ -1196,6 +1197,13 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
         body: JSON.stringify({ columns, rows }, null, 2),
       };
     }
+    if (options.format === 'xlsx') {
+      return {
+        format: 'xlsx',
+        filename: `survey-${survey.slug}-questions-${Date.now()}.xlsx`,
+        body: buildXlsx(columns, rows, { sheetName: 'Questions' }),
+      };
+    }
     return {
       format: 'csv',
       filename: `survey-${survey.slug}-questions-${Date.now()}.csv`,
@@ -1276,6 +1284,15 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
       format: 'json',
       filename: `survey-${survey.slug}-responses-${Date.now()}.json`,
       body: JSON.stringify({ columns, rows, version: version?.versionNumber ?? null }, null, 2),
+    };
+  }
+  if (options.format === 'xlsx') {
+    return {
+      format: 'xlsx',
+      filename: `survey-${survey.slug}-responses-${Date.now()}.xlsx`,
+      body: buildXlsx(columns, rows, {
+        sheetName: `Responses v${version?.versionNumber ?? 'draft'}`,
+      }),
     };
   }
   return {

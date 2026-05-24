@@ -891,6 +891,29 @@ describe('GET /api/v1/surveys/:id/reports/export', () => {
     expect(blueRow.optionCount).toBe(1);
   });
 
+  it('exports responses as XLSX through the response export alias', async () => {
+    const { tenant, user } = await createTenantWithAdmin({
+      tenantName: 'Acme',
+      email: 'acme@test.local',
+    });
+    const { survey, version } = await seedSurvey({ tenantId: tenant._id, ownerId: user._id });
+    await createResponse({
+      tenantId: tenant._id,
+      survey,
+      version,
+      answers: [{ fieldId: 'field_rating', key: 'rating', type: 'rating', value: 5 }],
+    });
+    const token = await login('acme@test.local');
+    const response = await request(app)
+      .get(`/api/v1/surveys/${survey._id}/responses/export`)
+      .query({ format: 'xlsx' })
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toMatch(/spreadsheetml/);
+    expect(response.headers['content-disposition']).toMatch(/responses-/);
+  });
+
   it('refuses to export responses for a survey owned by another tenant', async () => {
     await createTenantWithAdmin({ tenantName: 'Acme', email: 'acme@test.local' });
     const beta = await createTenantWithAdmin({ tenantName: 'Beta', email: 'beta@test.local' });

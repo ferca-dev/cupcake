@@ -15,6 +15,7 @@ import {
   AppCard,
   AppInput,
   AppLoader,
+  AppModal,
   AppSelect,
   AppTable,
 } from '../../components/ui/index.js';
@@ -28,6 +29,36 @@ const editingContact = ref(null);
 const isSubmitting = ref(false);
 const serverError = ref('');
 const serverDetails = ref([]);
+const pageError = ref('');
+const isImportModalOpen = ref(false);
+const importFile = ref(null);
+const importJob = ref(null);
+const importMapping = ref({});
+const importDedupeKeys = ref(['email', 'phone', 'whatsappPhone']);
+const importUpdateExisting = ref(true);
+const importError = ref('');
+
+const importFields = Object.freeze([
+  { key: 'fullName', labelKey: 'contacts.importExport.fields.fullName' },
+  { key: 'firstName', labelKey: 'contacts.importExport.fields.firstName' },
+  { key: 'lastName', labelKey: 'contacts.importExport.fields.lastName' },
+  { key: 'email', labelKey: 'contacts.importExport.fields.email' },
+  { key: 'phone', labelKey: 'contacts.importExport.fields.phone' },
+  { key: 'whatsappPhone', labelKey: 'contacts.importExport.fields.whatsappPhone' },
+  { key: 'tags', labelKey: 'contacts.importExport.fields.tags' },
+  { key: 'groups', labelKey: 'contacts.importExport.fields.groups' },
+  { key: 'metadata', labelKey: 'contacts.importExport.fields.metadata' },
+  { key: 'status', labelKey: 'contacts.importExport.fields.status' },
+  { key: 'emailConsent', labelKey: 'contacts.importExport.fields.emailConsent' },
+  { key: 'smsConsent', labelKey: 'contacts.importExport.fields.smsConsent' },
+  { key: 'whatsappConsent', labelKey: 'contacts.importExport.fields.whatsappConsent' },
+]);
+
+const dedupeOptions = Object.freeze([
+  { key: 'email', labelKey: 'contacts.importExport.fields.email' },
+  { key: 'phone', labelKey: 'contacts.importExport.fields.phone' },
+  { key: 'whatsappPhone', labelKey: 'contacts.importExport.fields.whatsappPhone' },
+]);
 
 const columns = computed(() => [
   { key: 'fullName', label: t('contacts.list.columns.name') },
@@ -60,6 +91,11 @@ const groupOptions = computed(() => [
 ]);
 
 const rows = computed(() => store.contacts);
+const mappingOptions = computed(() => [
+  { value: '', label: t('contacts.importExport.notMapped') },
+  ...(importJob.value?.headers ?? []).map((header) => ({ value: header, label: header })),
+]);
+const importCounts = computed(() => importJob.value?.counts ?? {});
 
 const refresh = async () => {
   try {
@@ -81,6 +117,21 @@ const openCreate = () => {
   serverError.value = '';
   serverDetails.value = [];
   isModalOpen.value = true;
+};
+
+const openImport = () => {
+  importFile.value = null;
+  importJob.value = null;
+  importMapping.value = {};
+  importDedupeKeys.value = ['email', 'phone', 'whatsappPhone'];
+  importUpdateExisting.value = true;
+  importError.value = '';
+  isImportModalOpen.value = true;
+};
+
+const closeImport = () => {
+  if (store.isImportingContacts) return;
+  isImportModalOpen.value = false;
 };
 
 const openEdit = (contact) => {
@@ -129,6 +180,56 @@ const hardDelete = async (contact) => {
   await store.deleteContactHard(contact.id);
 };
 
+const setImportFile = (event) => {
+  importFile.value = event.target.files?.[0] ?? null;
+};
+
+const uploadImport = async () => {
+  if (!importFile.value) return;
+  importError.value = '';
+  try {
+    const job = await store.uploadContactImport(importFile.value);
+    importJob.value = job;
+    importMapping.value = { ...(job?.suggestedMapping ?? {}) };
+    importDedupeKeys.value = job?.dedupeKeys?.length
+      ? [...job.dedupeKeys]
+      : ['email', 'phone', 'whatsappPhone'];
+    importUpdateExisting.value = job?.updateExisting !== false;
+  } catch (err) {
+    importError.value = err?.message ?? t('contacts.importExport.uploadFailed');
+  }
+};
+
+const confirmImport = async () => {
+  if (!importJob.value?.id) return;
+  importError.value = '';
+  try {
+    const dedupeKeys = importDedupeKeys.value.length ? importDedupeKeys.value : ['email'];
+    await store.saveContactImportMapping(importJob.value.id, {
+      mapping: importMapping.value,
+      dedupeKeys,
+      updateExisting: importUpdateExisting.value,
+    });
+    importJob.value = await store.confirmContactImport(importJob.value.id);
+  } catch (err) {
+    importError.value = err?.message ?? t('contacts.importExport.confirmFailed');
+  }
+};
+
+const downloadImportErrors = async () => {
+  if (!importJob.value?.id) return;
+  await store.downloadContactImportErrors(importJob.value.id);
+};
+
+const exportContacts = async (format) => {
+  pageError.value = '';
+  try {
+    await store.downloadContacts(format);
+  } catch (err) {
+    pageError.value = err?.message ?? t('contacts.importExport.exportFailed');
+  }
+};
+
 const statusVariant = (status) => {
   switch (status) {
     case 'active':
@@ -173,10 +274,30 @@ const consentVariant = (status) => {
         <h2>{{ t('contacts.list.title') }}</h2>
         <p>{{ t('contacts.list.subtitle') }}</p>
       </div>
-      <AppButton @click="openCreate">{{ t('contacts.list.newContact') }}</AppButton>
+      <div class="contacts__header-actions">
+        <AppButton
+          variant="secondary"
+          :loading="store.isExportingContacts"
+          @click="exportContacts('csv')"
+        >
+          {{ t('contacts.importExport.exportCsv') }}
+        </AppButton>
+        <AppButton
+          variant="secondary"
+          :loading="store.isExportingContacts"
+          @click="exportContacts('xlsx')"
+        >
+          {{ t('contacts.importExport.exportXlsx') }}
+        </AppButton>
+        <AppButton variant="secondary" @click="openImport">
+          {{ t('contacts.importExport.import') }}
+        </AppButton>
+        <AppButton @click="openCreate">{{ t('contacts.list.newContact') }}</AppButton>
+      </div>
     </header>
 
     <AppAlert v-if="store.lastError" variant="error">{{ store.lastError }}</AppAlert>
+    <AppAlert v-if="pageError" variant="error">{{ pageError }}</AppAlert>
 
     <AppCard padded>
       <template #title>{{ t('contacts.list.filters.title') }}</template>
@@ -299,6 +420,117 @@ const consentVariant = (status) => {
       @submit="handleSubmit"
       @close="closeModal"
     />
+
+    <AppModal
+      v-model="isImportModalOpen"
+      :title="t('contacts.importExport.importTitle')"
+      size="lg"
+      @close="closeImport"
+    >
+      <div class="contacts__import">
+        <AppAlert v-if="importError" variant="error">{{ importError }}</AppAlert>
+
+        <div class="contacts__upload-row">
+          <label class="contacts__file-field">
+            <span>{{ t('contacts.importExport.fileLabel') }}</span>
+            <input
+              type="file"
+              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              @change="setImportFile"
+            />
+          </label>
+          <AppButton
+            variant="secondary"
+            :disabled="!importFile"
+            :loading="store.isImportingContacts && !importJob"
+            @click="uploadImport"
+          >
+            {{ t('contacts.importExport.preview') }}
+          </AppButton>
+        </div>
+
+        <template v-if="importJob">
+          <div class="contacts__import-summary">
+            <AppBadge variant="info">{{ importJob.status }}</AppBadge>
+            <span>{{
+              t('contacts.importExport.totalRows', { count: importCounts.totalRows ?? 0 })
+            }}</span>
+            <span v-if="importJob.file?.originalName">{{ importJob.file.originalName }}</span>
+          </div>
+
+          <div v-if="importJob.sampleRows?.length" class="contacts__sample">
+            <table>
+              <thead>
+                <tr>
+                  <th v-for="header in importJob.headers" :key="header">{{ header }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(sample, index) in importJob.sampleRows" :key="index">
+                  <td v-for="header in importJob.headers" :key="header">
+                    {{ sample[header] || '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="contacts__mapping">
+            <AppSelect
+              v-for="field in importFields"
+              :key="field.key"
+              v-model="importMapping[field.key]"
+              :label="t(field.labelKey)"
+              :options="mappingOptions"
+            />
+          </div>
+
+          <div class="contacts__import-options">
+            <label>
+              <input v-model="importUpdateExisting" type="checkbox" />
+              {{ t('contacts.importExport.updateExisting') }}
+            </label>
+            <div class="contacts__dedupe">
+              <span>{{ t('contacts.importExport.dedupeBy') }}</span>
+              <label v-for="option in dedupeOptions" :key="option.key">
+                <input v-model="importDedupeKeys" type="checkbox" :value="option.key" />
+                {{ t(option.labelKey) }}
+              </label>
+            </div>
+          </div>
+
+          <div v-if="importJob.status === 'completed'" class="contacts__import-result">
+            <span>{{
+              t('contacts.importExport.created', { count: importCounts.createdRows ?? 0 })
+            }}</span>
+            <span>{{
+              t('contacts.importExport.updated', { count: importCounts.updatedRows ?? 0 })
+            }}</span>
+            <span>{{
+              t('contacts.importExport.rejected', { count: importCounts.rejectedRows ?? 0 })
+            }}</span>
+          </div>
+        </template>
+      </div>
+
+      <template #footer>
+        <AppButton variant="ghost" @click="closeImport">{{ t('common.close') }}</AppButton>
+        <AppButton
+          v-if="importJob?.errorReportAvailable"
+          variant="secondary"
+          @click="downloadImportErrors"
+        >
+          {{ t('contacts.importExport.downloadErrors') }}
+        </AppButton>
+        <AppButton
+          :disabled="!importJob || importJob.status === 'completed'"
+          :loading="store.isImportingContacts && Boolean(importJob)"
+          @click="confirmImport"
+        >
+          {{ t('contacts.importExport.confirm') }}
+        </AppButton>
+      </template>
+    </AppModal>
   </section>
 </template>
 
@@ -325,6 +557,13 @@ const consentVariant = (status) => {
   color: var(--color-text-muted);
 }
 
+.contacts__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 .contacts__filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -348,5 +587,80 @@ const consentVariant = (status) => {
   display: inline-flex;
   gap: var(--space-2);
   justify-content: flex-end;
+}
+
+.contacts__import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.contacts__upload-row,
+.contacts__import-summary,
+.contacts__import-options,
+.contacts__import-result,
+.contacts__dedupe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.contacts__file-field {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.contacts__file-field input {
+  color: var(--color-text);
+}
+
+.contacts__sample {
+  max-height: 12rem;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.contacts__sample table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.contacts__sample th,
+.contacts__sample td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.contacts__mapping {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.contacts__import-options label,
+.contacts__dedupe label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 720px) {
+  .contacts__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .contacts__header-actions {
+    justify-content: flex-start;
+  }
 }
 </style>

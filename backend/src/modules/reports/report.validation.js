@@ -53,7 +53,7 @@ export const reportFilterSchema = z
 export const reportExportQuerySchema = z
   .object({
     type: z.enum(['responses', 'questions']).optional().default('responses'),
-    format: z.enum(['csv', 'json']).optional().default('csv'),
+    format: z.enum(['csv', 'xlsx', 'json']).optional().default('csv'),
     limit: z.coerce.number().int().min(1).max(50000).optional().default(10000),
   })
   .strict()

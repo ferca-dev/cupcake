@@ -7,8 +7,11 @@ import {
   createContactGroupSchema,
   updateContactGroupSchema,
   listContactGroupsQuerySchema,
-  contactImportPlaceholderSchema,
+  contactImportMappingSchema,
+  contactExportQuerySchema,
 } from './contact.validation.js';
+import * as contactImportService from './contact-import.service.js';
+import * as contactExportService from './contact-export.service.js';
 import { asyncHandler } from '../../common/utils/async-handler.js';
 import { sendSuccess } from '../../common/responses/index.js';
 import { HTTP_STATUS } from '../../common/constants/index.js';
@@ -91,32 +94,94 @@ export const deleteContact = asyncHandler(async (req, res) => {
   });
 });
 
-export const requestContactImport = asyncHandler(async (req, res) => {
-  const payload = contactImportPlaceholderSchema.parse(req.body ?? undefined) ?? {};
+export const createContactImport = asyncHandler(async (req, res) => {
   const tenantId = resolveTenantId(req);
-  const job = await contactService.requestContactImport({
+  const job = await contactImportService.createContactImport({
+    tenantId,
+    actor: req.user,
+    file: req.file,
+    ...requestContext(req),
+  });
+  return sendSuccess(res, {
+    statusCode: HTTP_STATUS.CREATED,
+    data: { job },
+    message: 'Contact import uploaded',
+  });
+});
+
+export const getContactImport = asyncHandler(async (req, res) => {
+  const tenantId = resolveTenantId(req);
+  const job = await contactImportService.getContactImport({
+    id: req.params.id,
+    tenantId,
+  });
+  return sendSuccess(res, {
+    data: { job },
+    message: 'Contact import fetched',
+  });
+});
+
+export const previewContactImport = asyncHandler(async (req, res) => {
+  const tenantId = resolveTenantId(req);
+  const job = await contactImportService.previewContactImport({
+    id: req.params.id,
+    tenantId,
+  });
+  return sendSuccess(res, { data: { job }, message: 'Contact import preview fetched' });
+});
+
+export const updateContactImportMapping = asyncHandler(async (req, res) => {
+  const payload = contactImportMappingSchema.parse(req.body ?? {});
+  const tenantId = resolveTenantId(req);
+  const job = await contactImportService.updateContactImportMapping({
+    id: req.params.id,
     tenantId,
     actor: req.user,
     payload,
     ...requestContext(req),
   });
+  return sendSuccess(res, { data: { job }, message: 'Contact import mapping saved' });
+});
+
+export const confirmContactImport = asyncHandler(async (req, res) => {
+  const tenantId = resolveTenantId(req);
+  const job = await contactImportService.confirmContactImport({
+    id: req.params.id,
+    tenantId,
+    actor: req.user,
+    ...requestContext(req),
+  });
   return sendSuccess(res, {
     statusCode: HTTP_STATUS.ACCEPTED,
     data: { job },
-    message: 'Bulk import is temporarily unavailable',
+    message: 'Contact import processed',
   });
 });
 
-export const getContactImportReport = asyncHandler(async (req, res) => {
+export const downloadContactImportErrors = asyncHandler(async (req, res) => {
   const tenantId = resolveTenantId(req);
-  const report = await contactService.getContactImportReport({
+  const report = await contactImportService.buildContactImportErrorReport({
     id: req.params.id,
     tenantId,
   });
-  return sendSuccess(res, {
-    data: { report },
-    message: 'Bulk import is temporarily unavailable',
-  });
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="${report.filename}"`);
+  res.set('Cache-Control', 'no-store');
+  return res.status(200).send(report.body);
+});
+
+export const exportContacts = asyncHandler(async (req, res) => {
+  const query = contactExportQuerySchema.parse(req.query ?? {});
+  const tenantId = resolveTenantId(req);
+  const exported = await contactExportService.buildContactExport({ tenantId, query });
+  const contentType =
+    exported.format === 'xlsx'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'text/csv; charset=utf-8';
+  res.set('Content-Type', contentType);
+  res.set('Content-Disposition', `attachment; filename="${exported.filename}"`);
+  res.set('Cache-Control', 'no-store');
+  return res.status(200).send(exported.body);
 });
 
 // --- Groups ----------------------------------------------------------------

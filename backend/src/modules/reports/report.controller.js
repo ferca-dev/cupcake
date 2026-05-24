@@ -5,6 +5,7 @@ import { sendSuccess } from '../../common/responses/index.js';
 import { AuthorizationError } from '../../common/errors/index.js';
 
 const resolveTenantId = (req) => req.tenantContext?.tenantId ?? null;
+const resolveSurveyId = (req) => req.params.id ?? req.params.surveyId;
 
 const requireTenant = (req) => {
   const tenantId = resolveTenantId(req);
@@ -22,7 +23,7 @@ export const getOverview = asyncHandler(async (req, res) => {
   const tenantId = requireTenant(req);
   const filters = parseFilters(req);
   const report = await reportService.getOverviewReport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
   });
@@ -33,7 +34,7 @@ export const getChannels = asyncHandler(async (req, res) => {
   const tenantId = requireTenant(req);
   const filters = parseFilters(req);
   const report = await reportService.getChannelsReport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
   });
@@ -44,7 +45,7 @@ export const getQuestions = asyncHandler(async (req, res) => {
   const tenantId = requireTenant(req);
   const filters = parseFilters(req);
   const report = await reportService.getQuestionsReport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
   });
@@ -55,7 +56,7 @@ export const getTrends = asyncHandler(async (req, res) => {
   const tenantId = requireTenant(req);
   const filters = parseFilters(req);
   const report = await reportService.getTrendsReport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
   });
@@ -66,7 +67,7 @@ export const getDropOff = asyncHandler(async (req, res) => {
   const tenantId = requireTenant(req);
   const filters = parseFilters(req);
   const report = await reportService.getDropOffReport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
   });
@@ -77,7 +78,7 @@ export const getTiming = asyncHandler(async (req, res) => {
   const tenantId = requireTenant(req);
   const filters = parseFilters(req);
   const report = await reportService.getTimingReport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
   });
@@ -88,7 +89,7 @@ export const getVersions = asyncHandler(async (req, res) => {
   const tenantId = requireTenant(req);
   const filters = parseFilters(req);
   const report = await reportService.getVersionsReport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
   });
@@ -104,14 +105,18 @@ export const exportReport = asyncHandler(async (req, res) => {
   const options = reportExportQuerySchema.parse({ type, format, limit });
 
   const exported = await reportService.buildExport({
-    surveyId: req.params.id,
+    surveyId: resolveSurveyId(req),
     tenantId,
     filters,
     options,
   });
 
   const contentType =
-    exported.format === 'json' ? 'application/json; charset=utf-8' : 'text/csv; charset=utf-8';
+    exported.format === 'json'
+      ? 'application/json; charset=utf-8'
+      : exported.format === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'text/csv; charset=utf-8';
 
   res.set('Content-Type', contentType);
   res.set('Content-Disposition', `attachment; filename="${exported.filename}"`);

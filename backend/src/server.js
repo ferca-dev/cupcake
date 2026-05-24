@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { logger } from './common/utils/logger.js';
+import { registerAllProcessors } from './modules/jobs/processors/index.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -20,6 +21,13 @@ const start = async () => {
     logger.fatal({ err }, 'Aborting startup: database connection failed');
     process.exit(1);
   }
+
+  // Register every job processor before the HTTP listener starts. The API
+  // uses the inline driver only in tests; in production the same handlers
+  // are claimed and executed by the separate `pnpm run worker` process, but
+  // registering them here keeps the inline-driver fallback safe and lets
+  // tests run without a dedicated worker boot path.
+  registerAllProcessors();
 
   const app = createApp();
   const server = app.listen(env.APP_PORT, () => {

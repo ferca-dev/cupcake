@@ -42,3 +42,16 @@ process.env.MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN ?? '
 process.env.MERCADOPAGO_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET ?? '';
 process.env.PAYMENT_REMINDER_DAYS_BEFORE = process.env.PAYMENT_REMINDER_DAYS_BEFORE ?? '3';
 process.env.LOW_TOKEN_BALANCE_THRESHOLD = process.env.LOW_TOKEN_BALANCE_THRESHOLD ?? '100';
+
+// Background job defaults for tests. `inline` runs handlers synchronously
+// inside the enqueueing process so the existing campaign/payment tests can
+// continue to observe job side-effects in the same HTTP response without
+// spinning up a worker. Tests that need to exercise the polling driver
+// explicitly opt in by overriding JOB_QUEUE_DRIVER and resetting the env
+// cache.
+process.env.JOB_QUEUE_DRIVER = process.env.JOB_QUEUE_DRIVER ?? 'inline';
+process.env.JOB_CONCURRENCY = process.env.JOB_CONCURRENCY ?? '2';
+process.env.JOB_MAX_ATTEMPTS = process.env.JOB_MAX_ATTEMPTS ?? '3';
+process.env.JOB_BACKOFF_SECONDS = process.env.JOB_BACKOFF_SECONDS ?? '1';
+process.env.JOB_POLL_INTERVAL_MS = process.env.JOB_POLL_INTERVAL_MS ?? '100';
+process.env.JOB_LOCK_TIMEOUT_MS = process.env.JOB_LOCK_TIMEOUT_MS ?? '5000';

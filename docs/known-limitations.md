@@ -27,22 +27,6 @@ unavailable`. No password can be changed through this code path.
   `passwordHash` via `bcrypt` and clearing `lastLoginAt`). This is intentional
   break-glass access for the closed beta.
 
-## Bulk contact import
-
-- **Endpoints**: `POST /api/v1/contacts/import`, `GET /api/v1/contacts/imports/:id/report`.
-- **Behaviour today**: the request endpoint accepts the payload, records an
-  audit event, and responds `202` with a job whose status is
-  `pending_implementation`. The report endpoint always returns the same empty
-  report shape with `placeholder: true`. No CSV/XLSX is parsed and no contacts
-  are created. Suppression state is already stored separately from contacts,
-  so a future import or a manual re-create of a contact cannot clear an active
-  suppression entry for the same tenant/channel/address.
-- **Why deferred**: a real import requires file upload handling, schema
-  detection, duplicate resolution policy, and a background job runner. None of
-  those infrastructures exist yet.
-- **Workaround**: contacts can be created one by one through the UI or via
-  `POST /api/v1/contacts`.
-
 ## Messaging provider follow-ups
 
 - **Modules**: `EMAIL_PROVIDER`, `SMS_PROVIDER`, `WHATSAPP_PROVIDER` (env vars).
@@ -120,14 +104,16 @@ unavailable`. No password can be changed through this code path.
 - **Module**: `media`.
 - **Behaviour today**: deleted `media_assets` documents are flipped to
   `status: 'deleted'` and the underlying object stays in the configured
-  store. There is no background job that prunes deleted records or detects
-  orphaned uploads that were never referenced. Signed URLs use a 15-minute
-  expiry for S3 reads and are not rotated for long-lived public references.
-- **Why deferred**: an asynchronous cleanup job needs a job runner and a
-  retention policy decision that has not been signed off.
-- **Workaround**: operators can manually delete object keys from the storage
-  provider after the matching `media_assets` document has been
-  `status: 'deleted'` for the agreed retention window.
+  store until the `media.cleanup` background job runs (weekly via the job
+  scheduler, callable on demand via `purgeDeletedImages`). Signed URLs use
+  a 15-minute expiry for S3 reads and are not rotated for long-lived
+  public references.
+- **Why partial**: orphan detection for uploads that were never referenced
+  still needs a retention policy decision.
+- **Workaround**: the recurring `media.cleanup` job removes assets marked
+  `deleted` for longer than 30 days. Operators can also requeue it from
+  `POST /api/v1/admin/jobs/:id/retry` after a manual reset, or run it
+  ad-hoc via the worker's scheduled task.
 
 ## Soft-limit notifications
 
