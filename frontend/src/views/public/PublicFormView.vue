@@ -53,9 +53,7 @@ const captchaProvider = computed(() => antiAbuse.value?.captcha?.provider ?? 'no
 const captchaRequired = computed(() => Boolean(antiAbuse.value?.captcha?.required));
 const captchaSiteKey = computed(() => antiAbuse.value?.captcha?.siteKey ?? null);
 const honeypotEnabled = computed(() => Boolean(antiAbuse.value?.honeypot?.enabled));
-const honeypotFieldName = computed(
-  () => antiAbuse.value?.honeypot?.fieldName ?? 'website_url',
-);
+const honeypotFieldName = computed(() => antiAbuse.value?.honeypot?.fieldName ?? 'website_url');
 
 const captchaToken = ref(null);
 const captchaError = ref(false);
@@ -173,6 +171,54 @@ const onSubmit = async () => {
   }
 
   submitState.submitting = true;
+
+  const locationCapture = survey.value?.settings?.locationCapture || {};
+  const locMode = locationCapture.mode || 'optional';
+  let locationMetadata = null;
+
+  if (locMode === 'required' || locMode === 'optional') {
+    locationMetadata = await new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve({ permissionStatus: 'unavailable', source: 'browser' });
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracyMeters: pos.coords.accuracy,
+            permissionStatus: 'granted',
+            source: 'browser',
+            capturedAt: new Date(pos.timestamp).toISOString(),
+          });
+        },
+        (err) => {
+          resolve({
+            permissionStatus: err.code === 1 ? 'denied' : 'unavailable',
+            source: 'browser',
+          });
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      );
+    });
+
+    if (locMode === 'required') {
+      const hasCoords = typeof locationMetadata.latitude === 'number';
+      const minAccuracy = locationCapture.minimumAccuracyMeters || 100;
+      if (
+        (!hasCoords && !locationCapture.allowIpFallback) ||
+        (hasCoords && locationMetadata.accuracyMeters > minAccuracy)
+      ) {
+        submitState.error =
+          locationCapture.requiredMessage ||
+          t('publicForm.locationRequired', 'Location is required to submit this survey.');
+        submitState.submitting = false;
+        return;
+      }
+    }
+  }
+
   try {
     const payload = {
       answers: serializeAnswers(schema.value, answerState),
@@ -180,6 +226,9 @@ const onSubmit = async () => {
         startedAt: startedAt.value ? startedAt.value.toISOString() : undefined,
       },
     };
+    if (locationMetadata) {
+      payload.metadata.location = locationMetadata;
+    }
     if (submissionToken.value) {
       payload.submissionToken = submissionToken.value;
     }
@@ -280,12 +329,7 @@ onUnmounted(() => {
 
     <template v-else-if="survey">
       <header class="public-form__header">
-        <img
-          v-if="branding?.logoUrl"
-          class="public-form__logo"
-          :src="branding.logoUrl"
-          alt=""
-        />
+        <img v-if="branding?.logoUrl" class="public-form__logo" :src="branding.logoUrl" alt="" />
         <h1 class="public-form__title">{{ survey.title }}</h1>
         <p v-if="survey.description" class="public-form__description">{{ survey.description }}</p>
       </header>
@@ -351,11 +395,7 @@ onUnmounted(() => {
           <template #error>{{ t('publicForm.captchaError') }}</template>
         </PublicCaptchaWidget>
 
-        <AppAlert
-          v-if="captchaError"
-          variant="error"
-          data-testid="public-form-captcha-error"
-        >
+        <AppAlert v-if="captchaError" variant="error" data-testid="public-form-captcha-error">
           {{ t('publicForm.captchaError') }}
         </AppAlert>
 

@@ -57,6 +57,21 @@ export const submitResponseSchema = z
       .object({
         startedAt: z.string().datetime({ offset: true }).optional(),
         completionTimeSeconds: z.number().int().min(0).max(86_400).optional(),
+        location: z
+          .object({
+            latitude: z.number().min(-90).max(90).nullable().optional(),
+            longitude: z.number().min(-180).max(180).nullable().optional(),
+            accuracyMeters: z.number().min(0).nullable().optional(),
+            permissionStatus: z
+              .enum(['granted', 'denied', 'prompt', 'unavailable'])
+              .nullable()
+              .optional(),
+            source: z.enum(['browser', 'ip', 'surveyor_required']).nullable().optional(),
+            capturedAt: z.string().datetime({ offset: true }).nullable().optional(),
+          })
+          .strict()
+          .nullable()
+          .optional(),
       })
       .strict()
       .optional()

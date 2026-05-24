@@ -120,6 +120,12 @@ const navItems = computed(() => {
       visible: auth.hasPermission('surveyor.responses.submit'),
     },
     {
+      to: { name: 'surveyor.activity' },
+      label: t('surveyorActivity.nav'),
+      icon: 'M4 19V5m0 14h16M8 16V9m4 7V7m4 9v-5M7 5h10l2 3',
+      visible: auth.hasPermission('surveyor.activity.view'),
+    },
+    {
       to: { name: 'templates.list' },
       label: t('templates.list.title'),
       icon: 'M4 4h7v7H4Zm9 0h7v4h-7Zm0 6h7v10h-7ZM4 13h7v7H4Z',

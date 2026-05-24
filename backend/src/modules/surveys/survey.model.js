@@ -60,6 +60,24 @@ const responseLimitSchema = new Schema(
   { _id: false },
 );
 
+const locationCaptureSchema = new Schema(
+  {
+    mode: {
+      type: String,
+      enum: ['disabled', 'optional', 'required', 'required_for_surveyors'],
+      default: 'optional',
+    },
+    minimumAccuracyMeters: { type: Number, default: 100 },
+    allowIpFallback: { type: Boolean, default: true },
+    storeRawIp: { type: Boolean, default: false },
+    requiredMessage: {
+      type: String,
+      default: 'Location is required to submit this survey.',
+    },
+  },
+  { _id: false },
+);
+
 const surveySettingsSchema = new Schema(
   {
     allowAnonymous: { type: Boolean, default: true },
@@ -79,6 +97,7 @@ const surveySettingsSchema = new Schema(
     collectIp: { type: Boolean, default: false },
     responseLimit: { type: responseLimitSchema, default: () => ({}) },
     antiAbuse: { type: antiAbuseSettingsSchema, default: () => ({}) },
+    locationCapture: { type: locationCaptureSchema, default: () => ({}) },
   },
   { _id: false },
 );

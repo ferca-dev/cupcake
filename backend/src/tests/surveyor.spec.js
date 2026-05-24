@@ -13,6 +13,7 @@ import { hashPassword } from '../common/auth/passwords.js';
 import { ROLES } from '../common/auth/roles.js';
 import { TEAM_AUDIT_ACTIONS } from '../modules/team/team.service.js';
 import { SURVEYOR_AUDIT_ACTIONS } from '../modules/surveyor/surveyor.service.js';
+import { SURVEYOR_ACTIVITY_AUDIT_ACTIONS } from '../modules/surveyor-activity/surveyor-activity.service.js';
 
 let app;
 
@@ -40,6 +41,16 @@ const sampleSchema = (fields = [sampleField()]) => ({
   sections: [],
   logicRules: [],
   layout: { mode: 'single_page', showProgress: true },
+});
+
+const sampleLocation = (overrides = {}) => ({
+  latitude: 25.6866,
+  longitude: -100.3161,
+  accuracyMeters: 25,
+  permissionStatus: 'granted',
+  source: 'browser',
+  capturedAt: new Date('2026-05-24T12:00:00.000Z').toISOString(),
+  ...overrides,
 });
 
 const createTenantWithAdmin = async ({ tenantName = 'Acme', email = 'admin@acme.test' } = {}) => {
@@ -245,6 +256,7 @@ describe('surveyor verified response submission', () => {
       .set(auth(token))
       .send({
         answers: [{ fieldId: 'field_name', value: 'Jane Surveyor' }],
+        metadata: { location: sampleLocation() },
       });
 
     expect(submit.status).toBe(201);
@@ -274,16 +286,39 @@ describe('surveyor verified response submission', () => {
   it('still validates required schema fields', async () => {
     const { tenant, user } = await createTenantWithAdmin();
     const surveyor = await createSurveyor({ tenant });
-    const { survey } = await publishSurvey({ tenant, user });
+    const { survey } = await publishSurvey({
+      tenant,
+      user,
+      settings: { locationCapture: { minimumAccuracyMeters: 500 } },
+    });
 
     const token = await login(surveyor.email);
     const submit = await request(app)
       .post(`/api/v1/surveyor/surveys/${survey._id.toString()}/responses`)
       .set(auth(token))
-      .send({ answers: [] });
+      .send({ answers: [], metadata: { location: sampleLocation() } });
 
     expect(submit.status).toBe(422);
     expect(submit.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('blocks surveyor submission without geolocation server-side', async () => {
+    const { tenant, user } = await createTenantWithAdmin();
+    const surveyor = await createSurveyor({ tenant });
+    const { survey } = await publishSurvey({
+      tenant,
+      user,
+      settings: { locationCapture: { mode: 'disabled' } },
+    });
+
+    const token = await login(surveyor.email);
+    const submit = await request(app)
+      .post(`/api/v1/surveyor/surveys/${survey._id.toString()}/responses`)
+      .set(auth(token))
+      .send({ answers: [{ fieldId: 'field_name', value: 'Jane Surveyor' }] });
+
+    expect(submit.status).toBe(409);
+    expect(submit.body.error.message).toMatch(/Location is required/i);
   });
 });
 
@@ -306,5 +341,155 @@ describe('surveyor permission boundaries', () => {
     expect(campaigns.status).toBe(403);
     expect(billing.status).toBe(403);
     expect(team.status).toBe(403);
+  });
+});
+
+describe('surveyor fieldwork monitoring', () => {
+  const submitSurveyorResponse = async ({ survey, token, value, location = sampleLocation() }) =>
+    request(app)
+      .post(`/api/v1/surveyor/surveys/${survey._id.toString()}/responses`)
+      .set(auth(token))
+      .send({
+        answers: [{ fieldId: 'field_name', value }],
+        metadata: { location },
+      });
+
+  it('aggregates surveyor activity, map points, and suspicious location indicators', async () => {
+    const { tenant, user } = await createTenantWithAdmin();
+    const surveyor = await createSurveyor({ tenant });
+    const { survey } = await publishSurvey({
+      tenant,
+      user,
+      settings: { locationCapture: { minimumAccuracyMeters: 500 } },
+    });
+    const adminToken = await login(user.email);
+    const surveyorToken = await login(surveyor.email);
+
+    const ok = await submitSurveyorResponse({
+      survey,
+      token: surveyorToken,
+      value: 'First',
+      location: sampleLocation(),
+    });
+    const lowAccuracy = await submitSurveyorResponse({
+      survey,
+      token: surveyorToken,
+      value: 'Second',
+      location: sampleLocation({ latitude: 25.687, accuracyMeters: 250 }),
+    });
+
+    expect(ok.status).toBe(201);
+    expect(lowAccuracy.status).toBe(201);
+
+    const summary = await request(app)
+      .get('/api/v1/surveyor-activity/summary')
+      .set(auth(adminToken));
+    expect(summary.status).toBe(200);
+    expect(summary.body.data.summary.totals.responses).toBe(2);
+    expect(summary.body.data.summary.totals.withLocation).toBe(2);
+    expect(summary.body.data.summary.totals.lowAccuracy).toBe(1);
+    expect(summary.body.data.summary.bySurveyor[0]).toMatchObject({
+      surveyorId: surveyor._id.toString(),
+      totalResponses: 2,
+    });
+
+    const map = await request(app).get('/api/v1/surveyor-activity/map').set(auth(adminToken));
+    expect(map.status).toBe(200);
+    expect(map.body.data.points).toHaveLength(2);
+    expect(map.body.data.points[0]).toHaveProperty('latitude');
+
+    const responses = await request(app)
+      .get('/api/v1/surveyor-activity/responses?locationStatus=low_accuracy')
+      .set(auth(adminToken));
+    expect(responses.status).toBe(200);
+    expect(responses.body.data.items).toHaveLength(1);
+    expect(responses.body.data.items[0].suspiciousFlags).toContain('low_accuracy');
+
+    const audit = await AuditLog.findOne({
+      action: SURVEYOR_ACTIVITY_AUDIT_ACTIONS.LOCATION_VIEWED,
+      tenantId: tenant._id,
+    });
+    expect(audit).not.toBeNull();
+  });
+
+  it('rejects surveyor activity access for surveyors and enforces tenant isolation', async () => {
+    const acme = await createTenantWithAdmin();
+    const beta = await createTenantWithAdmin({
+      tenantName: 'Beta',
+      email: 'admin@beta.test',
+    });
+    const acmeSurveyor = await createSurveyor({ tenant: acme.tenant });
+    const betaSurveyor = await createSurveyor({
+      tenant: beta.tenant,
+      email: 'surveyor@beta.test',
+    });
+    const { survey: acmeSurvey } = await publishSurvey({
+      tenant: acme.tenant,
+      user: acme.user,
+      slug: 'acme-monitoring',
+    });
+    const { survey: betaSurvey } = await publishSurvey({
+      tenant: beta.tenant,
+      user: beta.user,
+      slug: 'beta-monitoring',
+    });
+    const acmeSurveyorToken = await login(acmeSurveyor.email);
+    const betaSurveyorToken = await login(betaSurveyor.email);
+    const acmeAdminToken = await login(acme.user.email);
+
+    await submitSurveyorResponse({
+      survey: acmeSurvey,
+      token: acmeSurveyorToken,
+      value: 'Acme',
+      location: sampleLocation({ latitude: 25.1 }),
+    });
+    await submitSurveyorResponse({
+      survey: betaSurvey,
+      token: betaSurveyorToken,
+      value: 'Beta',
+      location: sampleLocation({ latitude: 26.1 }),
+    });
+
+    const forbidden = await request(app)
+      .get('/api/v1/surveyor-activity/summary')
+      .set(auth(acmeSurveyorToken));
+    expect(forbidden.status).toBe(403);
+
+    const summary = await request(app)
+      .get('/api/v1/surveyor-activity/summary')
+      .set(auth(acmeAdminToken));
+    expect(summary.status).toBe(200);
+    expect(summary.body.data.summary.totals.responses).toBe(1);
+    expect(summary.body.data.summary.bySurveyor[0].surveyorId).toBe(acmeSurveyor._id.toString());
+  });
+
+  it('exports surveyor activity and records an audit event', async () => {
+    const { tenant, user } = await createTenantWithAdmin();
+    const surveyor = await createSurveyor({ tenant });
+    const { survey } = await publishSurvey({ tenant, user });
+    const adminToken = await login(user.email);
+    const surveyorToken = await login(surveyor.email);
+
+    await submitSurveyorResponse({
+      survey,
+      token: surveyorToken,
+      value: 'Exported',
+      location: sampleLocation(),
+    });
+
+    const exported = await request(app)
+      .get('/api/v1/surveyor-activity/export?format=csv')
+      .set(auth(adminToken));
+
+    expect(exported.status).toBe(200);
+    expect(exported.headers['content-type']).toContain('text/csv');
+    expect(exported.text).toContain('Surveyor name');
+    expect(exported.text).toContain('Field Surveyor');
+
+    const audit = await AuditLog.findOne({
+      action: SURVEYOR_ACTIVITY_AUDIT_ACTIONS.LOCATION_EXPORTED,
+      tenantId: tenant._id,
+    });
+    expect(audit).not.toBeNull();
   });
 });

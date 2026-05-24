@@ -98,13 +98,57 @@ const onSubmit = async () => {
   }
 
   submitState.submitting = true;
+
+  const locationCapture =
+    survey.value?.version?.settings?.locationCapture ||
+    survey.value?.settings?.locationCapture ||
+    {};
+  let locationMetadata = null;
+
+  locationMetadata = await new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({ permissionStatus: 'unavailable', source: 'browser' });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracyMeters: pos.coords.accuracy,
+          permissionStatus: 'granted',
+          source: 'browser',
+          capturedAt: new Date(pos.timestamp).toISOString(),
+        });
+      },
+      (err) => {
+        resolve({ permissionStatus: err.code === 1 ? 'denied' : 'unavailable', source: 'browser' });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  });
+
+  const hasCoords = typeof locationMetadata.latitude === 'number';
+  const minAccuracy = locationCapture.minimumAccuracyMeters || 100;
+  if (!hasCoords || (hasCoords && locationMetadata.accuracyMeters > minAccuracy)) {
+    submitState.error =
+      locationCapture.requiredMessage ||
+      t('publicForm.locationRequired', 'Location is required to submit this survey.');
+    submitState.submitting = false;
+    return;
+  }
+
   try {
-    const result = await surveyorService.submitResponse(surveyId.value, {
+    const payload = {
       answers: serializeAnswers(schema.value, answerState),
       metadata: {
         startedAt: startedAt.value ? startedAt.value.toISOString() : undefined,
       },
-    });
+    };
+    if (locationMetadata) {
+      payload.metadata.location = locationMetadata;
+    }
+    const result = await surveyorService.submitResponse(surveyId.value, payload);
     submittedResult.value = result?.response ?? null;
   } catch (err) {
     if (err instanceof ApiError && err.isValidation && applyServerValidationDetails(err.details)) {

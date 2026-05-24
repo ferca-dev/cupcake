@@ -53,6 +53,9 @@ This folder splits the original `promt.md` master prompt into execution-ready ph
 - `phase-37-surveyor-fieldwork-monitoring.md`: mandatory surveyor location, surveyor response tracking, fieldwork monitoring, maps, and supervisor reports.
 - `phase-38-post-surveyor-location-hardening.md`: final verification for surveyor permissions, location enforcement, privacy, reporting, and regression coverage.
 
+Implemented documentation for Phase 37 monitoring lives in
+`docs/fieldwork-monitoring.md`.
+
 ## Execution rule
 
 If a phase reveals that a previous phase missed infrastructure or a cross-cutting concern, fix the earlier foundation in the same branch before continuing. Do not work around missing architecture with duplicated code.

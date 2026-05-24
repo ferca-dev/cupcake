@@ -74,6 +74,11 @@ Stored responses are distinguishable:
 Raw response exports include `Respondent type` and `Submitted by user ID`
 columns so analysts can separate public and verified field responses.
 
+Fieldwork monitoring for surveyor productivity and response locations is
+documented in [fieldwork-monitoring.md](fieldwork-monitoring.md). Monitoring
+uses submitted response events only; the application does not collect
+continuous tracking.
+
 ## Audit trail
 
 Relevant actions:
@@ -83,6 +88,8 @@ Relevant actions:
 - `team.member.role_changed`
 - `auth.login.success` with `metadata.role`
 - `surveyor.response.submitted`
+- `surveyor_activity.location.viewed`
+- `surveyor_activity.location.exported`
 
 ## Frontend
 

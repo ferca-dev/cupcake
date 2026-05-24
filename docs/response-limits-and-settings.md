@@ -77,11 +77,28 @@ Surveyor responses are persisted with `respondentType: "surveyor"` and
 
 ### Privacy notes
 
-- IP collection only happens when `collectIp` is enabled on the survey.
-- Even when IPs are collected, only the hash (`ipHash`) is used for
-  deduplication.
+- IP collection behaviour is dictated by `locationCapture.storeRawIp` (or legacy `collectIp`). If disabled, the raw IP is NEVER stored on the response metadata; it is only hashed (`ipHash`) in-memory and then discarded if needed for deduplication.
+- Geolocation metadata is governed by `locationCapture.mode`. Browsers will prompt users for permission before coordinates are captured.
+- When geolocation is denied, the `permissionStatus` is recorded as `denied`. If `allowIpFallback` is enabled, the system might rely on the server IP.
 - The device key is fully random; no fingerprinting (canvas, fonts, screen
   size, etc.) is performed.
+
+## Location Capture (Phase 36)
+
+The application supports explicit geolocation capture through the browser's Geolocation API.
+
+### Configuration
+
+`survey.settings.locationCapture` determines the behaviour:
+
+- `mode` (`disabled`, `optional`, `required`, `required_for_surveyors`): Determines whether location is collected and if it blocks submission.
+- `minimumAccuracyMeters` (default `100`): The maximum acceptable accuracy radius.
+- `allowIpFallback` (default `true`): If `true`, a public respondent can submit without browser coordinates by falling back to their IP address location.
+- `storeRawIp` (default `false`): If `true`, the raw IPv4/IPv6 is stored in `metadata.ip`. If `false`, only the hash is preserved for deduplication rules.
+
+### Surveyor Enforcement
+
+Submissions coming from authenticated surveyors (`/api/v1/surveyor/*`) enforce a strict requirement. A surveyor MUST submit valid browser coordinates with an accuracy better than `minimumAccuracyMeters`, even when public respondents use `disabled` or optional location capture. `allowIpFallback` does not apply to surveyors.
 
 ## Account settings API
 

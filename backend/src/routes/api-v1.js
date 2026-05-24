@@ -20,6 +20,7 @@ import { brandingRouter } from '../modules/branding/branding.routes.js';
 import { customDomainRouter } from '../modules/domains/custom-domain.routes.js';
 import { teamRouter, teamPublicRouter } from '../modules/team/team.routes.js';
 import { surveyorRouter } from '../modules/surveyor/surveyor.routes.js';
+import { surveyorActivityRouter } from '../modules/surveyor-activity/surveyor-activity.routes.js';
 import {
   publicSuppressionRouter,
   suppressionRouter,
@@ -96,6 +97,11 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/surveyor/surveys',
         '/api/v1/surveyor/surveys/:id',
         '/api/v1/surveyor/surveys/:id/responses',
+        '/api/v1/surveyor-activity/summary',
+        '/api/v1/surveyor-activity/responses',
+        '/api/v1/surveyor-activity/map',
+        '/api/v1/surveyor-activity/export',
+        '/api/v1/surveyor-activity/surveyors/:userId',
         '/api/v1/public/unsubscribe/email',
         '/api/v1/public/unsubscribe/email/:token',
         '/api/v1/dashboard/summary',
@@ -216,6 +222,7 @@ apiV1Router.use('/campaigns', campaignsRouter);
 apiV1Router.use('/public', publicSuppressionRouter);
 apiV1Router.use('/public', publicFormsRouter);
 apiV1Router.use('/surveyor', surveyorRouter);
+apiV1Router.use('/surveyor-activity', surveyorActivityRouter);
 apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminRouter);
 apiV1Router.use('/settings', settingsRouter);

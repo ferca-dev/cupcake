@@ -39,6 +39,7 @@ import SettingsView from '../views/settings/SettingsView.vue';
 import TeamManagementView from '../views/team/TeamManagementView.vue';
 import SurveyorSurveyListView from '../views/surveyor/SurveyorSurveyListView.vue';
 import SurveyorResponseView from '../views/surveyor/SurveyorResponseView.vue';
+import SurveyorActivityView from '../views/surveyor/SurveyorActivityView.vue';
 import DeveloperHomeView from '../views/developer/DeveloperHomeView.vue';
 import AcceptInvitationView from '../views/auth/AcceptInvitationView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
@@ -128,6 +129,16 @@ export const routes = [
           requiresAuth: true,
           permissions: ['surveyor.responses.submit'],
           layout: 'reading',
+        },
+      },
+      {
+        path: 'surveyor-activity',
+        name: 'surveyor.activity',
+        component: SurveyorActivityView,
+        meta: {
+          title: 'Fieldwork monitoring',
+          requiresAuth: true,
+          permissions: ['surveyor.activity.view'],
         },
       },
       {

@@ -29,6 +29,22 @@ const metadataSchema = new Schema(
     // campaign reporting (which keeps `contactId` for every linked response)
     // never collides with the partial-unique index.
     contactKeyHash: { type: String, default: null },
+    location: {
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+      accuracyMeters: { type: Number, default: null },
+      permissionStatus: {
+        type: String,
+        enum: ['granted', 'denied', 'prompt', 'unavailable', null],
+        default: null,
+      },
+      source: {
+        type: String,
+        enum: ['browser', 'ip', 'surveyor_required', null],
+        default: null,
+      },
+      capturedAt: { type: Date, default: null },
+    },
     startedAt: { type: Date, default: null },
     submittedAt: { type: Date, required: true },
     completionTimeSeconds: { type: Number, default: null },

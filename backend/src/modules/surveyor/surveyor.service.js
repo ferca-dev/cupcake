@@ -44,7 +44,18 @@ const toSurveyorSurvey = (survey, version = null) => ({
         id: version._id.toString(),
         versionNumber: version.versionNumber,
         schema: version.schema,
-        settings: version.settings ?? null,
+        settings: {
+          locationCapture: {
+            mode: version.settings?.locationCapture?.mode ?? 'optional',
+            minimumAccuracyMeters: version.settings?.locationCapture?.minimumAccuracyMeters ?? 100,
+            allowIpFallback: Boolean(version.settings?.locationCapture?.allowIpFallback ?? true),
+            storeRawIp: Boolean(version.settings?.locationCapture?.storeRawIp ?? false),
+            requiredMessage:
+              version.settings?.locationCapture?.requiredMessage ??
+              'Location is required to submit this survey.',
+          },
+          ...(version.settings || {}),
+        },
       }
     : null,
   acceptingResponses: survey.status === 'published',
@@ -119,6 +130,25 @@ export const submitSurveyorResponse = async ({
     throw new ConflictError('This survey is no longer accepting responses.');
   }
 
+  const locationCapture =
+    version.settings?.locationCapture || survey.settings?.locationCapture || {};
+  const loc = payload?.metadata?.location || {};
+  const hasCoords = typeof loc.latitude === 'number' && typeof loc.longitude === 'number';
+
+  if (!hasCoords) {
+    throw new ConflictError(
+      locationCapture.requiredMessage || 'Location is required to submit this survey.',
+    );
+  } else if (
+    typeof loc.accuracyMeters === 'number' &&
+    typeof locationCapture.minimumAccuracyMeters === 'number' &&
+    loc.accuracyMeters > locationCapture.minimumAccuracyMeters
+  ) {
+    throw new ConflictError(
+      locationCapture.requiredMessage || 'Location is required to submit this survey.',
+    );
+  }
+
   await assertQuota({ tenantId: tenantId.toString(), quotaKey: QUOTA_KEYS.RESPONSES_MONTHLY });
 
   const answers = validateAnswersAgainstSchema(version.schema, payload?.answers ?? []);
@@ -142,10 +172,18 @@ export const submitSurveyorResponse = async ({
       submittedByUserId: actor.id,
       answers,
       metadata: {
-        ip: survey.settings?.collectIp ? truncate(ip, 64) : null,
+        ip: locationCapture.storeRawIp ? truncate(ip, 64) : null,
         ipHash: null,
         deviceKeyHash: null,
         contactKeyHash: null,
+        location: {
+          latitude: loc.latitude ?? null,
+          longitude: loc.longitude ?? null,
+          accuracyMeters: loc.accuracyMeters ?? null,
+          permissionStatus: loc.permissionStatus ?? null,
+          source: loc.source ?? null,
+          capturedAt: loc.capturedAt ? new Date(loc.capturedAt) : null,
+        },
         userAgent: truncate(userAgent, 500),
         startedAt,
         submittedAt,

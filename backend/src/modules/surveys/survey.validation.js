@@ -35,6 +35,16 @@ const antiAbuseSchema = z
   })
   .strict();
 
+const locationCaptureSchema = z
+  .object({
+    mode: z.enum(['disabled', 'optional', 'required', 'required_for_surveyors']).optional(),
+    minimumAccuracyMeters: z.number().int().min(1).max(10_000).optional(),
+    allowIpFallback: z.boolean().optional(),
+    storeRawIp: z.boolean().optional(),
+    requiredMessage: z.string().trim().max(500).optional(),
+  })
+  .strict();
+
 const settingsSchema = z
   .object({
     allowAnonymous: z.boolean().optional(),
@@ -46,6 +56,7 @@ const settingsSchema = z
     collectIp: z.boolean().optional(),
     responseLimit: responseLimitSchema.optional(),
     antiAbuse: antiAbuseSchema.optional(),
+    locationCapture: locationCaptureSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

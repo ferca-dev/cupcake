@@ -90,6 +90,15 @@ const toPublicSchemaView = async ({ survey, version, domain = null }) => {
         pausedMessage: effectiveSettings.pausedMessage ?? null,
         oneResponsePerContact: Boolean(effectiveSettings.oneResponsePerContact),
         collectIp: Boolean(effectiveSettings.collectIp),
+        locationCapture: {
+          mode: effectiveSettings.locationCapture?.mode ?? 'optional',
+          minimumAccuracyMeters: effectiveSettings.locationCapture?.minimumAccuracyMeters ?? 100,
+          allowIpFallback: Boolean(effectiveSettings.locationCapture?.allowIpFallback ?? true),
+          storeRawIp: Boolean(effectiveSettings.locationCapture?.storeRawIp ?? false),
+          requiredMessage:
+            effectiveSettings.locationCapture?.requiredMessage ??
+            'Location is required to submit this survey.',
+        },
         responseLimit: toPublicResponseLimit(responseLimit),
         antiAbuse,
       },
@@ -265,11 +274,36 @@ export const submitPublicResponse = async ({
     userAgent,
   });
 
+  const locationCapture = effectiveSettings.locationCapture || {};
+  const loc = payload?.metadata?.location || {};
+  const hasCoords = typeof loc.latitude === 'number' && typeof loc.longitude === 'number';
+
+  if (locationCapture.mode === 'required') {
+    if (!hasCoords) {
+      if (!locationCapture.allowIpFallback) {
+        throw new ConflictError(
+          locationCapture.requiredMessage || 'Location is required to submit this survey.',
+        );
+      }
+    } else if (
+      typeof loc.accuracyMeters === 'number' &&
+      typeof locationCapture.minimumAccuracyMeters === 'number' &&
+      loc.accuracyMeters > locationCapture.minimumAccuracyMeters
+    ) {
+      throw new ConflictError(
+        locationCapture.requiredMessage || 'Location is required to submit this survey.',
+      );
+    }
+  }
+
   // Enforce the tenant's monthly response quota before validating the body so
   // a tenant that has run out of their plan does not consume CPU for nothing.
   // The error code is machine-readable so the public form can surface a
   // "this workspace has reached its monthly limit" message.
-  await assertQuota({ tenantId: survey.tenantId.toString(), quotaKey: QUOTA_KEYS.RESPONSES_MONTHLY });
+  await assertQuota({
+    tenantId: survey.tenantId.toString(),
+    quotaKey: QUOTA_KEYS.RESPONSES_MONTHLY,
+  });
 
   const answers = validateAnswersAgainstSchema(version.schema, payload?.answers ?? []);
 
@@ -339,10 +373,20 @@ export const submitPublicResponse = async ({
       submissionToken: submissionToken ?? null,
       answers,
       metadata: {
-        ip: effectiveSettings.collectIp ? truncate(ip, 64) : null,
-        ipHash: limitContext.ipHash,
+        ip: locationCapture.storeRawIp ? truncate(ip, 64) : null,
+        ipHash:
+          limitContext.ipHash ||
+          hashResponseKey({ kind: 'ip', surveyId: surveyIdString, value: ip }),
         deviceKeyHash: limitContext.deviceKeyHash,
         contactKeyHash: limitContext.contactKeyHash,
+        location: {
+          latitude: loc.latitude ?? null,
+          longitude: loc.longitude ?? null,
+          accuracyMeters: loc.accuracyMeters ?? null,
+          permissionStatus: loc.permissionStatus ?? null,
+          source: loc.source ?? null,
+          capturedAt: loc.capturedAt ? new Date(loc.capturedAt) : null,
+        },
         userAgent: truncate(userAgent, 500),
         startedAt: startedAt && !Number.isNaN(startedAt.getTime()) ? startedAt : null,
         submittedAt,
