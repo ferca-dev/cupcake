@@ -17,6 +17,8 @@ import {
 } from '../../common/errors/index.js';
 import { logger } from '../../common/utils/logger.js';
 import { sendPaymentNotification } from './notification.service.js';
+import { publishWebhookEvent } from '../developer/webhook-publisher.js';
+import { WEBHOOK_EVENT_TYPES } from '../developer/webhook-events.js';
 
 export const PAYMENT_AUDIT_ACTIONS = Object.freeze({
   PREFERENCE_CREATED: 'payments.preference.created',
@@ -447,6 +449,28 @@ const handlePaymentEvent = async ({ provider, paymentId, event }) => {
 
   // Fire the matching email exactly once.
   await dispatchPaymentLifecycleEmail({ transaction, fetched });
+
+  // Emit the outbound webhook event for tenants subscribed to
+  // `payment.approved`. We only fire for approved payments so integrations
+  // can match the wallet credit; rejections and refunds have their own
+  // surface via the admin payments view.
+  if (fetched.status === 'approved') {
+    await publishWebhookEvent({
+      type: WEBHOOK_EVENT_TYPES.PAYMENT_APPROVED,
+      tenantId: transaction.tenantId,
+      eventId: `payment.approved:${transaction._id.toString()}`,
+      data: {
+        paymentId: transaction._id.toString(),
+        providerPaymentId: transaction.providerPaymentId ?? null,
+        externalReference: transaction.externalReference ?? null,
+        amountMinor: transaction.amountMinor,
+        currency: transaction.currency,
+        purpose: transaction.purpose,
+        tokensCredited: transaction.tokensToCredit ?? 0,
+        approvedAt: transaction.paidAt ?? new Date(),
+      },
+    });
+  }
 
   return { status: 'processed', transaction };
 };

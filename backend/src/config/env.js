@@ -131,6 +131,31 @@ const envSchema = z
     S3_SECRET_ACCESS_KEY: z.string().trim().default(''),
     S3_PUBLIC_BASE_URL: optionalUrl,
 
+    // Public form anti-abuse. The CAPTCHA provider is intentionally `none` by
+    // default so local development and the seed flow keep working without
+    // external credentials. `turnstile` requires both Turnstile keys and is
+    // asserted below so a misconfigured environment fails fast at boot.
+    PUBLIC_FORM_CAPTCHA_PROVIDER: z.enum(['none', 'turnstile']).default('none'),
+    TURNSTILE_SITE_KEY: z.string().trim().default(''),
+    TURNSTILE_SECRET_KEY: z.string().trim().default(''),
+    // Hidden field name embedded in the rendered public form. Real browsers
+    // never see it (it is off-screen and aria-hidden) so any non-empty value
+    // is treated as a bot submission.
+    PUBLIC_FORM_HONEYPOT_FIELD: stringWithDefault('website_url'),
+    // Sliding-window rate limits used by the anti-abuse service. These guard
+    // the public submission endpoint by IP, survey, tenant, and submission
+    // token. `0` disables a particular dimension. The defaults are tuned so
+    // legitimate respondents are unaffected.
+    PUBLIC_FORM_RATE_LIMIT_PER_IP_PER_MINUTE: z.coerce.number().int().min(0).default(30),
+    PUBLIC_FORM_RATE_LIMIT_PER_SURVEY_PER_MINUTE: z.coerce.number().int().min(0).default(120),
+    PUBLIC_FORM_RATE_LIMIT_PER_TENANT_PER_MINUTE: z.coerce.number().int().min(0).default(600),
+    PUBLIC_FORM_RATE_LIMIT_PER_TOKEN_PER_MINUTE: z.coerce.number().int().min(0).default(10),
+    // Floor for the time spent on the form before a submission is allowed.
+    // Bots fill and post forms in milliseconds; humans take seconds. The
+    // value is a global floor; surveys can opt for a stricter floor in
+    // their anti-abuse settings.
+    PUBLIC_FORM_MIN_FILL_SECONDS: z.coerce.number().int().min(0).max(600).default(0),
+
     CORS_ORIGIN: stringWithDefault('http://localhost:5173'),
 
     LOG_LEVEL: z
@@ -160,6 +185,17 @@ const envSchema = z
     JOB_POLL_INTERVAL_MS: z.coerce.number().int().min(50).max(60000).default(500),
     // Lock TTL — if a worker dies mid-job the lock is reclaimable after this.
     JOB_LOCK_TIMEOUT_MS: z.coerce.number().int().min(1000).max(3_600_000).default(60_000),
+
+    // Outbound webhook + API key integration surface (Phase 32). The signing
+    // secret feeds the HMAC used to derive `apiKey.secretHash` so rotating it
+    // forces a re-issue of every key. Blank falls back to the JWT access
+    // secret so local development keeps working without extra config.
+    WEBHOOK_SIGNING_SECRET: z.string().trim().default(''),
+    // Per-API-key request quota target. Phase 32 does not yet enforce this
+    // at the middleware level (the global rate limiter still applies); the
+    // value is exposed in env so a future phase can wire it without changing
+    // the configuration contract.
+    API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(60),
   })
   .superRefine((value, ctx) => {
     if (value.APP_ENV === 'production' && value.STORAGE_DRIVER === 'local') {
@@ -189,6 +225,18 @@ const envSchema = z
             code: z.ZodIssueCode.custom,
             path: [key],
             message: `${key} is required when PAYMENT_PROVIDER=mercadopago`,
+          });
+        }
+      }
+    }
+
+    if (value.PUBLIC_FORM_CAPTCHA_PROVIDER === 'turnstile') {
+      for (const key of ['TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY']) {
+        if (!value[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${key} is required when PUBLIC_FORM_CAPTCHA_PROVIDER=turnstile`,
           });
         }
       }

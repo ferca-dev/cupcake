@@ -44,6 +44,15 @@ export const submitResponseSchema = z
       .regex(/^[A-Za-z0-9_-]+$/, 'Device key is malformed')
       .optional(),
     answers: z.array(answerSchema).max(500).default([]),
+    // Cloudflare Turnstile (or future provider) verification token. The
+    // anti-abuse service decides whether a token is required for the target
+    // survey; here we only enforce shape so a malformed token is rejected
+    // before the provider call.
+    captchaToken: z.string().trim().min(1).max(4096).optional(),
+    // Honeypot inputs are recorded under a permissive map so any future
+    // honeypot field name (configurable via env) deserializes without a
+    // schema change. Real browsers leave the value blank; bots fill it.
+    honeypot: z.record(z.string()).optional(),
     metadata: z
       .object({
         startedAt: z.string().datetime({ offset: true }).optional(),

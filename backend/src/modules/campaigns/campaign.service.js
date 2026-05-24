@@ -23,6 +23,8 @@ import {
   buildSuppressionLookup,
   suppressionSkipReason,
 } from '../suppression/suppression.service.js';
+import { publishWebhookEvent } from '../developer/webhook-publisher.js';
+import { WEBHOOK_EVENT_TYPES } from '../developer/webhook-events.js';
 
 // Maps a campaign channel to the plan feature flag that gates it.
 const CHANNEL_FEATURE = Object.freeze({
@@ -692,6 +694,22 @@ export const sendCampaign = async ({
     };
     await campaign.save();
 
+    // Emit the campaign.failed integration event for tenants subscribed to
+    // the outbound webhook. We send before throwing so the event captures
+    // the preflight rejection in the same payload the API caller will see.
+    await publishWebhookEvent({
+      type: WEBHOOK_EVENT_TYPES.CAMPAIGN_FAILED,
+      tenantId: campaign.tenantId,
+      data: {
+        campaignId: campaign._id.toString(),
+        surveyId: campaign.surveyId.toString(),
+        status: campaign.status,
+        reason: 'preflight_rejected',
+        preflightReasons: preflight.reasons,
+        summary: campaign.summary,
+      },
+    });
+
     throw new ConflictError('Campaign cannot be sent', [
       { reasons: preflight.reasons, balance: preflight.balance, totalCost: preflight.totalCost },
     ]);
@@ -771,6 +789,24 @@ export const sendCampaign = async ({
     },
     ip,
     userAgent,
+  });
+
+  // Integration event for tenants subscribed to outbound webhooks. We emit
+  // `campaign.completed` for completed/completed_with_errors so the
+  // integration receiver can decide how strictly to treat partial successes.
+  await publishWebhookEvent({
+    type: WEBHOOK_EVENT_TYPES.CAMPAIGN_COMPLETED,
+    tenantId: campaign.tenantId,
+    data: {
+      campaignId: campaign._id.toString(),
+      surveyId: campaign.surveyId.toString(),
+      status,
+      summary: campaign.summary,
+      tokens: {
+        totalCost: preflight.totalCost,
+        balanceAfter: balanceAfter.balance,
+      },
+    },
   });
 
   return {

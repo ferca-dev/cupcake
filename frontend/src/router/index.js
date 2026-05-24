@@ -13,6 +13,7 @@ import ForgotPasswordView from '../views/auth/ForgotPasswordView.vue';
 import DashboardView from '../views/dashboard/DashboardView.vue';
 import SurveyListView from '../views/surveys/SurveyListView.vue';
 import SurveyBuilderView from '../views/surveys/SurveyBuilderView.vue';
+import SurveySettingsView from '../views/surveys/SurveySettingsView.vue';
 import SurveyStatsView from '../features/dashboard/SurveyStatsView.vue';
 import SurveyReportsView from '../features/reports/SurveyReportsView.vue';
 import ContactListView from '../views/contacts/ContactListView.vue';
@@ -36,6 +37,7 @@ import PlansAdminView from '../views/admin/PlansAdminView.vue';
 import PlanView from '../views/billing/PlanView.vue';
 import SettingsView from '../views/settings/SettingsView.vue';
 import TeamManagementView from '../views/team/TeamManagementView.vue';
+import DeveloperHomeView from '../views/developer/DeveloperHomeView.vue';
 import AcceptInvitationView from '../views/auth/AcceptInvitationView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
@@ -114,6 +116,16 @@ export const routes = [
           requiresAuth: true,
           permissions: ['surveys.update'],
           layout: 'full',
+        },
+      },
+      {
+        path: 'surveys/:id/settings',
+        name: 'surveys.settings',
+        component: SurveySettingsView,
+        meta: {
+          title: 'Survey settings',
+          requiresAuth: true,
+          permissions: ['surveys.update'],
         },
       },
       {
@@ -285,6 +297,16 @@ export const routes = [
         component: TeamManagementView,
         meta: {
           title: 'Team',
+          requiresAuth: true,
+          permissions: ['users.manage'],
+        },
+      },
+      {
+        path: 'developer',
+        name: 'developer.home',
+        component: DeveloperHomeView,
+        meta: {
+          title: 'Developer',
           requiresAuth: true,
           permissions: ['users.manage'],
         },

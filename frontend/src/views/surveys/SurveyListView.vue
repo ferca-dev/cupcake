@@ -118,6 +118,10 @@ const openReports = (surveyId) => {
   router.push({ name: 'surveys.reports', params: { id: surveyId } });
 };
 
+const openSettings = (surveyId) => {
+  router.push({ name: 'surveys.settings', params: { id: surveyId } });
+};
+
 const formatDate = (value) => {
   if (!value) return '—';
   try {
@@ -226,6 +230,9 @@ const copyPublicLink = async (url) => {
             </AppButton>
             <AppButton size="sm" variant="ghost" @click="openReports(row.id)">
               {{ t('surveys.list.reports') }}
+            </AppButton>
+            <AppButton size="sm" variant="ghost" @click="openSettings(row.id)">
+              {{ t('surveys.list.settings') }}
             </AppButton>
           </div>
         </template>

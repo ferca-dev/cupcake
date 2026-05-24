@@ -254,6 +254,8 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
     production-readiness.md         # Pre-deploy checklist
     provider-architecture.md        # Campaign messaging adapter contract
     response-limits-and-settings.md # Response-limit settings (Phase 16)
+    public-form-anti-abuse.md       # Public form anti-abuse, CAPTCHA, honeypot (Phase 31)
+    client-api-and-webhooks.md      # Tenant API keys + outbound webhooks (Phase 32)
     survey-reports.md               # Per-survey statistical reports (Phase 20)
     templates.md                    # Templates module (Phase 11)
     troubleshooting.md              # Local issues, env, seeders, smoke test
@@ -303,6 +305,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/known-limitations.md](docs/known-limitations.md) — features intentionally deferred past Phase 23.
 - [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
 - [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md) — response-limit configuration and account-settings API.
+- [docs/public-form-anti-abuse.md](docs/public-form-anti-abuse.md) — public form anti-abuse stack (CAPTCHA, honeypot, rate limits, audit log).
 - [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
 - [docs/media-storage.md](docs/media-storage.md) — image upload validation, local/S3 storage, and cleanup policy.
 - [docs/team-management.md](docs/team-management.md) — tenant team membership, invitations, and ownership transfer.

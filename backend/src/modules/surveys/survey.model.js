@@ -15,6 +15,37 @@ export const RESPONSE_LIMIT_MODES = Object.freeze([
 
 export const DEFAULT_RESPONSE_LIMIT_MESSAGE = 'This survey has already been answered.';
 
+export const ANTI_ABUSE_SUSPICIOUS_ACTIONS = Object.freeze(['reject', 'flag']);
+
+const antiAbuseSettingsSchema = new Schema(
+  {
+    // When true the public form must include a verified CAPTCHA token.
+    captchaRequired: { type: Boolean, default: false },
+    // When true the rendered form embeds an invisible honeypot field and
+    // rejects any submission whose honeypot value is non-empty.
+    honeypotEnabled: { type: Boolean, default: true },
+    // Floor for "time spent on the form" before a submission is allowed.
+    // null/0 lets the global env floor apply. Set per-survey only when the
+    // tenant needs a stricter bar than the platform default.
+    minFillSeconds: { type: Number, default: null, min: 0, max: 600 },
+    // Per-survey override for the per-IP burst limit. null falls back to the
+    // global env value (`PUBLIC_FORM_RATE_LIMIT_PER_IP_PER_MINUTE`).
+    perIpPerMinute: { type: Number, default: null, min: 0, max: 100_000 },
+    // Per-token override (campaign submission tokens). Same fallback rule.
+    perTokenPerMinute: { type: Number, default: null, min: 0, max: 100_000 },
+    // How the service treats a flagged submission. `reject` (default) blocks
+    // the request and surfaces a generic error. `flag` lets the response
+    // through but writes a `suspicious_submissions` record so abuse can be
+    // reviewed without losing data.
+    suspiciousAction: {
+      type: String,
+      enum: ANTI_ABUSE_SUSPICIOUS_ACTIONS,
+      default: 'reject',
+    },
+  },
+  { _id: false },
+);
+
 const responseLimitSchema = new Schema(
   {
     mode: {
@@ -47,6 +78,7 @@ const surveySettingsSchema = new Schema(
     oneResponsePerContact: { type: Boolean, default: false },
     collectIp: { type: Boolean, default: false },
     responseLimit: { type: responseLimitSchema, default: () => ({}) },
+    antiAbuse: { type: antiAbuseSettingsSchema, default: () => ({}) },
   },
   { _id: false },
 );

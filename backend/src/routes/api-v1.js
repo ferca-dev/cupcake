@@ -21,6 +21,7 @@ import {
   publicSuppressionRouter,
   suppressionRouter,
 } from '../modules/suppression/suppression.routes.js';
+import { developerRouter } from '../modules/developer/developer.routes.js';
 import { sendSuccess } from '../common/responses/index.js';
 import { loadEnv } from '../config/env.js';
 
@@ -173,6 +174,13 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/webhooks/twilio/opt-out',
         '/api/v1/webhooks/sendgrid/events',
         '/api/v1/webhooks/mercadopago',
+        '/api/v1/developer/api-keys',
+        '/api/v1/developer/api-keys/:id/rotate',
+        '/api/v1/developer/api-keys/:id/revoke',
+        '/api/v1/developer/webhooks',
+        '/api/v1/developer/webhooks/:id',
+        '/api/v1/developer/webhooks/:id/deliveries',
+        '/api/v1/developer/webhooks/:id/test',
       ],
     },
     message: 'API metadata',
@@ -201,3 +209,4 @@ apiV1Router.use('/billing', planBillingRouter);
 apiV1Router.use('/team', teamPublicRouter);
 apiV1Router.use('/team', teamRouter);
 apiV1Router.use('/webhooks', webhooksRouter);
+apiV1Router.use('/developer', developerRouter);

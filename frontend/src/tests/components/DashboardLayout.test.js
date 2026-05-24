@@ -41,6 +41,7 @@ const buildRouter = () => {
             meta: { layout: 'reading' },
           },
           { path: 'team', name: 'team.manage', component: Empty },
+          { path: 'developer', name: 'developer.home', component: Empty },
           { path: 'admin', name: 'admin.home', component: Empty },
           { path: 'admin/tenants', name: 'admin.tenants.list', component: Empty },
           {

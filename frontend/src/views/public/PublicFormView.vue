@@ -19,6 +19,7 @@ import {
 import { getOrCreateDeviceKey } from '../../features/public-form/device-key.js';
 import { computeFieldVisibility } from '../../features/logic/logic-engine.js';
 import PublicFieldRenderer from '../../components/public-form/PublicFieldRenderer.vue';
+import PublicCaptchaWidget from '../../components/public-form/PublicCaptchaWidget.vue';
 import PublicThankYouView from './PublicThankYouView.vue';
 import { AppAlert, AppButton } from '../../components/ui/index.js';
 
@@ -41,6 +42,23 @@ const requiresDeviceKey = computed(
   () => responseLimit.value?.deviceKeyRequired === true || limitMode.value === 'one_per_device',
 );
 const limitMessage = computed(() => responseLimit.value?.message || t('publicForm.responseLimit'));
+
+// Anti-abuse configuration the backend exposes for this survey. The renderer
+// uses it to decide whether to mount the CAPTCHA widget and which honeypot
+// field name to embed. Defaults are intentionally permissive — surveys that
+// have not opted into anti-abuse work exactly as before.
+const antiAbuse = computed(() => survey.value?.settings?.antiAbuse ?? null);
+const captchaProvider = computed(() => antiAbuse.value?.captcha?.provider ?? 'none');
+const captchaRequired = computed(() => Boolean(antiAbuse.value?.captcha?.required));
+const captchaSiteKey = computed(() => antiAbuse.value?.captcha?.siteKey ?? null);
+const honeypotEnabled = computed(() => Boolean(antiAbuse.value?.honeypot?.enabled));
+const honeypotFieldName = computed(
+  () => antiAbuse.value?.honeypot?.fieldName ?? 'website_url',
+);
+
+const captchaToken = ref(null);
+const captchaError = ref(false);
+const honeypotValue = ref('');
 
 const loadState = reactive({ loading: true, error: null });
 const submitState = reactive({ submitting: false, error: null });
@@ -117,10 +135,23 @@ const applyServerValidationDetails = (details) => {
   return mapped;
 };
 
+const onCaptchaToken = (token) => {
+  captchaToken.value = typeof token === 'string' && token.length > 0 ? token : null;
+};
+const onCaptchaError = () => {
+  captchaToken.value = null;
+  captchaError.value = true;
+};
+
 const onSubmit = async () => {
   if (!schema.value) return;
   submitState.error = null;
   resetFieldErrors();
+
+  if (captchaRequired.value && !captchaToken.value) {
+    submitState.error = t('publicForm.captchaPending');
+    return;
+  }
 
   const localErrors = validateAnswers(schema.value, answerState, t);
   if (Object.keys(localErrors).length > 0) {
@@ -142,6 +173,14 @@ const onSubmit = async () => {
     }
     if (requiresDeviceKey.value) {
       payload.deviceKey = getOrCreateDeviceKey(slug.value);
+    }
+    if (captchaRequired.value && captchaToken.value) {
+      payload.captchaToken = captchaToken.value;
+    }
+    if (honeypotEnabled.value) {
+      // The honeypot is sent unconditionally so the backend can verify the
+      // field was wired client-side. Real browsers leave it empty.
+      payload.honeypot = { [honeypotFieldName.value]: honeypotValue.value ?? '' };
     }
     const result = await publicFormService.submit(slug.value, payload);
     submittedResult.value = result?.response ?? null;
@@ -227,6 +266,53 @@ watch(slug, (next, prev) => {
           <template #select-placeholder>{{ t('publicForm.selectPlaceholder') }}</template>
         </PublicFieldRenderer>
 
+        <!--
+          Honeypot input. `aria-hidden` plus `tabindex="-1"` keeps it off the
+          tab order and out of the screen reader tree; the visually-hidden
+          wrapper removes it from the layout without using `display: none`
+          (which some bots detect and skip). The label survives for the rare
+          assistive technology that walks the DOM regardless of aria — its
+          copy explicitly tells human readers to leave the field blank.
+        -->
+        <div
+          v-if="honeypotEnabled"
+          class="public-form__honeypot"
+          aria-hidden="true"
+          data-testid="public-form-honeypot"
+        >
+          <label :for="`honeypot-${honeypotFieldName}`">
+            {{ t('publicForm.honeypotLabel') }}
+          </label>
+          <input
+            :id="`honeypot-${honeypotFieldName}`"
+            v-model="honeypotValue"
+            :name="honeypotFieldName"
+            type="text"
+            tabindex="-1"
+            autocomplete="off"
+          />
+        </div>
+
+        <PublicCaptchaWidget
+          v-if="captchaRequired && captchaProvider === 'turnstile'"
+          :provider="captchaProvider"
+          :site-key="captchaSiteKey"
+          data-testid="public-form-captcha"
+          @token-change="onCaptchaToken"
+          @error="onCaptchaError"
+        >
+          <template #loading>{{ t('publicForm.captchaLoading') }}</template>
+          <template #error>{{ t('publicForm.captchaError') }}</template>
+        </PublicCaptchaWidget>
+
+        <AppAlert
+          v-if="captchaError"
+          variant="error"
+          data-testid="public-form-captcha-error"
+        >
+          {{ t('publicForm.captchaError') }}
+        </AppAlert>
+
         <footer class="public-form__footer">
           <AppButton
             type="submit"
@@ -279,5 +365,23 @@ watch(slug, (next, prev) => {
 .public-form__footer {
   display: flex;
   justify-content: flex-end;
+}
+
+/*
+ * Visually hide the honeypot without `display: none` (which some bots use as
+ * a signal to skip the field). Keeping it focusable would defeat the trap,
+ * so the input itself is also `tabindex="-1"` and `aria-hidden` on the
+ * wrapper removes it from the accessibility tree.
+ */
+.public-form__honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

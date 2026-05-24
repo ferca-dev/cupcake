@@ -2,6 +2,7 @@ import { register as registerCampaignSend } from './campaign-send.processor.js';
 import { register as registerPaymentReminders } from './payment-reminders.processor.js';
 import { register as registerMediaCleanup } from './media-cleanup.processor.js';
 import { register as registerDeferred } from './deferred.processors.js';
+import { registerWebhookRetryProcessor } from '../../developer/webhook-retry.processor.js';
 import { clearJobHandlers } from '../job.registry.js';
 
 /**
@@ -9,6 +10,10 @@ import { clearJobHandlers } from '../job.registry.js';
  * (so HTTP handlers can enqueue jobs and have them run via the inline driver
  * during tests) and by `worker.js` (so the polling worker can claim and run
  * the same handlers).
+ *
+ * Real processors are registered AFTER the deferred placeholder set so they
+ * cleanly overwrite the placeholder entry without having to comment it out
+ * piecemeal as new producers go live.
  */
 export const registerAllProcessors = () => {
   // Re-registering is safe because the registry overwrites by type, but we
@@ -19,4 +24,6 @@ export const registerAllProcessors = () => {
   registerPaymentReminders();
   registerMediaCleanup();
   registerDeferred();
+  // Real outbound webhook delivery — overrides the deferred placeholder.
+  registerWebhookRetryProcessor();
 };

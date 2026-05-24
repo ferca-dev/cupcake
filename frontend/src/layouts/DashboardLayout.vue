@@ -180,6 +180,12 @@ const navItems = computed(() => {
       visible: auth.hasPermission('users.manage'),
     },
     {
+      to: { name: 'developer.home' },
+      label: t('developer.nav'),
+      icon: 'M8 6 2 12l6 6m8-12 6 6-6 6M14 4l-4 16',
+      visible: auth.hasPermission('users.manage'),
+    },
+    {
       to: { name: 'settings.account' },
       label: t('settings.nav'),
       icon: 'M12 8a4 4 0 1 0 4 4 4 4 0 0 0-4-4Zm9 4-2 1 1 2-2 2-2-1-1 2h-4l-1-2-2 1-2-2 1-2-2-1v-2l2-1-1-2 2-2 2 1 1-2h4l1 2 2-1 2 2-1 2 2 1Z',

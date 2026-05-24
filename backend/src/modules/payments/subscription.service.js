@@ -8,6 +8,8 @@ import * as tokenRepo from '../tokens/token.repository.js';
 import { resolvePaymentProvider } from './providers/provider.factory.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 import { sendPaymentNotification } from './notification.service.js';
+import { publishWebhookEvent } from '../developer/webhook-publisher.js';
+import { WEBHOOK_EVENT_TYPES } from '../developer/webhook-events.js';
 import { registerSubscriptionHandlers } from './payment.service.js';
 import { Tenant } from '../tenants/tenant.model.js';
 import { User } from '../users/user.model.js';
@@ -654,6 +656,24 @@ const handleAuthorizedPaymentEvent = async ({ provider, authorizedPaymentId, eve
       recipientEmail: subscription.mercadoPagoPayerEmail,
       data: { planName: subscription.planNameSnapshot },
     });
+    if (fetched.status === 'rejected') {
+      // Outbound webhook so integrations can react to a hard subscription
+      // payment failure (pause downstream provisioning, alert ops, etc.).
+      // Recycling retries are excluded — the receiver will get the final
+      // resolution event either way.
+      await publishWebhookEvent({
+        type: WEBHOOK_EVENT_TYPES.SUBSCRIPTION_FAILED,
+        tenantId: subscription.tenantId,
+        eventId: `subscription.failed:${invoice._id.toString()}`,
+        data: {
+          subscriptionId: subscription._id.toString(),
+          invoiceId: invoice._id.toString(),
+          planName: subscription.planNameSnapshot ?? null,
+          failureReason: fetched.rawStatus ?? 'rejected',
+          failedAt: new Date(),
+        },
+      });
+    }
   }
 
   return { status: 'processed', transaction: null };

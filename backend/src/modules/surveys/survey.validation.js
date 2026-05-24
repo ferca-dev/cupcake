@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { SURVEY_STATUSES, RESPONSE_LIMIT_MODES } from './survey.model.js';
+import {
+  SURVEY_STATUSES,
+  RESPONSE_LIMIT_MODES,
+  ANTI_ABUSE_SUSPICIOUS_ACTIONS,
+} from './survey.model.js';
 import { formSchemaSchema } from './form-schema.validator.js';
 
 const slugSchema = z
@@ -20,6 +24,17 @@ const responseLimitSchema = z
   })
   .strict();
 
+const antiAbuseSchema = z
+  .object({
+    captchaRequired: z.boolean().optional(),
+    honeypotEnabled: z.boolean().optional(),
+    minFillSeconds: z.number().int().min(0).max(600).nullable().optional(),
+    perIpPerMinute: z.number().int().min(0).max(100_000).nullable().optional(),
+    perTokenPerMinute: z.number().int().min(0).max(100_000).nullable().optional(),
+    suspiciousAction: z.enum(ANTI_ABUSE_SUSPICIOUS_ACTIONS).optional(),
+  })
+  .strict();
+
 const settingsSchema = z
   .object({
     allowAnonymous: z.boolean().optional(),
@@ -30,6 +45,7 @@ const settingsSchema = z
     oneResponsePerContact: z.boolean().optional(),
     collectIp: z.boolean().optional(),
     responseLimit: responseLimitSchema.optional(),
+    antiAbuse: antiAbuseSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

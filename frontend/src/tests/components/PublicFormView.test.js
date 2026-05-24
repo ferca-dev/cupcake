@@ -11,7 +11,11 @@ const buildJsonResponse = (body, init = {}) =>
     headers: { 'content-type': 'application/json', ...(init.headers ?? {}) },
   });
 
-const publishedFormPayload = ({ status = 'published', acceptingResponses = true } = {}) => ({
+const publishedFormPayload = ({
+  status = 'published',
+  acceptingResponses = true,
+  antiAbuse = null,
+} = {}) => ({
   success: true,
   data: {
     survey: {
@@ -25,6 +29,11 @@ const publishedFormPayload = ({ status = 'published', acceptingResponses = true 
         thankYouMessage: 'Thanks a lot!',
         pausedMessage: 'On break.',
         collectIp: false,
+        antiAbuse: antiAbuse ?? {
+          captcha: { required: false, provider: 'none', siteKey: null },
+          honeypot: { enabled: true, fieldName: 'website_url' },
+          minFillSeconds: 0,
+        },
       },
     },
     version: {
@@ -177,6 +186,118 @@ describe('PublicFormView', () => {
     expect(wrapper.text()).toMatch(/on break/i);
     const submitButton = wrapper.find('button[type="submit"]');
     expect(submitButton.attributes('disabled')).toBeDefined();
+  });
+
+  it('renders an accessible honeypot input that real respondents can ignore', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => buildJsonResponse(publishedFormPayload())),
+    );
+    const router = buildRouter();
+    const wrapper = await mountForm(router);
+
+    const honeypot = wrapper.find('[data-testid="public-form-honeypot"]');
+    expect(honeypot.exists()).toBe(true);
+    // The wrapper must be hidden from assistive tech so screen-reader users
+    // are not asked to fill the trap.
+    expect(honeypot.attributes('aria-hidden')).toBe('true');
+    const honeypotInput = honeypot.find('input');
+    expect(honeypotInput.attributes('tabindex')).toBe('-1');
+    expect(honeypotInput.attributes('autocomplete')).toBe('off');
+  });
+
+  it('sends an empty honeypot value alongside the submission', async () => {
+    const calls = [];
+    const fetchMock = vi.fn(async (url, init) => {
+      calls.push({ url: url.toString(), method: init?.method ?? 'GET', body: init?.body });
+      if (init?.method === 'POST') {
+        return buildJsonResponse({
+          success: true,
+          data: {
+            response: {
+              id: 'response-1',
+              surveyId: 'survey-1',
+              surveyVersionId: 'version-1',
+              submittedAt: new Date().toISOString(),
+              thankYouMessage: 'Thanks a lot!',
+            },
+          },
+        });
+      }
+      return buildJsonResponse(publishedFormPayload());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const router = buildRouter();
+    const wrapper = await mountForm(router);
+
+    await wrapper.find('[data-field-id="field_name"] input').setValue('Ada');
+    await wrapper.find('[data-field-id="field_email"] input').setValue('ada@example.com');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    await flushPromises();
+
+    const submitCall = calls.find((call) => call.method === 'POST');
+    const body = JSON.parse(submitCall.body);
+    expect(body.honeypot).toEqual({ website_url: '' });
+  });
+
+  it('does not mount the CAPTCHA widget when the survey does not require it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => buildJsonResponse(publishedFormPayload())),
+    );
+    const router = buildRouter();
+    const wrapper = await mountForm(router);
+
+    expect(wrapper.find('[data-testid="public-form-captcha"]').exists()).toBe(false);
+  });
+
+  it('mounts the CAPTCHA widget when the survey opts in and a site key is provided', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        buildJsonResponse(
+          publishedFormPayload({
+            antiAbuse: {
+              captcha: { required: true, provider: 'turnstile', siteKey: 'pub-key' },
+              honeypot: { enabled: true, fieldName: 'website_url' },
+              minFillSeconds: 0,
+            },
+          }),
+        ),
+      ),
+    );
+    const router = buildRouter();
+    const wrapper = await mountForm(router);
+
+    expect(wrapper.find('[data-testid="public-form-captcha"]').exists()).toBe(true);
+  });
+
+  it('blocks submission when the CAPTCHA token is missing', async () => {
+    const fetchMock = vi.fn(async () =>
+      buildJsonResponse(
+        publishedFormPayload({
+          antiAbuse: {
+            captcha: { required: true, provider: 'turnstile', siteKey: 'pub-key' },
+            honeypot: { enabled: true, fieldName: 'website_url' },
+            minFillSeconds: 0,
+          },
+        }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const router = buildRouter();
+    const wrapper = await mountForm(router);
+
+    await wrapper.find('[data-field-id="field_name"] input').setValue('Ada');
+    await wrapper.find('[data-field-id="field_email"] input').setValue('ada@example.com');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.text()).toMatch(/security challenge/i);
+    // Only the initial GET should have fired — no POST happens without a CAPTCHA token.
+    const submitCall = fetchMock.mock.calls.find((args) => args[1]?.method === 'POST');
+    expect(submitCall).toBeUndefined();
   });
 
   it('renders a not-found message when the API returns 404', async () => {

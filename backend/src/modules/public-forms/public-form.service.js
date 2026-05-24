@@ -14,6 +14,8 @@ import { DEFAULT_RESPONSE_LIMIT_MESSAGE, RESPONSE_LIMIT_MODES } from '../surveys
 import { validateAnswersAgainstSchema } from './answer.validator.js';
 import { assertQuota, consumeMonthlyQuota } from '../plans/plan.service.js';
 import { QUOTA_KEYS } from '../plans/plan.constants.js';
+import { buildAntiAbuseConfigForPublic, runAntiAbuseChecks } from './anti-abuse.service.js';
+import { loadEnv } from '../../config/env.js';
 
 const PUBLIC_VIEW_STATUSES = new Set(['published', 'paused']);
 
@@ -64,6 +66,7 @@ const mergeEffectiveSettings = (survey, version) => {
 const toPublicSchemaView = ({ survey, version }) => {
   const effectiveSettings = mergeEffectiveSettings(survey, version);
   const responseLimit = resolveResponseLimit(effectiveSettings);
+  const antiAbuse = buildAntiAbuseConfigForPublic({ effectiveSettings });
   return {
     survey: {
       id: survey._id.toString(),
@@ -80,6 +83,7 @@ const toPublicSchemaView = ({ survey, version }) => {
         oneResponsePerContact: Boolean(effectiveSettings.oneResponsePerContact),
         collectIp: Boolean(effectiveSettings.collectIp),
         responseLimit: toPublicResponseLimit(responseLimit),
+        antiAbuse,
       },
     },
     version: {
@@ -216,6 +220,29 @@ export const submitPublicResponse = async ({
   if (!effectiveSettings.allowAnonymous && !submissionToken) {
     throw new ConflictError('This survey requires a personal submission link.');
   }
+
+  // Anti-abuse runs before any expensive work (quota check, schema
+  // validation, response insert). Honeypot, rate limits, and CAPTCHA all
+  // fire here so a flood of bot traffic cannot push the tenant past their
+  // monthly quota or consume DB time per request.
+  const env = loadEnv();
+  const honeypotFieldName = env.PUBLIC_FORM_HONEYPOT_FIELD;
+  const honeypotValue =
+    payload?.honeypot && typeof payload.honeypot === 'object'
+      ? payload.honeypot[honeypotFieldName]
+      : undefined;
+  await runAntiAbuseChecks({
+    survey,
+    effectiveSettings,
+    payload: {
+      captchaToken: payload?.captchaToken,
+      [honeypotFieldName]: honeypotValue,
+      metadata: payload?.metadata,
+    },
+    submissionToken,
+    ip,
+    userAgent,
+  });
 
   // Enforce the tenant's monthly response quota before validating the body so
   // a tenant that has run out of their plan does not consume CPU for nothing.
