@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 import { ValidationError } from '../../common/errors/index.js';
 
@@ -134,27 +134,42 @@ const parseCsv = (text) => {
   return rows;
 };
 
-const parseXlsx = (buffer) => {
-  let workbook;
+const excelCellValue = (value) => {
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    if (value.text !== undefined) return value.text;
+    if (value.hyperlink && value.text) return value.text;
+    if (Array.isArray(value.richText))
+      return value.richText.map((part) => part.text ?? '').join('');
+    if (value.result !== undefined) return value.result;
+  }
+  return value;
+};
+
+const parseXlsx = async (buffer) => {
+  const workbook = new ExcelJS.Workbook();
   try {
-    workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+    await workbook.xlsx.load(buffer);
   } catch {
     throw new ValidationError('Invalid XLSX file', [
       { path: ['file'], message: 'The uploaded workbook could not be read' },
     ]);
   }
-  const firstSheet = workbook.SheetNames[0];
-  if (!firstSheet) {
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
     throw new ValidationError('Invalid XLSX file', [
       { path: ['file'], message: 'The workbook does not contain any sheets' },
     ]);
   }
-  return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {
-    header: 1,
-    raw: false,
-    defval: '',
-    blankrows: false,
+  const rows = [];
+  const columnCount = worksheet.columnCount;
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    const values = [];
+    for (let index = 1; index <= columnCount; index += 1) {
+      values.push(excelCellValue(row.getCell(index).value));
+    }
+    rows.push(values);
   });
+  return rows;
 };
 
 const normaliseMatrix = (matrix) =>
@@ -178,11 +193,11 @@ const buildSampleRows = ({ headers, rows, limit = 5 }) =>
       Object.fromEntries(headers.map((header, index) => [header, row.values[index] ?? ''])),
     );
 
-export const parseContactImportBuffer = ({ buffer, originalName, mimeType }) => {
+export const parseContactImportBuffer = async ({ buffer, originalName, mimeType }) => {
   const format = detectImportFormat({ originalName, mimeType });
   const matrix =
     format === 'xlsx'
-      ? normaliseMatrix(parseXlsx(buffer))
+      ? normaliseMatrix(await parseXlsx(buffer))
       : normaliseMatrix(parseCsv(buffer.toString('utf8').replace(/^\uFEFF/, '')));
 
   if (matrix.length < 2) {

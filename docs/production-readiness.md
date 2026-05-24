@@ -10,9 +10,12 @@ deployment. Every item must be either checked off or explicitly waived
       supports transactions (used during `register`) and falls back gracefully
       on standalone Mongo, but production should run on a replica set.
 - [ ] Backups: automated daily snapshots of the Mongo cluster with
-      verified restore drills.
+      verified restore drills. See
+      [docs/backup-and-restore.md](backup-and-restore.md).
 - [ ] Monitoring and alerting on backend uptime, error rate, request latency
-      (p95), Mongo connection health, and disk usage.
+      (p95), Mongo connection health, queue depth, payment failures, webhook
+      failures, and storage errors. See
+      [docs/operations-runbooks.md](operations-runbooks.md).
 - [ ] Logs shipped off-host (`LOG_LEVEL=info` minimum). The application logs
       JSON via pino with sensitive fields already redacted.
 - [ ] Outbound provider credentials (email/SMS/WhatsApp) stored in a secrets
@@ -24,6 +27,8 @@ deployment. Every item must be either checked off or explicitly waived
 
 - [ ] `APP_ENV=production`. Verified by inspecting `/api/v1/health` — it
       reports the live environment string.
+- [ ] `pnpm --filter ./backend run config:validate` passes with production
+      environment variables loaded.
 - [ ] `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` are random values of
       at least 32 bytes. Never reuse the `replace-me-*` placeholders shipped
       in `.env.example`.
@@ -97,6 +102,25 @@ operations runbook.
 
 After every deploy, run the manual checks described in
 [`docs/troubleshooting.md`](troubleshooting.md#first-deploy-smoke-test).
+For automated baseline checks, run:
+
+```bash
+SMOKE_API_BASE_URL="https://api.example.com/api/v1" \
+SMOKE_EMAIL="client@example.com" \
+SMOKE_PASSWORD="..." \
+pnpm smoke:critical
+```
+
+## Operational endpoints
+
+- `/api/v1/health/live`
+- `/api/v1/health/ready`
+- `/api/v1/health/dependencies`
+- `/api/v1/admin/operations/summary`
+- `/api/v1/admin/operations/metrics`
+
+Readiness must be wired into the load balancer or orchestration platform so
+instances with unavailable critical dependencies receive no traffic.
 
 ## Open limitations
 

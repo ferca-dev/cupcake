@@ -1201,7 +1201,7 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
       return {
         format: 'xlsx',
         filename: `survey-${survey.slug}-questions-${Date.now()}.xlsx`,
-        body: buildXlsx(columns, rows, { sheetName: 'Questions' }),
+        body: await buildXlsx(columns, rows, { sheetName: 'Questions' }),
       };
     }
     return {
@@ -1290,7 +1290,7 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
     return {
       format: 'xlsx',
       filename: `survey-${survey.slug}-responses-${Date.now()}.xlsx`,
-      body: buildXlsx(columns, rows, {
+      body: await buildXlsx(columns, rows, {
         sheetName: `Responses v${version?.versionNumber ?? 'draft'}`,
       }),
     };

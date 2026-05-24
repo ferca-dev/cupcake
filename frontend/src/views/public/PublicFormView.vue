@@ -5,7 +5,7 @@
 // Survey lookup happens through `publicFormService`, which talks to the
 // unauthenticated `/api/v1/public/forms/*` endpoints — auth tokens are
 // ignored by the backend for these routes.
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { useI18n } from '../../i18n/index.js';
@@ -34,6 +34,7 @@ const submissionToken = computed(() =>
 const surveyData = ref(null);
 const schema = computed(() => surveyData.value?.version?.schema ?? null);
 const survey = computed(() => surveyData.value?.survey ?? null);
+const branding = computed(() => surveyData.value?.branding ?? null);
 const acceptingResponses = computed(() => surveyData.value?.acceptingResponses === true);
 const pausedMessage = computed(() => surveyData.value?.pausedMessage ?? null);
 const responseLimit = computed(() => survey.value?.settings?.responseLimit ?? null);
@@ -81,6 +82,17 @@ const isFieldVisible = (fieldId) => visibilityMap.value.get(fieldId) !== false;
 const visibleFields = computed(() => {
   if (!schema.value) return [];
   return schema.value.fields.filter((field) => isFieldVisible(field.id));
+});
+
+const brandingStyle = computed(() => {
+  const brand = branding.value;
+  if (!brand) return {};
+  return {
+    '--public-brand-primary': brand.primaryColor || 'var(--color-primary-600)',
+    '--public-brand-accent': brand.accentColor || 'var(--color-secondary-600)',
+    '--public-brand-background': brand.backgroundColor || 'var(--color-surface-muted)',
+    '--public-brand-text': brand.textColor || 'var(--color-text)',
+  };
 });
 
 const resetAnswerState = (next) => {
@@ -217,10 +229,38 @@ watch(slug, (next, prev) => {
   submittedResult.value = null;
   loadForm();
 });
+
+watch(
+  branding,
+  (next) => {
+    if (typeof document === 'undefined') return;
+    document.body.classList.toggle('public-white-label', Boolean(next?.whiteLabel));
+    document.body.style.setProperty(
+      '--public-brand-page-background',
+      next?.backgroundColor || 'var(--color-surface-muted)',
+    );
+    if (next?.faviconUrl) {
+      let favicon = document.querySelector('link[rel="icon"]');
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.setAttribute('rel', 'icon');
+        document.head.appendChild(favicon);
+      }
+      favicon.setAttribute('href', next.faviconUrl);
+    }
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  if (typeof document === 'undefined') return;
+  document.body.classList.remove('public-white-label');
+  document.body.style.removeProperty('--public-brand-page-background');
+});
 </script>
 
 <template>
-  <article class="public-form" :data-public-slug="slug">
+  <article class="public-form" :style="brandingStyle" :data-public-slug="slug">
     <div v-if="loadState.loading" class="public-form__state" role="status">
       {{ t('publicForm.loading') }}
     </div>
@@ -240,6 +280,12 @@ watch(slug, (next, prev) => {
 
     <template v-else-if="survey">
       <header class="public-form__header">
+        <img
+          v-if="branding?.logoUrl"
+          class="public-form__logo"
+          :src="branding.logoUrl"
+          alt=""
+        />
         <h1 class="public-form__title">{{ survey.title }}</h1>
         <p v-if="survey.description" class="public-form__description">{{ survey.description }}</p>
       </header>
@@ -332,6 +378,7 @@ watch(slug, (next, prev) => {
 .public-form {
   width: 100%;
   background: var(--color-surface);
+  color: var(--public-brand-text, var(--color-text));
   padding: var(--space-6);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -348,7 +395,27 @@ watch(slug, (next, prev) => {
 .public-form__header h1 {
   margin: 0 0 var(--space-2) 0;
   font-size: var(--font-size-xl);
-  color: var(--color-text);
+  color: var(--public-brand-text, var(--color-text));
+}
+
+.public-form__logo {
+  max-height: 4rem;
+  max-width: 12rem;
+  object-fit: contain;
+  margin-bottom: var(--space-3);
+}
+
+:global(.public-form-layout) {
+  background: var(--public-brand-page-background, var(--color-surface-muted));
+}
+
+:global(body.public-white-label .public-form-layout__footer) {
+  display: none;
+}
+
+.public-form :global(.app-button--primary) {
+  background: var(--public-brand-primary, var(--color-primary-600));
+  border-color: var(--public-brand-primary, var(--color-primary-600));
 }
 
 .public-form__description {

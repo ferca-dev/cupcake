@@ -19,6 +19,7 @@ import { logger } from '../../common/utils/logger.js';
 import { sendPaymentNotification } from './notification.service.js';
 import { publishWebhookEvent } from '../developer/webhook-publisher.js';
 import { WEBHOOK_EVENT_TYPES } from '../developer/webhook-events.js';
+import { recordOperationalEvent } from '../observability/metrics.service.js';
 
 export const PAYMENT_AUDIT_ACTIONS = Object.freeze({
   PREFERENCE_CREATED: 'payments.preference.created',
@@ -355,6 +356,16 @@ export const processIncomingWebhook = async ({
       processingError: result.reason ?? null,
       relatedTransactionId: result.transaction?._id ?? null,
     });
+    recordOperationalEvent('payment_webhook_events_total', {
+      provider: provider.getProviderName(),
+      status: result.status,
+    });
+    if (result.status === 'failed') {
+      recordOperationalEvent('payment_failures_total', {
+        provider: provider.getProviderName(),
+        reason: result.reason ?? 'unknown',
+      });
+    }
     return { ...result, event };
   } catch (err) {
     logger.warn({ err, providerEventId }, 'Webhook handler threw');
@@ -362,6 +373,14 @@ export const processIncomingWebhook = async ({
       status: 'failed',
       processedAt: new Date(),
       processingError: err?.message?.slice(0, 200) ?? 'handler_threw',
+    });
+    recordOperationalEvent('payment_webhook_events_total', {
+      provider: provider.getProviderName(),
+      status: 'failed',
+    });
+    recordOperationalEvent('payment_failures_total', {
+      provider: provider.getProviderName(),
+      reason: 'handler_threw',
     });
     return { status: 'failed', reason: 'handler_threw', event };
   }

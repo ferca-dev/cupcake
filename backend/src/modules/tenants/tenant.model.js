@@ -7,7 +7,19 @@ const TENANT_STATUSES = ['active', 'suspended', 'cancelled'];
 const brandingSchema = new Schema(
   {
     logoUrl: { type: String, default: null },
+    logoMediaAssetId: { type: Types.ObjectId, ref: 'MediaAsset', default: null },
+    faviconUrl: { type: String, default: null },
+    faviconMediaAssetId: { type: Types.ObjectId, ref: 'MediaAsset', default: null },
     primaryColor: { type: String, default: null },
+    accentColor: { type: String, default: null },
+    backgroundColor: { type: String, default: null },
+    textColor: { type: String, default: null },
+    publicFormTheme: {
+      type: String,
+      enum: ['light', 'dark', 'system'],
+      default: 'light',
+    },
+    whiteLabel: { type: Boolean, default: false },
   },
   { _id: false },
 );

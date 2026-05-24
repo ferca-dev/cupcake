@@ -11,6 +11,7 @@ import {
 } from './webhook-signing.js';
 import { logger } from '../../common/utils/logger.js';
 import { NotFoundError } from '../../common/errors/index.js';
+import { recordOperationalEvent } from '../observability/metrics.service.js';
 
 const ATTEMPT_HISTORY_LIMIT = 20;
 const RESPONSE_BODY_SNIPPET_BYTES = 512;
@@ -163,6 +164,10 @@ export const dispatchDelivery = async ({ deliveryId }) => {
   pushAttempt(delivery, attempt);
 
   if (attempt.success) {
+    recordOperationalEvent('webhook_deliveries_total', {
+      eventType: delivery.eventType,
+      status: 'succeeded',
+    });
     delivery.status = 'succeeded';
     delivery.deliveredAt = new Date();
     delivery.nextAttemptAt = null;
@@ -180,6 +185,10 @@ export const dispatchDelivery = async ({ deliveryId }) => {
   endpoint.lastFailureAt = new Date();
   endpoint.consecutiveFailures = (endpoint.consecutiveFailures ?? 0) + 1;
   await endpoint.save();
+  recordOperationalEvent('webhook_deliveries_total', {
+    eventType: delivery.eventType,
+    status: 'failed',
+  });
 
   if (attemptNumber >= (delivery.maxAttempts ?? 5)) {
     delivery.status = 'dead_letter';

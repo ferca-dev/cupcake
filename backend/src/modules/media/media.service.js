@@ -17,6 +17,7 @@ import { AuthorizationError, NotFoundError, ValidationError } from '../../common
 import { loadEnv } from '../../config/env.js';
 import { assertFeature, assertQuota } from '../plans/plan.service.js';
 import { FEATURE_KEYS, QUOTA_KEYS } from '../plans/plan.constants.js';
+import { recordOperationalEvent } from '../observability/metrics.service.js';
 
 const PURPOSE_SEGMENTS = Object.freeze({
   survey_image: 'surveys',
@@ -198,11 +199,20 @@ export const uploadImage = async ({ tenantId, actor, file, purpose = 'general' }
     extension: validated.extension,
   });
 
-  const stored = await storage.uploadImage({
-    key: storageKey,
-    buffer: file.buffer,
-    contentType: validated.detected.mime,
-  });
+  let stored;
+  try {
+    stored = await storage.uploadImage({
+      key: storageKey,
+      buffer: file.buffer,
+      contentType: validated.detected.mime,
+    });
+  } catch (err) {
+    recordOperationalEvent('storage_errors_total', {
+      driver: storage.driver,
+      operation: 'uploadImage',
+    });
+    throw err;
+  }
 
   const asset = await repo.createAsset({
     tenantId: tenant,

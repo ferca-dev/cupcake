@@ -9,6 +9,8 @@ import * as tokenAdminController from '../tokens/token-admin.controller.js';
 import * as paymentAdminController from '../payments/admin-payment.controller.js';
 import * as planAdminController from '../plans/plan-admin.controller.js';
 import * as jobAdminController from '../jobs/job-admin.controller.js';
+import * as domainController from '../domains/custom-domain.controller.js';
+import * as operationsController from '../observability/operations.controller.js';
 
 /**
  * Single Express router that owns every `/api/v1/admin/*` endpoint. We mount
@@ -23,6 +25,13 @@ adminRouter.use(requireRole(ROLES.SUPER_ADMIN));
 // Platform-wide metrics. Re-uses the dashboard controller so we keep one
 // source of truth for the metric shape.
 adminRouter.get('/metrics', dashboardController.getAdminMetrics);
+adminRouter.get('/operations/summary', operationsController.getOperationalSummary);
+adminRouter.get('/operations/metrics', operationsController.getMetrics);
+
+// Custom domain review and operator overrides
+adminRouter.get('/domains', domainController.adminListDomains);
+adminRouter.post('/domains/:id/verify', domainController.adminVerifyDomain);
+adminRouter.patch('/domains/:id/status', domainController.adminUpdateDomainStatus);
 
 // Tenant management
 adminRouter.get('/tenants', adminTenantController.listTenants);

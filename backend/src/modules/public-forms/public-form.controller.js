@@ -11,18 +11,26 @@ import { HTTP_STATUS } from '../../common/constants/index.js';
 const requestContext = (req) => ({
   ip: req.ip,
   userAgent: req.get('user-agent') ?? null,
+  host: req.get('host') ?? null,
 });
 
 export const getPublicForm = asyncHandler(async (req, res) => {
   const slug = publicSlugParamSchema.parse(req.params.slug);
-  const result = await publicFormService.getPublicForm({ slug });
+  const result = await publicFormService.getPublicForm({
+    slug,
+    host: req.get('host') ?? null,
+  });
   return sendSuccess(res, { data: result, message: 'Public form fetched' });
 });
 
 export const getPublicFormByToken = asyncHandler(async (req, res) => {
   const slug = publicSlugParamSchema.parse(req.params.slug);
   const submissionToken = submissionTokenParamSchema.parse(req.params.submissionToken);
-  const result = await publicFormService.getPublicFormByToken({ slug, submissionToken });
+  const result = await publicFormService.getPublicFormByToken({
+    slug,
+    submissionToken,
+    host: req.get('host') ?? null,
+  });
   return sendSuccess(res, { data: result, message: 'Public form fetched' });
 });
 

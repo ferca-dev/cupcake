@@ -149,7 +149,7 @@ export const createContactImport = async ({
     ]);
   }
 
-  const parsed = parseContactImportBuffer({
+  const parsed = await parseContactImportBuffer({
     buffer: file.buffer,
     originalName: file.originalname,
     mimeType: file.mimetype,

@@ -25,6 +25,10 @@
     "test": "pnpm -r --if-present run test",
     "test:backend": "pnpm --filter ./backend --if-present run test",
     "test:frontend": "pnpm --filter ./frontend --if-present run test",
+    "security:audit": "pnpm audit --prod",
+    "smoke:critical": "node scripts/smoke-critical-flows.mjs",
+    "backup:mongodb": "bash scripts/mongodb-backup.sh",
+    "restore-drill:mongodb": "bash scripts/mongodb-restore-drill.sh",
     "db:up": "docker compose up -d mongodb",
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f mongodb",
@@ -32,5 +36,10 @@
   },
   "devDependencies": {
     "prettier": "^3.3.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "uuid": "^11.1.1"
+    }
   }
 }

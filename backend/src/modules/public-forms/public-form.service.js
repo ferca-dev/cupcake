@@ -16,6 +16,9 @@ import { assertQuota, consumeMonthlyQuota } from '../plans/plan.service.js';
 import { QUOTA_KEYS } from '../plans/plan.constants.js';
 import { buildAntiAbuseConfigForPublic, runAntiAbuseChecks } from './anti-abuse.service.js';
 import { loadEnv } from '../../config/env.js';
+import { resolveActiveDomainForHost } from '../domains/custom-domain.service.js';
+import { Tenant } from '../tenants/tenant.model.js';
+import { buildPublicBrandingForTenant } from '../branding/branding.service.js';
 
 const PUBLIC_VIEW_STATUSES = new Set(['published', 'paused']);
 
@@ -63,10 +66,15 @@ const mergeEffectiveSettings = (survey, version) => {
   return { ...fromSurvey, ...fromVersion };
 };
 
-const toPublicSchemaView = ({ survey, version }) => {
+const toPublicSchemaView = async ({ survey, version, domain = null }) => {
   const effectiveSettings = mergeEffectiveSettings(survey, version);
   const responseLimit = resolveResponseLimit(effectiveSettings);
   const antiAbuse = buildAntiAbuseConfigForPublic({ effectiveSettings });
+  const tenant = await Tenant.findById(survey.tenantId).select('settings.branding');
+  const branding = await buildPublicBrandingForTenant({
+    tenantId: survey.tenantId.toString(),
+    branding: tenant?.settings?.branding,
+  });
   return {
     survey: {
       id: survey._id.toString(),
@@ -91,13 +99,25 @@ const toPublicSchemaView = ({ survey, version }) => {
       versionNumber: version.versionNumber,
       schema: version.schema,
     },
+    branding,
+    domain: domain
+      ? {
+          id: domain.id,
+          hostname: domain.hostname,
+          tenantId: domain.tenantId,
+          sslMode: domain.sslMode,
+        }
+      : null,
     acceptingResponses: survey.status === 'published',
     pausedMessage: survey.status === 'paused' ? (effectiveSettings.pausedMessage ?? null) : null,
   };
 };
 
-const loadPublishedSurveyContext = async (slug) => {
-  const survey = await surveyRepo.findSurveyBySlug(slug);
+const loadPublishedSurveyContext = async ({ slug, host = null }) => {
+  const domain = await resolveActiveDomainForHost(host);
+  const survey = await surveyRepo.findSurveyBySlug(slug, {
+    tenantId: domain?.tenantId ?? null,
+  });
   if (!survey) {
     throw new NotFoundError('Survey not found');
   }
@@ -115,16 +135,16 @@ const loadPublishedSurveyContext = async (slug) => {
   if (!version) {
     throw new NotFoundError('Survey version not found');
   }
-  return { survey, version };
+  return { survey, version, domain };
 };
 
-export const getPublicForm = async ({ slug }) => {
-  const ctx = await loadPublishedSurveyContext(slug);
+export const getPublicForm = async ({ slug, host = null }) => {
+  const ctx = await loadPublishedSurveyContext({ slug, host });
   return toPublicSchemaView(ctx);
 };
 
-export const getPublicFormByToken = async ({ slug, submissionToken }) => {
-  const ctx = await loadPublishedSurveyContext(slug);
+export const getPublicFormByToken = async ({ slug, submissionToken, host = null }) => {
+  const ctx = await loadPublishedSurveyContext({ slug, host });
   // A token without a matching recipient is still accepted (the frontend can
   // submit responses with `allowAnonymous`) but campaign association requires
   // a real recipient. We surface the recipient channel/contact when found so
@@ -134,7 +154,7 @@ export const getPublicFormByToken = async ({ slug, submissionToken }) => {
     tenantId: ctx.survey.tenantId,
   });
   return {
-    ...toPublicSchemaView(ctx),
+    ...(await toPublicSchemaView(ctx)),
     submissionToken,
     recipient: recipient
       ? {
@@ -203,12 +223,13 @@ const buildLimitContext = ({ surveyId, limit, deviceKey, ip, recipient, submissi
 
 export const submitPublicResponse = async ({
   slug,
+  host = null,
   submissionToken = null,
   payload,
   ip = null,
   userAgent = null,
 }) => {
-  const { survey, version } = await loadPublishedSurveyContext(slug);
+  const { survey, version } = await loadPublishedSurveyContext({ slug, host });
 
   if (survey.status === 'paused') {
     throw new ConflictError(survey.settings?.pausedMessage ?? 'This survey is temporarily paused.');

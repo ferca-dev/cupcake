@@ -36,6 +36,34 @@ describe('GET /api/v1/health', () => {
   });
 });
 
+describe('production readiness health endpoints', () => {
+  const app = createApp();
+
+  it('returns liveness without checking dependencies', async () => {
+    const response = await request(app).get('/api/v1/health/live');
+    expect(response.status).toBe(200);
+    expect(response.body.data.status).toBe('ok');
+  });
+
+  it('returns 503 from readiness when critical dependencies are unavailable', async () => {
+    const response = await request(app).get('/api/v1/health/ready');
+    expect(response.status).toBe(503);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(response.body.error.details[0].status).toBe('not_ready');
+  });
+
+  it('echoes request and correlation ids on every response', async () => {
+    const response = await request(app)
+      .get('/api/v1/health/live')
+      .set('x-request-id', 'req-health-test')
+      .set('x-correlation-id', 'corr-health-test');
+
+    expect(response.headers['x-request-id']).toBe('req-health-test');
+    expect(response.headers['x-correlation-id']).toBe('corr-health-test');
+  });
+});
+
 describe('GET /api/v1', () => {
   const app = createApp();
 

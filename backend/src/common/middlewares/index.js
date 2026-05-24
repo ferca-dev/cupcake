@@ -1,4 +1,5 @@
 export { requestLogger } from './request-logger.js';
+export { metricsMiddleware } from './metrics.js';
 export { notFoundHandler } from './not-found-handler.js';
 export { errorHandler } from './error-handler.js';
 export { sanitizeInput } from './sanitize-input.js';

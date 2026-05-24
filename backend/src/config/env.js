@@ -196,14 +196,93 @@ const envSchema = z
     // value is exposed in env so a future phase can wire it without changing
     // the configuration contract.
     API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(60),
+
+    // Observability. `ERROR_MONITORING_DSN` is intentionally provider-neutral:
+    // the integration hook logs structured events today and can be adapted to
+    // Sentry, Honeybadger, or another collector without changing callers.
+    ERROR_MONITORING_DSN: z.string().trim().default(''),
+    ERROR_MONITORING_ENVIRONMENT: z.string().trim().default(''),
+    OPERATIONS_ALERT_EMAIL: z.string().trim().email().or(z.literal('')).default(''),
   })
   .superRefine((value, ctx) => {
+    const isProduction = value.APP_ENV === 'production';
+    const addIssue = (path, message) =>
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+
+    if (isProduction) {
+      const unsafeSecret = (secret) =>
+        secret.length < 32 ||
+        /replace-me|changeme|change-me|secret|password|local|demo/i.test(secret);
+
+      if (unsafeSecret(value.JWT_ACCESS_SECRET)) {
+        addIssue(
+          'JWT_ACCESS_SECRET',
+          'Production JWT_ACCESS_SECRET must be a random value of at least 32 characters',
+        );
+      }
+      if (unsafeSecret(value.JWT_REFRESH_SECRET)) {
+        addIssue(
+          'JWT_REFRESH_SECRET',
+          'Production JWT_REFRESH_SECRET must be a random value of at least 32 characters',
+        );
+      }
+      if (/changeme|change-me/i.test(value.SUPER_ADMIN_PASSWORD)) {
+        addIssue('SUPER_ADMIN_PASSWORD', 'Production super admin password must be rotated');
+      }
+      for (const key of ['APP_URL', 'FRONTEND_URL']) {
+        const parsed = new URL(value[key]);
+        if (parsed.protocol !== 'https:') addIssue(key, `${key} must use HTTPS in production`);
+        if (['localhost', '127.0.0.1', '0.0.0.0'].includes(parsed.hostname)) {
+          addIssue(key, `${key} must not point at localhost in production`);
+        }
+      }
+      const corsOrigins = value.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+      for (const origin of corsOrigins) {
+        if (origin === '*') addIssue('CORS_ORIGIN', 'Wildcard CORS is forbidden in production');
+        if (/localhost|127\.0\.0\.1|0\.0\.0\.0/.test(origin)) {
+          addIssue('CORS_ORIGIN', 'Production CORS origins must not point at localhost');
+        }
+        if (origin && !origin.startsWith('https://')) {
+          addIssue('CORS_ORIGIN', 'Production CORS origins must use HTTPS');
+        }
+      }
+      if (value.PAYMENT_PROVIDER === 'mock') {
+        addIssue('PAYMENT_PROVIDER', 'Production payments must not use the mock provider');
+      }
+      if (value.TOKEN_PURCHASE_MODE === 'manual') {
+        addIssue('TOKEN_PURCHASE_MODE', 'Production token purchases must not use manual mode');
+      }
+      if (value.EMAIL_PROVIDER === 'mock') {
+        addIssue('EMAIL_PROVIDER', 'Production email must not use the mock provider');
+      }
+      if (value.SMS_PROVIDER === 'mock') {
+        addIssue('SMS_PROVIDER', 'Production SMS must not use the mock provider');
+      }
+      if (value.WHATSAPP_PROVIDER === 'mock') {
+        addIssue('WHATSAPP_PROVIDER', 'Production WhatsApp must not use the mock provider');
+      }
+      if (!value.WEBHOOK_SIGNING_SECRET || unsafeSecret(value.WEBHOOK_SIGNING_SECRET)) {
+        addIssue(
+          'WEBHOOK_SIGNING_SECRET',
+          'Production webhook/API-key signing secret must be a random value of at least 32 characters',
+        );
+      }
+      if (!value.UNSUBSCRIBE_TOKEN_SECRET || unsafeSecret(value.UNSUBSCRIBE_TOKEN_SECRET)) {
+        addIssue(
+          'UNSUBSCRIBE_TOKEN_SECRET',
+          'Production unsubscribe token secret must be a random value of at least 32 characters',
+        );
+      }
+      if (value.PUBLIC_FORM_CAPTCHA_PROVIDER === 'none') {
+        addIssue(
+          'PUBLIC_FORM_CAPTCHA_PROVIDER',
+          'Production public forms must use a CAPTCHA provider',
+        );
+      }
+    }
+
     if (value.APP_ENV === 'production' && value.STORAGE_DRIVER === 'local') {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['STORAGE_DRIVER'],
-        message: 'Production storage must use an object storage driver',
-      });
+      addIssue('STORAGE_DRIVER', 'Production storage must use an object storage driver');
     }
 
     if (value.STORAGE_DRIVER === 's3') {
@@ -216,6 +295,54 @@ const envSchema = z
           });
         }
       }
+      if (isProduction) {
+        if (value.S3_PUBLIC_BASE_URL && !value.S3_PUBLIC_BASE_URL.startsWith('https://')) {
+          addIssue('S3_PUBLIC_BASE_URL', 'Production S3_PUBLIC_BASE_URL must use HTTPS');
+        }
+        if (
+          value.STORAGE_PUBLIC_BASE_URL &&
+          !value.STORAGE_PUBLIC_BASE_URL.startsWith('https://')
+        ) {
+          addIssue('STORAGE_PUBLIC_BASE_URL', 'Production STORAGE_PUBLIC_BASE_URL must use HTTPS');
+        }
+      }
+    }
+
+    if (value.EMAIL_PROVIDER === 'sendgrid') {
+      for (const key of ['TWILIO_SENDGRID_API_KEY', 'TWILIO_SENDGRID_FROM_EMAIL']) {
+        if (!value[key]) addIssue(key, `${key} is required when EMAIL_PROVIDER=sendgrid`);
+      }
+      if (isProduction && value.TWILIO_SENDGRID_FROM_EMAIL.endsWith('@cupcake.local')) {
+        addIssue('TWILIO_SENDGRID_FROM_EMAIL', 'Production SendGrid sender must use a real domain');
+      }
+    }
+
+    if (value.SMS_PROVIDER === 'twilio' || value.WHATSAPP_PROVIDER === 'twilio') {
+      for (const key of ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN']) {
+        if (!value[key]) addIssue(key, `${key} is required when a Twilio channel is enabled`);
+      }
+    }
+
+    if (
+      value.SMS_PROVIDER === 'twilio' &&
+      !value.TWILIO_MESSAGING_SERVICE_SID &&
+      !value.TWILIO_SMS_FROM
+    ) {
+      addIssue(
+        'TWILIO_SMS_FROM',
+        'TWILIO_SMS_FROM or TWILIO_MESSAGING_SERVICE_SID is required when SMS_PROVIDER=twilio',
+      );
+    }
+
+    if (
+      value.WHATSAPP_PROVIDER === 'twilio' &&
+      !value.TWILIO_MESSAGING_SERVICE_SID &&
+      !value.TWILIO_WHATSAPP_FROM
+    ) {
+      addIssue(
+        'TWILIO_WHATSAPP_FROM',
+        'TWILIO_WHATSAPP_FROM or TWILIO_MESSAGING_SERVICE_SID is required when WHATSAPP_PROVIDER=twilio',
+      );
     }
 
     if (value.PAYMENT_PROVIDER === 'mercadopago') {

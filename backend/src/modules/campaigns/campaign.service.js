@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import * as repo from './campaign.repository.js';
 import * as surveyRepo from '../surveys/survey.repository.js';
 import { Contact } from '../contacts/contact.model.js';
+import { Tenant } from '../tenants/tenant.model.js';
+import { CustomDomain } from '../domains/custom-domain.model.js';
 import { consentSkipReason, isConsentGranted } from '../contacts/consent.utils.js';
 import { resolveProviders } from './providers/provider.factory.js';
 import {
@@ -25,6 +27,8 @@ import {
 } from '../suppression/suppression.service.js';
 import { publishWebhookEvent } from '../developer/webhook-publisher.js';
 import { WEBHOOK_EVENT_TYPES } from '../developer/webhook-events.js';
+import { buildPublicBrandingForTenant } from '../branding/branding.service.js';
+import { recordOperationalEvent } from '../observability/metrics.service.js';
 
 // Maps a campaign channel to the plan feature flag that gates it.
 const CHANNEL_FEATURE = Object.freeze({
@@ -65,10 +69,10 @@ const ensureTenant = (tenantId) => {
 
 const generateSubmissionToken = () => crypto.randomBytes(24).toString('base64url').slice(0, 32);
 
-const buildPublicUrl = ({ env, slug, submissionToken }) => {
+const buildPublicUrl = ({ env, slug, submissionToken, hostname = null }) => {
   // The campaign send is delivered via the frontend renderer; the backend
   // route exists for token resolution but end users open the SPA URL.
-  const base = env.FRONTEND_URL.replace(/\/+$/, '');
+  const base = hostname ? `https://${hostname}` : env.FRONTEND_URL.replace(/\/+$/, '');
   return `${base}/f/${slug}/r/${submissionToken}`;
 };
 
@@ -330,6 +334,7 @@ const planRecipients = ({
   contacts,
   providers,
   env,
+  publicHostname = null,
   suppressionLookup = new Set(),
 }) => {
   const recipients = [];
@@ -363,6 +368,7 @@ const planRecipients = ({
             env,
             slug: survey.slug,
             submissionToken: 'duplicate',
+            hostname: publicHostname,
           }),
         });
         summary.skippedCount += 1;
@@ -381,7 +387,12 @@ const planRecipients = ({
         contactId: contact._id,
         channel,
         submissionToken,
-        publicUrl: buildPublicUrl({ env, slug: survey.slug, submissionToken }),
+        publicUrl: buildPublicUrl({
+          env,
+          slug: survey.slug,
+          submissionToken,
+          hostname: publicHostname,
+        }),
       };
 
       if (!validation.ready) {
@@ -464,6 +475,8 @@ const dispatchPendingRecipients = async ({
   tenantId,
   actor,
   failedSendPolicy,
+  branding = null,
+  env = loadEnv(),
 }) => {
   let sentCount = 0;
   let failedCount = 0;
@@ -533,6 +546,8 @@ const dispatchPendingRecipients = async ({
               })
             : null,
         campaign: { id: campaign._id.toString(), name: campaign.name },
+        branding,
+        appName: env.APP_NAME,
         survey: {
           id: survey._id.toString(),
           title: survey.title,
@@ -612,6 +627,16 @@ export const sendCampaign = async ({
     campaign,
     tenantId: tenant,
   });
+  const [tenantDoc, activeDomain] = await Promise.all([
+    Tenant.findById(tenant).select('settings.branding'),
+    CustomDomain.findOne({ tenantId: tenant, status: 'active', deletedAt: null }).sort({
+      activatedAt: -1,
+    }),
+  ]);
+  const branding = await buildPublicBrandingForTenant({
+    tenantId: tenant,
+    branding: tenantDoc?.settings?.branding,
+  });
 
   const providerSet = providers ?? resolveProviders({ env });
   const contacts = await resolveTargetContacts({
@@ -643,6 +668,7 @@ export const sendCampaign = async ({
     contacts,
     providers: providerSet,
     env,
+    publicHostname: activeDomain?.hostname ?? null,
     suppressionLookup,
   });
 
@@ -727,7 +753,20 @@ export const sendCampaign = async ({
     tenantId: tenant,
     actor,
     failedSendPolicy,
+    branding,
+    env,
   });
+
+  recordOperationalEvent(
+    'campaign_recipients_sent_total',
+    { campaignId: campaign._id.toString() },
+    dispatch.sentCount,
+  );
+  recordOperationalEvent(
+    'campaign_recipient_failures_total',
+    { campaignId: campaign._id.toString() },
+    dispatch.failedCount,
+  );
 
   const completedAt = new Date();
   const allValidSent = summary.validCount === 0 || dispatch.sentCount === summary.validCount;

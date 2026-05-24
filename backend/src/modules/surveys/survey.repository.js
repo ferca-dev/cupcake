@@ -36,7 +36,8 @@ export const findSurveys = async ({
 export const findSurveyById = async ({ id, tenantId = null }) =>
   Survey.findOne(tenantFilter({ _id: id }, tenantId));
 
-export const findSurveyBySlug = async (slug) => Survey.findOne({ slug });
+export const findSurveyBySlug = async (slug, { tenantId = null } = {}) =>
+  Survey.findOne(tenantFilter({ slug }, tenantId));
 
 export const findVersionById = async ({ id, tenantId = null }) =>
   SurveyVersion.findOne(tenantFilter({ _id: id }, tenantId));

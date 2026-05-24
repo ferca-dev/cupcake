@@ -27,6 +27,8 @@ export const FEATURE_KEYS = Object.freeze({
   SURVEYS_ADVANCED_REPORTS: 'surveys.advancedReports',
   SURVEYS_EXPORTS: 'surveys.exports',
   SURVEYS_CUSTOM_BRANDING: 'surveys.customBranding',
+  SURVEYS_WHITE_LABEL: 'surveys.whiteLabel',
+  SURVEYS_CUSTOM_DOMAINS: 'surveys.customDomains',
   SURVEYS_CAPTCHA: 'surveys.captcha',
   TEMPLATES_CUSTOM: 'templates.custom',
   MEDIA_UPLOAD: 'media.upload',
@@ -53,6 +55,16 @@ export const FEATURE_DEFINITIONS = Object.freeze([
     FEATURE_KEYS.SURVEYS_CUSTOM_BRANDING,
     'Custom branding',
     'Use tenant logo, colors and white-label on public forms.',
+  ),
+  def(
+    FEATURE_KEYS.SURVEYS_WHITE_LABEL,
+    'White-label public forms',
+    'Hide platform branding on public forms and campaign email templates.',
+  ),
+  def(
+    FEATURE_KEYS.SURVEYS_CUSTOM_DOMAINS,
+    'Custom public form domains',
+    'Verify and route public forms through tenant-owned hostnames.',
   ),
   def(
     FEATURE_KEYS.SURVEYS_CAPTCHA,

@@ -306,6 +306,9 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/production-readiness.md](docs/production-readiness.md) — pre-deploy checklist.
 - [docs/response-limits-and-settings.md](docs/response-limits-and-settings.md) — response-limit configuration and account-settings API.
 - [docs/public-form-anti-abuse.md](docs/public-form-anti-abuse.md) — public form anti-abuse stack (CAPTCHA, honeypot, rate limits, audit log).
+- [docs/custom-branding-and-domains.md](docs/custom-branding-and-domains.md) — tenant branding, DNS verification, custom domain routing, and SSL modes.
+- [docs/backup-and-restore.md](docs/backup-and-restore.md) — MongoDB and object storage backup and restore drills.
+- [docs/operations-runbooks.md](docs/operations-runbooks.md) — production monitoring endpoints, alerts, and incident runbooks.
 - [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
 - [docs/media-storage.md](docs/media-storage.md) — image upload validation, local/S3 storage, and cleanup policy.
 - [docs/team-management.md](docs/team-management.md) — tenant team membership, invitations, and ownership transfer.

@@ -6,6 +6,17 @@ import { HTTP_STATUS } from '../constants/http-status.js';
 import { sendError } from '../responses/api-response.js';
 import { logger } from '../utils/logger.js';
 import { loadEnv } from '../../config/env.js';
+import { captureException } from '../../modules/observability/error-monitoring.js';
+
+const resolveEnv = () => {
+  try {
+    return loadEnv();
+  } catch {
+    return {
+      isProduction: process.env.APP_ENV === 'production',
+    };
+  }
+};
 
 const normalize = (err) => {
   if (err instanceof AppError) {
@@ -101,7 +112,7 @@ const normalize = (err) => {
  * the shared error envelope. Stack traces are never sent in production.
  */
 export const errorHandler = (err, req, res, _next) => {
-  const env = loadEnv();
+  const env = resolveEnv();
   const normalized = normalize(err);
   const log = req.log ?? logger;
 
@@ -113,6 +124,11 @@ export const errorHandler = (err, req, res, _next) => {
 
   if (normalized.statusCode >= 500) {
     log.error(logPayload, normalized.message);
+    captureException(err, {
+      req,
+      tags: { handled: 'global_error_handler', module: 'http' },
+      extra: { statusCode: normalized.statusCode, code: normalized.code },
+    });
   } else {
     log.warn(logPayload, normalized.message);
   }

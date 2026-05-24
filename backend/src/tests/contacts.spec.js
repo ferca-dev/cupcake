@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 import { createApp } from '../app.js';
 import { startInMemoryMongo, stopInMemoryMongo, clearCollections } from './helpers/mongo.js';
@@ -558,13 +558,13 @@ describe('Contact imports and exports', () => {
       email: 'mapped@example.com',
       status: 'active',
     });
-    const worksheet = XLSX.utils.aoa_to_sheet([
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Contacts');
+    worksheet.addRows([
       ['Primary address', 'Display name', 'Status'],
       ['mapped@example.com', 'Mapped Person', 'active'],
     ]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contacts');
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
     const token = await login('acme@test.local');
 
     const upload = await request(app)

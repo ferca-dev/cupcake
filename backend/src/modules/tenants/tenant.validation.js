@@ -18,11 +18,31 @@ const passwordSchema = z
 const brandingSchema = z
   .object({
     logoUrl: z.string().url().nullable().optional(),
+    logoMediaAssetId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
+    faviconUrl: z.string().url().nullable().optional(),
+    faviconMediaAssetId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
     primaryColor: z
       .string()
       .regex(/^#?[0-9a-fA-F]{3,8}$/, 'Primary color must be a hex value')
       .nullable()
       .optional(),
+    accentColor: z
+      .string()
+      .regex(/^#?[0-9a-fA-F]{3,8}$/, 'Accent color must be a hex value')
+      .nullable()
+      .optional(),
+    backgroundColor: z
+      .string()
+      .regex(/^#?[0-9a-fA-F]{3,8}$/, 'Background color must be a hex value')
+      .nullable()
+      .optional(),
+    textColor: z
+      .string()
+      .regex(/^#?[0-9a-fA-F]{3,8}$/, 'Text color must be a hex value')
+      .nullable()
+      .optional(),
+    publicFormTheme: z.enum(['light', 'dark', 'system']).optional(),
+    whiteLabel: z.boolean().optional(),
   })
   .strict()
   .partial()

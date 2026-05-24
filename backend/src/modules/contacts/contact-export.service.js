@@ -124,7 +124,7 @@ export const buildContactExport = async ({ tenantId, query = {} }) => {
     return {
       format,
       filename: `contacts-${timestamp}.xlsx`,
-      body: buildXlsx(columns, rows, { sheetName: 'Contacts' }),
+      body: await buildXlsx(columns, rows, { sheetName: 'Contacts' }),
     };
   }
 

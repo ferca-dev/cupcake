@@ -8,6 +8,7 @@ import { apiV1Router } from './routes/api-v1.js';
 import { API_PREFIX } from './common/constants/index.js';
 import {
   requestLogger,
+  metricsMiddleware,
   notFoundHandler,
   errorHandler,
   sanitizeInput,
@@ -35,6 +36,7 @@ export const createApp = () => {
   app.set('trust proxy', 1);
 
   app.use(requestLogger);
+  app.use(metricsMiddleware);
   app.use(createHelmetMiddleware());
   app.use(createCorsMiddleware());
   app.use(compression());

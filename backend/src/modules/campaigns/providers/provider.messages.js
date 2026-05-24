@@ -61,6 +61,17 @@ export const buildEmailContent = (payload) => {
   const url = ensureUrl(payload);
   const unsubscribe = unsubscribeUrl(payload);
   const opening = greeting(payload);
+  const branding = payload?.branding ?? {};
+  const primaryColor = branding.primaryColor || '#2563eb';
+  const appName = payload?.appName || 'the platform';
+  const logoHtml = branding.logoUrl
+    ? `<p><img src="${escapeHtml(
+        branding.logoUrl,
+      )}" alt="" style="max-height:48px;max-width:180px"></p>`
+    : '';
+  const footerHtml = branding.whiteLabel
+    ? ''
+    : `<p style="font-size:12px;color:#6b7280">Powered by ${escapeHtml(appName)}</p>`;
 
   const textParts = [
     `${opening},`,
@@ -85,15 +96,17 @@ export const buildEmailContent = (payload) => {
   const html = `<!doctype html>
 <html>
   <body style="font-family: Arial, sans-serif; color: #1f2937;">
+    ${logoHtml}
     <p>${escapeHtml(opening)},</p>
     <p>Please take a moment to answer <strong>${escapeHtml(title)}</strong>.</p>
     <p>
-      <a href="${escapeHtml(url)}" style="background:#2563eb;color:#fff;padding:10px 16px;text-decoration:none;border-radius:6px;display:inline-block">
+      <a href="${escapeHtml(url)}" style="background:${escapeHtml(primaryColor)};color:#fff;padding:10px 16px;text-decoration:none;border-radius:6px;display:inline-block">
         Open the survey
       </a>
     </p>
     <p style="font-size:12px;color:#6b7280">If the button does not work, copy and paste this link:<br>${escapeHtml(url)}</p>
     ${unsubscribeHtml}
+    ${footerHtml}
   </body>
 </html>`;
 

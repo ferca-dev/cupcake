@@ -2,6 +2,7 @@ import * as repo from './job.repository.js';
 import { getJobHandler } from './job.registry.js';
 import { logger } from '../../common/utils/logger.js';
 import { loadEnv } from '../../config/env.js';
+import { recordOperationalEvent } from '../observability/metrics.service.js';
 
 /**
  * Computes the next retry time using exponential backoff with full jitter.
@@ -40,6 +41,7 @@ export const runJobOnce = async ({ workerId, env = loadEnv(), runner = null } = 
   const handler = runner ?? getJobHandler(claimed.type);
   if (!handler) {
     log.error('No handler registered for job type — dead-lettering');
+    recordOperationalEvent('job_runs_total', { type: claimed.type, status: 'dead_letter' });
     return repo.markJobDeadLetter({
       jobId: claimed._id,
       error: { message: `No handler registered for job type ${claimed.type}` },
@@ -53,12 +55,14 @@ export const runJobOnce = async ({ workerId, env = loadEnv(), runner = null } = 
       tenantId: claimed.tenantId?.toString() ?? null,
     });
     log.info({ result: typeof result }, 'Job completed');
+    recordOperationalEvent('job_runs_total', { type: claimed.type, status: 'completed' });
     return await repo.markJobCompleted({ jobId: claimed._id, result: result ?? null });
   } catch (err) {
     const attempts = claimed.attempts;
     const maxAttempts = claimed.maxAttempts;
     if (attempts >= maxAttempts) {
       log.error({ err, attempts, maxAttempts }, 'Job exhausted retries — dead-lettering');
+      recordOperationalEvent('job_runs_total', { type: claimed.type, status: 'dead_letter' });
       return repo.markJobDeadLetter({ jobId: claimed._id, error: err });
     }
     const nextRunAt = computeNextRunAt({
@@ -66,6 +70,7 @@ export const runJobOnce = async ({ workerId, env = loadEnv(), runner = null } = 
       baseSeconds: env.JOB_BACKOFF_SECONDS,
     });
     log.warn({ err, attempts, maxAttempts, nextRunAt }, 'Job failed — scheduling retry');
+    recordOperationalEvent('job_runs_total', { type: claimed.type, status: 'failed_retry' });
     return repo.markJobFailedForRetry({
       jobId: claimed._id,
       error: err,

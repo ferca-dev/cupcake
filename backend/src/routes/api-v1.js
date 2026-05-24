@@ -16,6 +16,8 @@ import { adminRouter } from '../modules/admin/admin.routes.js';
 import { settingsRouter } from '../modules/settings/settings.routes.js';
 import { webhooksRouter } from '../modules/webhooks/webhook.routes.js';
 import { mediaRouter } from '../modules/media/media.routes.js';
+import { brandingRouter } from '../modules/branding/branding.routes.js';
+import { customDomainRouter } from '../modules/domains/custom-domain.routes.js';
 import { teamRouter, teamPublicRouter } from '../modules/team/team.routes.js';
 import {
   publicSuppressionRouter,
@@ -37,6 +39,9 @@ apiV1Router.get('/', (req, res) =>
       environment: env.APP_ENV,
       endpoints: [
         '/api/v1/health',
+        '/api/v1/health/live',
+        '/api/v1/health/ready',
+        '/api/v1/health/dependencies',
         '/api/v1/auth/register',
         '/api/v1/auth/login',
         '/api/v1/auth/logout',
@@ -94,6 +99,8 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/dashboard/channels',
         '/api/v1/dashboard/recent-activity',
         '/api/v1/admin/metrics',
+        '/api/v1/admin/operations/summary',
+        '/api/v1/admin/operations/metrics',
         '/api/v1/admin/tenants',
         '/api/v1/admin/tenants/:id',
         '/api/v1/admin/tenants/:id/status',
@@ -104,6 +111,12 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/media/images',
         '/api/v1/media/images/:id',
         '/api/v1/media/images/:id/url',
+        '/api/v1/branding',
+        '/api/v1/domains',
+        '/api/v1/domains/:id/verify',
+        '/api/v1/domains/:id/status',
+        '/api/v1/admin/domains',
+        '/api/v1/admin/domains/:id/verify',
         '/api/v1/templates',
         '/api/v1/templates/:id',
         '/api/v1/templates/:id/create-survey',
@@ -201,6 +214,8 @@ apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminRouter);
 apiV1Router.use('/settings', settingsRouter);
 apiV1Router.use('/media', mediaRouter);
+apiV1Router.use('/branding', brandingRouter);
+apiV1Router.use('/domains', customDomainRouter);
 apiV1Router.use('/templates', templatesRouter);
 apiV1Router.use('/transactions', transactionsRouter);
 apiV1Router.use('/billing', tokenBillingRouter);

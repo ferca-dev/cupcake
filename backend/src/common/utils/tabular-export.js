@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const normaliseSheetName = (name = 'Export') =>
   String(name)
@@ -19,16 +19,16 @@ const cellValue = (value) => {
   return value;
 };
 
-export const buildXlsx = (columns, rows, { sheetName = 'Export' } = {}) => {
+export const buildXlsx = async (columns, rows, { sheetName = 'Export' } = {}) => {
   const matrix = [
     columns.map((column) => column.label ?? column.key),
     ...rows.map((row) => columns.map((column) => cellValue(row?.[column.key]))),
   ];
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.aoa_to_sheet(matrix);
-  worksheet['!cols'] = columns.map((column) => ({
-    wch: Math.max(String(column.label ?? column.key).length + 2, 14),
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(normaliseSheetName(sheetName));
+  worksheet.addRows(matrix);
+  worksheet.columns = columns.map((column) => ({
+    width: Math.max(String(column.label ?? column.key).length + 2, 14),
   }));
-  XLSX.utils.book_append_sheet(workbook, worksheet, normaliseSheetName(sheetName));
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  return Buffer.from(await workbook.xlsx.writeBuffer());
 };
