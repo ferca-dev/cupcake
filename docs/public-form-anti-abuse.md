@@ -11,17 +11,17 @@ campaign flows.
 
 ## Defense layers
 
-| Layer | Default | Where | Notes |
-| --- | --- | --- | --- |
-| Global IP rate limit | 30 / min | `createPublicFormRateLimiter` | Outer guard; not configurable per survey. |
-| Honeypot | Enabled | Backend + frontend | Visually hidden field; non-empty value rejects the submission. |
-| Min fill time | Off (`0` s) | Backend | Floor for the time the form was open before submission. |
-| Per-IP burst | 30 / min | Backend (env / per-survey override) | Sliding window of submissions per IP. |
-| Per-survey burst | 120 / min | Backend (env) | Aggregate burst on a single survey across all IPs. |
-| Per-tenant burst | 600 / min | Backend (env) | Aggregate burst across all of a tenant's surveys. |
-| Per-token burst | 10 / min | Backend (env / per-survey override) | Burst on a single submission token. |
-| CAPTCHA | Off | Backend + frontend | Cloudflare Turnstile, configurable per survey. |
-| Audit log | Always | Backend (`suspicious_submissions`) | Every detection records a row, even in `flag` mode. |
+| Layer                | Default     | Where                               | Notes                                                          |
+| -------------------- | ----------- | ----------------------------------- | -------------------------------------------------------------- |
+| Global IP rate limit | 30 / min    | `createPublicFormRateLimiter`       | Outer guard; not configurable per survey.                      |
+| Honeypot             | Enabled     | Backend + frontend                  | Visually hidden field; non-empty value rejects the submission. |
+| Min fill time        | Off (`0` s) | Backend                             | Floor for the time the form was open before submission.        |
+| Per-IP burst         | 30 / min    | Backend (env / per-survey override) | Sliding window of submissions per IP.                          |
+| Per-survey burst     | 120 / min   | Backend (env)                       | Aggregate burst on a single survey across all IPs.             |
+| Per-tenant burst     | 600 / min   | Backend (env)                       | Aggregate burst across all of a tenant's surveys.              |
+| Per-token burst      | 10 / min    | Backend (env / per-survey override) | Burst on a single submission token.                            |
+| CAPTCHA              | Off         | Backend + frontend                  | Cloudflare Turnstile, configurable per survey.                 |
+| Audit log            | Always      | Backend (`suspicious_submissions`)  | Every detection records a row, even in `flag` mode.            |
 
 Anti-abuse checks fire **before** the response is created so a flood of bot
 traffic cannot exhaust a tenant's monthly response quota.
@@ -57,9 +57,9 @@ behaviour for surveys created before Phase 31.
 settings.antiAbuse = {
   captchaRequired: false,
   honeypotEnabled: true,
-  minFillSeconds: null,       // override floor; null inherits env
-  perIpPerMinute: null,       // override per-IP limit; null inherits env
-  perTokenPerMinute: null,    // override per-token limit; null inherits env
+  minFillSeconds: null, // override floor; null inherits env
+  perIpPerMinute: null, // override per-IP limit; null inherits env
+  perTokenPerMinute: null, // override per-token limit; null inherits env
   suspiciousAction: 'reject', // 'reject' | 'flag'
 };
 ```
@@ -183,10 +183,9 @@ does not opt in never leaks the Turnstile site key to the public.
 
 ## Surveyor and authenticated bypass
 
-The surveyor role lands in Phase 35. The shared context mandates that
-surveyor submissions bypass public CAPTCHA, public device/IP limits, and
-campaign token requirements. Phase 31 does not yet expose a surveyor caller
-on the public form route, so no bypass is wired today. When the surveyor flow
-lands, the anti-abuse service must be called with a surveyor flag that
-short-circuits CAPTCHA, honeypot, and the public sliding-window limits while
-still recording suspicious activity for monitoring.
+Surveyor submissions use `/api/v1/surveyor/surveys/:id/responses`, not the
+public form route. That authenticated path bypasses this public anti-abuse
+stack entirely: no CAPTCHA, honeypot, public device/IP limit, anonymous link
+requirement, or campaign submission token is required. The surveyor service
+still enforces tenant isolation, published survey status, schema validation,
+required fields, conditional logic, and response quota.

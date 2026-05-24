@@ -18,6 +18,8 @@ export const createResponse = async (payload) => {
       campaignId: doc.campaignId ? doc.campaignId.toString() : null,
       campaignRecipientId: doc.campaignRecipientId ? doc.campaignRecipientId.toString() : null,
       contactId: doc.contactId ? doc.contactId.toString() : null,
+      respondentType: doc.respondentType ?? 'public',
+      submittedByUserId: doc.submittedByUserId ? doc.submittedByUserId.toString() : null,
       submittedAt: doc.metadata?.submittedAt ?? doc.createdAt,
       // The full answer set is intentionally excluded so the webhook payload
       // stays small and avoids leaking PII to misconfigured receivers. The

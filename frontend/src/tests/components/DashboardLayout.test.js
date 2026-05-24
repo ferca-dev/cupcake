@@ -19,6 +19,7 @@ const buildRouter = () => {
         children: [
           { path: '', name: 'dashboard.home', component: Empty },
           { path: 'surveys', name: 'surveys.list', component: Empty },
+          { path: 'surveyor/surveys', name: 'surveyor.surveys', component: Empty },
           {
             path: 'surveys/:id/edit',
             name: 'surveys.builder',

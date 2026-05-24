@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '../../stores/auth.store.js';
 import { useDashboardStore } from '../../stores/dashboard.store.js';
@@ -10,6 +11,7 @@ import AdminDashboard from '../../features/dashboard/AdminDashboard.vue';
 
 const auth = useAuthStore();
 const store = useDashboardStore();
+const router = useRouter();
 const { t } = useI18n();
 
 const name = computed(() => auth.displayName || 'there');
@@ -34,7 +36,13 @@ const refresh = async () => {
   }
 };
 
-onMounted(refresh);
+onMounted(() => {
+  if (auth.hasPermission('surveyor.responses.submit') && !auth.hasPermission('dashboard.view')) {
+    router.replace({ name: 'surveyor.surveys' });
+    return;
+  }
+  refresh();
+});
 </script>
 
 <template>

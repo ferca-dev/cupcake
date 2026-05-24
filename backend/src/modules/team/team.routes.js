@@ -26,8 +26,14 @@ teamRouter.use(requireTenantContext());
 // Listing endpoints are visible to anyone who can manage users in the tenant.
 // Mutations re-check inside the service so we can return precise error codes
 // (e.g. "transfer ownership first") rather than a blanket 403.
-teamRouter.get('/members', controller.listMembers);
-teamRouter.get('/members/:id', controller.getMember);
+teamRouter.get('/members', requirePermission(PERMISSIONS.USERS_MANAGE), controller.listMembers);
+teamRouter.get('/surveyors', requirePermission(PERMISSIONS.USERS_MANAGE), controller.listSurveyors);
+teamRouter.post(
+  '/surveyors',
+  requirePermission(PERMISSIONS.USERS_MANAGE),
+  controller.createSurveyor,
+);
+teamRouter.get('/members/:id', requirePermission(PERMISSIONS.USERS_MANAGE), controller.getMember);
 
 teamRouter.patch(
   '/members/:id/role',
@@ -45,7 +51,11 @@ teamRouter.delete(
   controller.removeMember,
 );
 
-teamRouter.get('/invitations', controller.listInvitations);
+teamRouter.get(
+  '/invitations',
+  requirePermission(PERMISSIONS.USERS_MANAGE),
+  controller.listInvitations,
+);
 teamRouter.post(
   '/invitations',
   requirePermission(PERMISSIONS.USERS_MANAGE),

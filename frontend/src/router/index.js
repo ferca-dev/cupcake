@@ -37,6 +37,8 @@ import PlansAdminView from '../views/admin/PlansAdminView.vue';
 import PlanView from '../views/billing/PlanView.vue';
 import SettingsView from '../views/settings/SettingsView.vue';
 import TeamManagementView from '../views/team/TeamManagementView.vue';
+import SurveyorSurveyListView from '../views/surveyor/SurveyorSurveyListView.vue';
+import SurveyorResponseView from '../views/surveyor/SurveyorResponseView.vue';
 import DeveloperHomeView from '../views/developer/DeveloperHomeView.vue';
 import AcceptInvitationView from '../views/auth/AcceptInvitationView.vue';
 import ForbiddenView from '../views/ForbiddenView.vue';
@@ -105,6 +107,27 @@ export const routes = [
           title: 'Surveys',
           requiresAuth: true,
           permissions: ['surveys.view'],
+        },
+      },
+      {
+        path: 'surveyor/surveys',
+        name: 'surveyor.surveys',
+        component: SurveyorSurveyListView,
+        meta: {
+          title: 'Field surveys',
+          requiresAuth: true,
+          permissions: ['surveyor.responses.submit'],
+        },
+      },
+      {
+        path: 'surveyor/surveys/:id/respond',
+        name: 'surveyor.surveys.respond',
+        component: SurveyorResponseView,
+        meta: {
+          title: 'Submit response',
+          requiresAuth: true,
+          permissions: ['surveyor.responses.submit'],
+          layout: 'reading',
         },
       },
       {

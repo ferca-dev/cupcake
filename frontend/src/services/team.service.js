@@ -11,6 +11,10 @@ export const teamService = Object.freeze({
 
   getMember: (id) => apiClient.get(`/team/members/${id}`).then(unwrap),
 
+  listSurveyors: (query) => apiClient.get('/team/surveyors', { query }).then(unwrap),
+
+  createSurveyor: (payload) => apiClient.post('/team/surveyors', payload).then(unwrap),
+
   updateMemberRole: (id, payload) =>
     apiClient.patch(`/team/members/${id}/role`, payload).then(unwrap),
 
@@ -23,15 +27,12 @@ export const teamService = Object.freeze({
 
   createInvitation: (payload) => apiClient.post('/team/invitations', payload).then(unwrap),
 
-  resendInvitation: (id) =>
-    apiClient.post(`/team/invitations/${id}/resend`, {}).then(unwrap),
+  resendInvitation: (id) => apiClient.post(`/team/invitations/${id}/resend`, {}).then(unwrap),
 
-  revokeInvitation: (id) =>
-    apiClient.post(`/team/invitations/${id}/revoke`, {}).then(unwrap),
+  revokeInvitation: (id) => apiClient.post(`/team/invitations/${id}/revoke`, {}).then(unwrap),
 
   acceptInvitation: (payload) =>
     apiClient.post('/team/invitations/accept', payload, { skipAuth: true }).then(unwrap),
 
-  transferOwnership: (payload) =>
-    apiClient.post('/team/owner-transfer', payload).then(unwrap),
+  transferOwnership: (payload) => apiClient.post('/team/owner-transfer', payload).then(unwrap),
 });

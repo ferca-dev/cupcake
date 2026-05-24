@@ -4,6 +4,7 @@ import {
   updateMemberRoleSchema,
   updateMemberStatusSchema,
   createInvitationSchema,
+  createSurveyorSchema,
   listInvitationsQuerySchema,
   acceptInvitationSchema,
   ownerTransferSchema,
@@ -26,6 +27,26 @@ export const listMembers = asyncHandler(async (req, res) => {
 export const getMember = asyncHandler(async (req, res) => {
   const member = await service.getMember({ actor: req.user, id: req.params.id });
   return sendSuccess(res, { data: { member }, message: 'Team member fetched' });
+});
+
+export const listSurveyors = asyncHandler(async (req, res) => {
+  const query = listMembersQuerySchema.parse({ ...(req.query ?? {}), role: 'surveyor' });
+  const result = await service.listSurveyors({ actor: req.user, query });
+  return sendSuccess(res, { data: result, message: 'Surveyors fetched' });
+});
+
+export const createSurveyor = asyncHandler(async (req, res) => {
+  const payload = createSurveyorSchema.parse(req.body ?? {});
+  const result = await service.createSurveyor({
+    actor: req.user,
+    payload,
+    ...requestContext(req),
+  });
+  return sendSuccess(res, {
+    statusCode: HTTP_STATUS.CREATED,
+    data: result,
+    message: 'Surveyor created',
+  });
 });
 
 export const updateMemberRole = asyncHandler(async (req, res) => {

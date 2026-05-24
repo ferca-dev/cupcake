@@ -19,6 +19,7 @@ import { mediaRouter } from '../modules/media/media.routes.js';
 import { brandingRouter } from '../modules/branding/branding.routes.js';
 import { customDomainRouter } from '../modules/domains/custom-domain.routes.js';
 import { teamRouter, teamPublicRouter } from '../modules/team/team.routes.js';
+import { surveyorRouter } from '../modules/surveyor/surveyor.routes.js';
 import {
   publicSuppressionRouter,
   suppressionRouter,
@@ -92,6 +93,9 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/public/forms/:slug',
         '/api/v1/public/forms/:slug/token/:submissionToken',
         '/api/v1/public/forms/:slug/responses',
+        '/api/v1/surveyor/surveys',
+        '/api/v1/surveyor/surveys/:id',
+        '/api/v1/surveyor/surveys/:id/responses',
         '/api/v1/public/unsubscribe/email',
         '/api/v1/public/unsubscribe/email/:token',
         '/api/v1/dashboard/summary',
@@ -177,6 +181,7 @@ apiV1Router.get('/', (req, res) =>
         '/api/v1/team/members/:id',
         '/api/v1/team/members/:id/role',
         '/api/v1/team/members/:id/status',
+        '/api/v1/team/surveyors',
         '/api/v1/team/invitations',
         '/api/v1/team/invitations/:id/resend',
         '/api/v1/team/invitations/:id/revoke',
@@ -210,6 +215,7 @@ apiV1Router.use('/suppression-list', suppressionRouter);
 apiV1Router.use('/campaigns', campaignsRouter);
 apiV1Router.use('/public', publicSuppressionRouter);
 apiV1Router.use('/public', publicFormsRouter);
+apiV1Router.use('/surveyor', surveyorRouter);
 apiV1Router.use('/dashboard', dashboardRouter);
 apiV1Router.use('/admin', adminRouter);
 apiV1Router.use('/settings', settingsRouter);

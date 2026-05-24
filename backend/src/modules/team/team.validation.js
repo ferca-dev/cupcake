@@ -49,6 +49,14 @@ export const createInvitationSchema = z
   })
   .strict();
 
+export const createSurveyorSchema = z
+  .object({
+    email: emailField,
+    name: z.string().trim().min(1).max(120),
+    password: passwordField,
+  })
+  .strict();
+
 export const listInvitationsQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).optional().default(1),

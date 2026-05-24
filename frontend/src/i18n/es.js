@@ -366,6 +366,28 @@ export default {
         '¿Transferir la propiedad al usuario seleccionado? Dejarás de ser el propietario.',
     },
   },
+  surveyor: {
+    nav: 'Encuestas de campo',
+    surveys: {
+      title: 'Encuestas de campo',
+      subtitle: 'Responde encuestas publicadas del espacio como encuestador verificado.',
+      availableTitle: 'Encuestas disponibles',
+      empty: 'No hay encuestas publicadas disponibles.',
+      respond: 'Responder',
+      loadError: 'No pudimos cargar tus encuestas.',
+      columns: {
+        title: 'Encuesta',
+        updatedAt: 'Actualizada',
+        actions: 'Acciones',
+      },
+    },
+    response: {
+      loadError: 'No pudimos cargar esta encuesta.',
+      submit: 'Enviar respuesta verificada',
+      submitError: 'No pudimos enviar tu respuesta.',
+      thankYou: 'Respuesta enviada.',
+    },
+  },
   developer: {
     nav: 'Desarrolladores',
     title: 'Integraciones para desarrolladores',

@@ -105,13 +105,19 @@ const navItems = computed(() => {
       to: { name: 'dashboard.home' },
       label: t('layout.dashboardHome'),
       icon: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-8.5Z',
-      visible: true,
+      visible: auth.hasPermission('dashboard.view'),
     },
     {
       to: { name: 'surveys.list' },
       label: t('surveys.list.title'),
       icon: 'M7 4h8l4 4v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm6 0v5h5',
-      visible: true,
+      visible: auth.hasPermission('surveys.view'),
+    },
+    {
+      to: { name: 'surveyor.surveys' },
+      label: t('surveyor.nav'),
+      icon: 'M9 4h6l2 3v13H7V7Zm1 8h4m-4 4h4M8 7h8',
+      visible: auth.hasPermission('surveyor.responses.submit'),
     },
     {
       to: { name: 'templates.list' },

@@ -71,7 +71,7 @@ const CLIENT_MEMBER_PERMISSIONS = Object.freeze([
 // through the surveyor flow and view surveys they're allowed to fill, but they
 // don't manage tenant data themselves.
 const SURVEYOR_PERMISSIONS = Object.freeze([
-  PERMISSIONS.SURVEYS_VIEW,
+  PERMISSIONS.RESPONSES_SUBMIT_VERIFIED,
   PERMISSIONS.SURVEYOR_RESPONSES_SUBMIT,
 ]);
 

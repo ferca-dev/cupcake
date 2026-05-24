@@ -62,6 +62,19 @@ The public form generates an anonymous device key when the renderer reports
 If the backend returns `RESPONSE_LIMIT_REACHED`, the public form switches to
 a friendly "you already answered" state instead of the generic error.
 
+### Verified surveyor submissions
+
+Authenticated surveyor responses use `/api/v1/surveyor/surveys/:id/responses`
+instead of the public form endpoint. They bypass public-only response-limit
+dedupe, public CAPTCHA, public honeypot checks, anonymous link requirements,
+and campaign submission-token requirements. They still validate the published
+schema, required fields, conditional visibility, survey status, tenant
+isolation, and monthly response quota.
+
+Surveyor responses are persisted with `respondentType: "surveyor"` and
+`submittedByUserId`, while anonymous/public responses default to
+`respondentType: "public"`.
+
 ### Privacy notes
 
 - IP collection only happens when `collectIp` is enabled on the survey.

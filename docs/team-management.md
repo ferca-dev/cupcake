@@ -5,6 +5,7 @@ Phase 26 introduces tenant-level team management. Workspace admins (`client_admi
 ## Capabilities
 
 - Invite by email + role (`client_admin`, `client_member`, `surveyor`).
+- Create active surveyor accounts directly for field staff.
 - Resend or revoke pending invitations.
 - Public, token-based invitation acceptance flow.
 - Update a member's role or status (active / inactive / suspended).
@@ -16,15 +17,15 @@ Phase 26 introduces tenant-level team management. Workspace admins (`client_admi
 
 ### `TeamInvitation`
 
-| Field | Notes |
-| --- | --- |
-| `tenantId` | Owning workspace. |
-| `email`, `name`, `role` | Invitee. Role limited to `client_admin`, `client_member`, `surveyor`. |
-| `tokenHash` | SHA-256 of the opaque acceptance token. Plaintext is sent in the email and returned **once** from the create/resend endpoints. |
-| `status` | `pending`, `accepted`, `revoked`, `expired`. |
-| `expiresAt` | 7 days from creation/resend. |
-| `invitedByUserId` / `revokedByUserId` / `acceptedByUserId` | Audit trail. |
-| `lastSentAt`, `resendCount` | Track delivery activity. |
+| Field                                                      | Notes                                                                                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `tenantId`                                                 | Owning workspace.                                                                                                              |
+| `email`, `name`, `role`                                    | Invitee. Role limited to `client_admin`, `client_member`, `surveyor`.                                                          |
+| `tokenHash`                                                | SHA-256 of the opaque acceptance token. Plaintext is sent in the email and returned **once** from the create/resend endpoints. |
+| `status`                                                   | `pending`, `accepted`, `revoked`, `expired`.                                                                                   |
+| `expiresAt`                                                | 7 days from creation/resend.                                                                                                   |
+| `invitedByUserId` / `revokedByUserId` / `acceptedByUserId` | Audit trail.                                                                                                                   |
+| `lastSentAt`, `resendCount`                                | Track delivery activity.                                                                                                       |
 
 Indexes:
 
@@ -40,20 +41,22 @@ Optional integer that caps the total of active members + pending invitations. `n
 
 All routes are under `/api/v1/team` and require authentication except `/invitations/accept`.
 
-| Method | Path | Permission | Notes |
-| --- | --- | --- | --- |
-| GET | `/team/members` | tenant context | Paginated members, includes `isOwner`, current seat limit. |
-| GET | `/team/members/:id` | tenant context | Member detail. |
-| PATCH | `/team/members/:id/role` | `users.manage` | Cannot change own role; cannot demote the workspace owner; refuses if it would leave zero active admins. |
-| PATCH | `/team/members/:id/status` | `users.manage` | Disabling revokes refresh tokens. Cannot disable the owner. |
-| DELETE | `/team/members/:id` | `users.manage` | Same admin-floor checks as PATCH. |
-| GET | `/team/invitations` | tenant context | Paginated invitations. |
-| POST | `/team/invitations` | `users.manage` | Returns `{ invitation, acceptToken, acceptUrl }`. The plaintext token is shown once. |
-| POST | `/team/invitations/:id/resend` | `users.manage` | Rotates the token, extends expiration. |
-| POST | `/team/invitations/:id/revoke` | `users.manage` | Marks `revoked`; the token can no longer accept. |
-| POST | `/team/invitations/accept` | public | Body `{ token, name?, password }`. Auto-expires the invitation row when the token is expired before failing. |
-| POST | `/team/owner-transfer` | `users.manage` | Body `{ targetUserId, confirm: true }`. Only the current owner or a super admin may call. Auto-promotes the target to admin. |
-| GET | `/admin/tenants/:id/invitations` | `super_admin` | Super-admin-only listing for support. |
+| Method | Path                             | Permission     | Notes                                                                                                                        |
+| ------ | -------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/team/members`                  | `users.manage` | Paginated members, includes `isOwner`, current seat limit.                                                                   |
+| GET    | `/team/members/:id`              | `users.manage` | Member detail.                                                                                                               |
+| GET    | `/team/surveyors`                | `users.manage` | Paginated tenant surveyors.                                                                                                  |
+| POST   | `/team/surveyors`                | `users.manage` | Creates an active `surveyor` user with `{ name, email, password }`.                                                          |
+| PATCH  | `/team/members/:id/role`         | `users.manage` | Cannot change own role; cannot demote the workspace owner; refuses if it would leave zero active admins.                     |
+| PATCH  | `/team/members/:id/status`       | `users.manage` | Disabling revokes refresh tokens. Cannot disable the owner.                                                                  |
+| DELETE | `/team/members/:id`              | `users.manage` | Same admin-floor checks as PATCH.                                                                                            |
+| GET    | `/team/invitations`              | `users.manage` | Paginated invitations.                                                                                                       |
+| POST   | `/team/invitations`              | `users.manage` | Returns `{ invitation, acceptToken, acceptUrl }`. The plaintext token is shown once.                                         |
+| POST   | `/team/invitations/:id/resend`   | `users.manage` | Rotates the token, extends expiration.                                                                                       |
+| POST   | `/team/invitations/:id/revoke`   | `users.manage` | Marks `revoked`; the token can no longer accept.                                                                             |
+| POST   | `/team/invitations/accept`       | public         | Body `{ token, name?, password }`. Auto-expires the invitation row when the token is expired before failing.                 |
+| POST   | `/team/owner-transfer`           | `users.manage` | Body `{ targetUserId, confirm: true }`. Only the current owner or a super admin may call. Auto-promotes the target to admin. |
+| GET    | `/admin/tenants/:id/invitations` | `super_admin`  | Super-admin-only listing for support.                                                                                        |
 
 ### Acceptance flow
 
@@ -68,6 +71,7 @@ All routes are under `/api/v1/team` and require authentication except `/invitati
 - A tenant must always retain at least one active `client_admin`. The service refuses role demotions, removals, and disabling operations that would leave zero.
 - Users cannot change their own role or status.
 - Removing or disabling a member revokes every active refresh token for that user.
+- Changing a member's role revokes every active refresh token for that user so stale permissions expire on the next refresh.
 - Ownership transfer requires `confirm: true` and is restricted to the current owner (or super admin). The target is promoted to admin if needed.
 - Email notifications go through the existing `transactional-email` provider. Failures are logged but do not block the underlying mutation.
 
@@ -76,7 +80,7 @@ All routes are under `/api/v1/team` and require authentication except `/invitati
 The service emits the following audit actions on the shared `AuditLog` collection:
 
 - `team.invitation.created`, `team.invitation.resent`, `team.invitation.revoked`, `team.invitation.accepted`, `team.invitation.expired`
-- `team.member.role_changed`, `team.member.status_changed`, `team.member.removed`
+- `team.surveyor.created`, `team.member.role_changed`, `team.member.status_changed`, `team.member.removed`
 - `tenant.ownership.transferred`
 
 Each entry records the actor, tenant, entity id, and relevant metadata (previous/next values, revoked token counts, reason where applicable).

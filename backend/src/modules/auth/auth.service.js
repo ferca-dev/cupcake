@@ -324,6 +324,7 @@ export const login = async ({ email, password, ip = null, userAgent = null }) =>
     tenantId: user.tenantId,
     ip,
     userAgent,
+    metadata: { role: user.role },
   });
 
   return {

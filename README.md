@@ -256,6 +256,7 @@ The root `package.json` exposes workspace-wide commands. Each command uses `--if
     response-limits-and-settings.md # Response-limit settings (Phase 16)
     public-form-anti-abuse.md       # Public form anti-abuse, CAPTCHA, honeypot (Phase 31)
     client-api-and-webhooks.md      # Tenant API keys + outbound webhooks (Phase 32)
+    surveyor-access.md              # Surveyor role and verified responses (Phase 35)
     survey-reports.md               # Per-survey statistical reports (Phase 20)
     templates.md                    # Templates module (Phase 11)
     troubleshooting.md              # Local issues, env, seeders, smoke test
@@ -309,6 +310,7 @@ The full reference lives in [docs/naming-conventions.md](docs/naming-conventions
 - [docs/custom-branding-and-domains.md](docs/custom-branding-and-domains.md) — tenant branding, DNS verification, custom domain routing, and SSL modes.
 - [docs/backup-and-restore.md](docs/backup-and-restore.md) — MongoDB and object storage backup and restore drills.
 - [docs/operations-runbooks.md](docs/operations-runbooks.md) — production monitoring endpoints, alerts, and incident runbooks.
+- [docs/surveyor-access.md](docs/surveyor-access.md) — surveyor role, verified response API, and field-staff UI.
 - [docs/survey-reports.md](docs/survey-reports.md) — per-survey statistical reports, filters, exports.
 - [docs/media-storage.md](docs/media-storage.md) — image upload validation, local/S3 storage, and cleanup policy.
 - [docs/team-management.md](docs/team-management.md) — tenant team membership, invitations, and ownership transfer.

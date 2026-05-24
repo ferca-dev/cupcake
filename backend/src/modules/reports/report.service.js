@@ -445,7 +445,7 @@ const fetchResponsesForJsLevel = async ({ survey, filters, limit = 50000 }) => {
   if (match._id === null) return [];
   return Response.find(match)
     .select(
-      '_id surveyVersionId answers campaignRecipientId campaignId contactId metadata createdAt',
+      '_id surveyVersionId answers campaignRecipientId campaignId contactId respondentType submittedByUserId metadata createdAt',
     )
     .limit(limit)
     .sort({ 'metadata.submittedAt': 1, createdAt: 1 })
@@ -1244,6 +1244,8 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
     { key: 'campaignId', label: 'Campaign ID' },
     { key: 'campaignRecipientId', label: 'Campaign recipient ID' },
     { key: 'contactId', label: 'Contact ID' },
+    { key: 'respondentType', label: 'Respondent type' },
+    { key: 'submittedByUserId', label: 'Submitted by user ID' },
     { key: 'completionTimeSeconds', label: 'Completion time (s)' },
   ];
 
@@ -1266,6 +1268,8 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
       campaignId: safeToString(response.campaignId) ?? '',
       campaignRecipientId: safeToString(response.campaignRecipientId) ?? '',
       contactId: safeToString(response.contactId) ?? '',
+      respondentType: response.respondentType ?? 'public',
+      submittedByUserId: safeToString(response.submittedByUserId) ?? '',
       completionTimeSeconds: response.metadata?.completionTimeSeconds ?? '',
     };
     const answerByField = new Map();

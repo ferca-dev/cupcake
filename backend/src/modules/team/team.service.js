@@ -38,6 +38,7 @@ export const TEAM_AUDIT_ACTIONS = Object.freeze({
   MEMBER_ROLE_CHANGED: 'team.member.role_changed',
   MEMBER_STATUS_CHANGED: 'team.member.status_changed',
   MEMBER_REMOVED: 'team.member.removed',
+  SURVEYOR_CREATED: 'team.surveyor.created',
   OWNERSHIP_TRANSFERRED: 'tenant.ownership.transferred',
 });
 
@@ -109,16 +110,10 @@ const toPublicInvitation = (invitation) => ({
   role: invitation.role,
   status: invitation.status,
   expiresAt: invitation.expiresAt,
-  invitedByUserId: invitation.invitedByUserId
-    ? invitation.invitedByUserId.toString()
-    : null,
-  acceptedByUserId: invitation.acceptedByUserId
-    ? invitation.acceptedByUserId.toString()
-    : null,
+  invitedByUserId: invitation.invitedByUserId ? invitation.invitedByUserId.toString() : null,
+  acceptedByUserId: invitation.acceptedByUserId ? invitation.acceptedByUserId.toString() : null,
   acceptedAt: invitation.acceptedAt ?? null,
-  revokedByUserId: invitation.revokedByUserId
-    ? invitation.revokedByUserId.toString()
-    : null,
+  revokedByUserId: invitation.revokedByUserId ? invitation.revokedByUserId.toString() : null,
   revokedAt: invitation.revokedAt ?? null,
   lastSentAt: invitation.lastSentAt ?? null,
   resendCount: invitation.resendCount ?? 0,
@@ -183,11 +178,7 @@ const ensureNotSelf = ({ actor, member, message }) => {
  * proposed action. We reject demotions, removals, disable/delete actions, and
  * ownership reassignments that would otherwise leave the workspace stranded.
  */
-const assertTenantKeepsAdmin = async ({
-  tenant,
-  excludeUserId,
-  scope = 'admin',
-}) => {
+const assertTenantKeepsAdmin = async ({ tenant, excludeUserId, scope = 'admin' }) => {
   const remainingAdmins = await User.countDocuments(buildAdminCountFilter(tenant, excludeUserId));
   if (remainingAdmins > 0) return;
 
@@ -200,10 +191,7 @@ const assertTenantKeepsAdmin = async ({
 };
 
 const revokeRefreshTokensFor = async (userId) =>
-  RefreshToken.updateMany(
-    { userId, revokedAt: null },
-    { $set: { revokedAt: new Date() } },
-  );
+  RefreshToken.updateMany({ userId, revokedAt: null }, { $set: { revokedAt: new Date() } });
 
 const buildAdminCountFilter = (tenant, excludeUserId) => ({
   tenantId: tenant._id,
@@ -239,11 +227,7 @@ export const listMembers = async ({ actor, query }) => {
   const sort = sortToMongo(query.sort);
 
   const [items, total] = await Promise.all([
-    User.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(query.limit)
-      .lean({ getters: true }),
+    User.find(filter).sort(sort).skip(skip).limit(query.limit).lean({ getters: true }),
     User.countDocuments(filter),
   ]);
 
@@ -264,6 +248,58 @@ export const listMembers = async ({ actor, query }) => {
       maxTeamMembers: tenant?.settings?.maxTeamMembers ?? null,
     },
   };
+};
+
+export const listSurveyors = async ({ actor, query }) =>
+  listMembers({ actor, query: { ...query, role: ROLES.SURVEYOR } });
+
+export const createSurveyor = async ({ actor, payload, ip, userAgent }) => {
+  const tenantId = requireTenantId(actor);
+  assertCanManageRole({ actor, targetRole: ROLES.SURVEYOR });
+  const tenant = await requireTenantDoc(tenantId);
+  if (tenant.status !== 'active') {
+    throw new ConflictError('Tenant is not active');
+  }
+
+  await assertFeature({ tenantId, feature: FEATURE_KEYS.TEAM_INVITATIONS });
+  await assertQuota({ tenantId, quotaKey: QUOTA_KEYS.USERS });
+  await assertSeatAvailable({ tenant });
+
+  const email = payload.email.toLowerCase().trim();
+  const existingUser = await User.findOne({ email });
+  if (existingUser?.tenantId?.toString() === tenantId.toString()) {
+    throw new ConflictError('User already belongs to this tenant');
+  }
+  if (
+    existingUser &&
+    existingUser.tenantId &&
+    existingUser.tenantId.toString() !== tenantId.toString()
+  ) {
+    throw new ConflictError('Email already belongs to another tenant');
+  }
+
+  const user = await User.create({
+    tenantId,
+    role: ROLES.SURVEYOR,
+    name: payload.name,
+    email,
+    passwordHash: await hashPassword(payload.password),
+    status: 'active',
+    emailVerifiedAt: new Date(),
+  });
+
+  await audit({
+    action: TEAM_AUDIT_ACTIONS.SURVEYOR_CREATED,
+    actor,
+    tenantId,
+    entityType: ENTITY_MEMBER,
+    entityId: user._id,
+    metadata: { email, role: ROLES.SURVEYOR },
+    ip,
+    userAgent,
+  });
+
+  return { surveyor: toPublicMember(user) };
 };
 
 export const getMember = async ({ actor, id }) => {
@@ -307,6 +343,7 @@ export const updateMemberRole = async ({ actor, id, payload, ip, userAgent }) =>
   const previousRole = user.role;
   user.role = payload.role;
   await user.save();
+  const revoked = await revokeRefreshTokensFor(user._id);
 
   await audit({
     action: TEAM_AUDIT_ACTIONS.MEMBER_ROLE_CHANGED,
@@ -314,12 +351,21 @@ export const updateMemberRole = async ({ actor, id, payload, ip, userAgent }) =>
     tenantId,
     entityType: ENTITY_MEMBER,
     entityId: user._id,
-    metadata: { previousRole, nextRole: payload.role },
+    metadata: {
+      previousRole,
+      nextRole: payload.role,
+      revokedTokens: revoked.modifiedCount ?? 0,
+    },
     ip,
     userAgent,
   });
 
-  return { member: toPublicMember(user), changed: true, previousRole };
+  return {
+    member: toPublicMember(user),
+    changed: true,
+    previousRole,
+    revokedTokens: revoked.modifiedCount ?? 0,
+  };
 };
 
 export const updateMemberStatus = async ({ actor, id, payload, ip, userAgent }) => {
@@ -345,11 +391,7 @@ export const updateMemberStatus = async ({ actor, id, payload, ip, userAgent }) 
   }
 
   // Disabling the last remaining active admin would lock the tenant out.
-  if (
-    user.role === ROLES.CLIENT_ADMIN &&
-    user.status === 'active' &&
-    payload.status !== 'active'
-  ) {
+  if (user.role === ROLES.CLIENT_ADMIN && user.status === 'active' && payload.status !== 'active') {
     await assertTenantKeepsAdmin({ tenant, excludeUserId: user._id });
   }
 
@@ -470,10 +512,7 @@ export const listInvitations = async ({ actor, query }) => {
 
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
-    TeamInvitation.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(query.limit),
+    TeamInvitation.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit),
     TeamInvitation.countDocuments(filter),
   ]);
 

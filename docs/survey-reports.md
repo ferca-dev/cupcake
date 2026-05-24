@@ -123,7 +123,9 @@ XLSX exports use the same column descriptors and row values as CSV exports,
 with one worksheet per downloaded file.
 
 - `?type=responses` (default) produces one row per response with one column
-  per schema field plus delivery/channel metadata.
+  per schema field plus delivery/channel metadata. Verified surveyor
+  responses include `Respondent type` and `Submitted by user ID` metadata so
+  exports can distinguish field staff submissions from public responses.
 - `?type=questions` produces a long-format table with one row per (question,
   option) pair, suitable for pivoting in spreadsheets.
 

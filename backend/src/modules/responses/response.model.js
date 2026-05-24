@@ -72,6 +72,18 @@ const responseSchema = new Schema(
       default: null,
     },
     submissionToken: { type: String, default: null, index: true },
+    respondentType: {
+      type: String,
+      enum: ['public', 'surveyor'],
+      default: 'public',
+      index: true,
+    },
+    submittedByUserId: {
+      type: Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     answers: { type: [answerSchema], default: [] },
     metadata: { type: metadataSchema, required: true },
   },

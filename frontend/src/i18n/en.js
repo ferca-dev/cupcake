@@ -364,6 +364,28 @@ export default {
         'Transfer ownership to the selected user? You will no longer be the workspace owner.',
     },
   },
+  surveyor: {
+    nav: 'Field surveys',
+    surveys: {
+      title: 'Field surveys',
+      subtitle: 'Answer published workspace surveys as a verified surveyor.',
+      availableTitle: 'Available surveys',
+      empty: 'No published surveys are available.',
+      respond: 'Respond',
+      loadError: 'We could not load your surveys.',
+      columns: {
+        title: 'Survey',
+        updatedAt: 'Updated',
+        actions: 'Actions',
+      },
+    },
+    response: {
+      loadError: 'We could not load this survey.',
+      submit: 'Submit verified response',
+      submitError: 'We could not submit your response.',
+      thankYou: 'Response submitted.',
+    },
+  },
   developer: {
     nav: 'Developer',
     title: 'Developer integrations',
