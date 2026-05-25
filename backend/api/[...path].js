@@ -7,11 +7,32 @@ const splitOrigins = (value = '') =>
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+const isAllowedVercelPreviewOrigin = (origin) => {
+  try {
+    const requestUrl = new URL(origin);
+    const frontendUrl = new URL(process.env.FRONTEND_URL || '');
+    if (requestUrl.protocol !== 'https:' || frontendUrl.hostname.endsWith('.vercel.app') === false) {
+      return false;
+    }
+
+    const projectName = frontendUrl.hostname.replace(/\.vercel\.app$/, '');
+    return (
+      requestUrl.hostname.endsWith('.vercel.app') &&
+      requestUrl.hostname.startsWith(`${projectName}-`)
+    );
+  } catch {
+    return false;
+  }
+};
+
 const applyCorsHeaders = (req, res) => {
   const requestOrigin = req.headers.origin;
   const allowList = splitOrigins(process.env.CORS_ORIGIN || 'http://localhost:5173');
   const isAllowed =
-    !requestOrigin || allowList.includes('*') || allowList.includes(requestOrigin);
+    !requestOrigin ||
+    allowList.includes('*') ||
+    allowList.includes(requestOrigin) ||
+    isAllowedVercelPreviewOrigin(requestOrigin);
 
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Credentials', 'true');

@@ -10,6 +10,7 @@ out/
 .nuxt/
 .vite/
 .turbo/
+.vercel/
 coverage/
 *.tsbuildinfo
 

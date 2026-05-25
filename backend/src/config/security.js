@@ -5,6 +5,24 @@ import { loadEnv } from './env.js';
 
 const env = loadEnv();
 
+const isAllowedVercelPreviewOrigin = (origin) => {
+  try {
+    const requestUrl = new URL(origin);
+    const frontendUrl = new URL(env.FRONTEND_URL);
+    if (requestUrl.protocol !== 'https:' || frontendUrl.hostname.endsWith('.vercel.app') === false) {
+      return false;
+    }
+
+    const projectName = frontendUrl.hostname.replace(/\.vercel\.app$/, '');
+    return (
+      requestUrl.hostname.endsWith('.vercel.app') &&
+      requestUrl.hostname.startsWith(`${projectName}-`)
+    );
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Helmet configuration. Defaults are conservative; tweaks here keep API
  * responses portable while still hardening common headers.
@@ -26,7 +44,7 @@ export const createCorsMiddleware = () => {
   return cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (allowList.includes('*') || allowList.includes(origin)) {
+      if (allowList.includes('*') || allowList.includes(origin) || isAllowedVercelPreviewOrigin(origin)) {
         return callback(null, true);
       }
       return callback(new AuthorizationError(`Origin ${origin} is not allowed by CORS`));
