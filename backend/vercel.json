@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "buildCommand": "echo \"No backend build step required\"",
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 30
+    }
+  }
+}
