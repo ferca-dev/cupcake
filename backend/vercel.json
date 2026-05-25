@@ -1,10 +1,21 @@
 {
   "version": 2,
   "buildCommand": "echo \"No backend build step required\"",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "/api"
+    }
+  ],
   "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    },
     "api/[...path].js": {
+      "maxDuration": 30
+    },
+    "api/v1/[...path].js": {
       "maxDuration": 30
     }
   }
 }
-

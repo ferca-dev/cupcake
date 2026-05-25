@@ -35,7 +35,8 @@
     "db:reset": "docker compose down -v && docker compose up -d mongodb"
   },
   "devDependencies": {
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "vercel": "^54.4.1"
   },
   "pnpm": {
     "overrides": {
