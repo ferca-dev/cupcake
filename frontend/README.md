@@ -9,7 +9,7 @@ Vue 3 + Vite single-page app for the Cupcake survey platform. This package is pa
 - A running backend exposing `/api/v1` (defaults to `http://localhost:4000/api/v1`).
 
 ## Setup
-
+ 
 ```bash
 # From the repository root
 pnpm install
