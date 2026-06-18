@@ -61,6 +61,30 @@ const ensureDatabase = async (mongoose, connectDatabase) => {
   await databasePromise;
 };
 
+const removeSearchParam = (url, param) => {
+  if (typeof url !== 'string' || !url.includes('?')) return url;
+
+  const parsed = new URL(url, 'http://localhost');
+  if (!parsed.searchParams.has(param)) return url;
+
+  parsed.searchParams.delete(param);
+  const query = parsed.searchParams.toString();
+  return `${parsed.pathname}${query ? `?${query}` : ''}`;
+};
+
+export const stripVercelRoutingQuery = (req) => {
+  // Vercel exposes catch-all route params on req.query. Express then treats the
+  // synthetic `path` param as user query input, which strict Zod schemas reject.
+  if (req?.query && Object.prototype.hasOwnProperty.call(req.query, 'path')) {
+    delete req.query.path;
+  }
+
+  if (req) {
+    req.url = removeSearchParam(req.url, 'path');
+    req.originalUrl = removeSearchParam(req.originalUrl, 'path');
+  }
+};
+
 const getApp = async () => {
   if (!appPromise) {
     appPromise = (async () => {
@@ -103,6 +127,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    stripVercelRoutingQuery(req);
     const app = await getApp();
     app(req, res);
   } catch (err) {
