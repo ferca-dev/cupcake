@@ -13,7 +13,7 @@ const year = computed(() => new Date().getFullYear());
   <div class="auth-layout">
     <main id="main" class="auth-layout__panel">
       <header class="auth-layout__brand">
-        <span class="auth-layout__logo" aria-hidden="true">{{ APP_NAME.charAt(0) }}</span>
+        <img class="auth-layout__logo" src="/brand/cupcake-mark.svg" alt="" aria-hidden="true" />
         <h1 class="auth-layout__title">{{ APP_NAME }}</h1>
         <p class="auth-layout__tagline">{{ t('app.tagline') }}</p>
       </header>
@@ -64,14 +64,7 @@ const year = computed(() => new Date().getFullYear());
 .auth-layout__logo {
   width: 3rem;
   height: 3rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   border-radius: var(--radius-md);
-  background: var(--color-primary-600);
-  color: var(--color-on-primary);
-  font-weight: 700;
-  font-size: 1.5rem;
 }
 
 .auth-layout__title {

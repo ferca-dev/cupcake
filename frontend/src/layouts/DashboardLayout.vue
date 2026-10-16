@@ -291,9 +291,12 @@ const sidebarLabel = computed(() =>
         </svg>
       </button>
       <RouterLink :to="{ name: 'dashboard.home' }" class="dashboard-layout__brand">
-        <span class="dashboard-layout__brand-mark" aria-hidden="true">{{
-          APP_NAME.charAt(0)
-        }}</span>
+        <img
+          class="dashboard-layout__brand-mark"
+          src="/brand/cupcake-mark.svg"
+          alt=""
+          aria-hidden="true"
+        />
         <span class="dashboard-layout__brand-text">{{ APP_NAME }}</span>
       </RouterLink>
       <div class="dashboard-layout__user">
@@ -443,15 +446,9 @@ const sidebarLabel = computed(() =>
 }
 
 .dashboard-layout__brand-mark {
-  background: var(--color-primary-600);
-  color: var(--color-on-primary);
   border-radius: var(--radius-sm);
   width: 2rem;
   height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
 }
 
 .dashboard-layout__user {

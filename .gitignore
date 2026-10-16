@@ -67,3 +67,4 @@ junit.xml
 .eslintcache
 .stylelintcache
 .cache/
+.vercel

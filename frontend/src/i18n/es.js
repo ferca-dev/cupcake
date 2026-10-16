@@ -731,6 +731,35 @@ export default {
       savedAt: 'Configuración guardada a las {time}.',
       loadError: 'No pudimos cargar la configuración.',
       saveError: 'No pudimos guardar la configuración.',
+      locationCapture: {
+        title: 'Captura de ubicación',
+        subtitle: 'Configura cómo se registran la geolocalización y las direcciones IP.',
+        modes: {
+          disabled: 'Desactivada',
+          optional: 'Opcional',
+          required: 'Obligatoria para todos',
+          required_for_surveyors: 'Obligatoria solo para encuestadores',
+        },
+        mode: {
+          label: 'Modo de captura',
+        },
+        minAccuracy: {
+          label: 'Precisión mínima (metros)',
+        },
+        requiredMessage: {
+          label: 'Mensaje obligatorio',
+        },
+        ipFallback: {
+          label: 'Permitir respaldo por IP',
+          hint:
+            'Si la geolocalización no está disponible o fue denegada, usar la ubicación de la IP del servidor como respaldo.',
+        },
+        storeRawIp: {
+          label: 'Guardar IP sin procesar',
+          hint:
+            'Guarda la dirección IP sin procesar en la respuesta. Si se desactiva, se guarda un hash para límites.',
+        },
+      },
       antiAbuse: {
         title: 'Anti-abuso',
         subtitle:
@@ -1521,6 +1550,7 @@ export default {
     notFound: 'Este formulario ya no está disponible.',
     paused: 'Esta encuesta está pausada temporalmente.',
     closed: 'Esta encuesta ya no acepta respuestas.',
+    locationRequired: 'Se requiere ubicación para enviar esta encuesta.',
     requiredAuth: 'Esta encuesta requiere un enlace personal para responder.',
     responseLimit: 'Ya respondiste esta encuesta.',
     submit: 'Enviar',

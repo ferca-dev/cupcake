@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Cupcake mark</title>
+  <desc id="desc">Cupcake brand mark combining a form card, survey check, and subtle cupcake shape.</desc>
+  <rect width="96" height="96" rx="18" fill="#4f46e5" />
+  <path d="M27 43.5c0-4.7 3.8-8.5 8.5-8.5h25c4.7 0 8.5 3.8 8.5 8.5V47H27v-3.5Z" fill="#fff" />
+  <path d="M31 47h34l-5.3 30H36.3L31 47Z" fill="#fff" />
+  <path d="M34.5 58h27" stroke="#c7d2fe" stroke-width="2" stroke-linecap="round" />
+  <circle cx="40" cy="66" r="2.7" fill="#4f46e5" />
+  <path d="M47 66h12" stroke="#4f46e5" stroke-width="2.4" stroke-linecap="round" />
+  <path
+    d="M32 34c4.1-10.5 13.2-16.2 22-12.6 5.3 2.2 9.2 6.9 11 12.6"
+    fill="none"
+    stroke="#fff"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <path
+    d="M37 28.5 45 36l15-18"
+    fill="none"
+    stroke="#e11d48"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
