@@ -29,6 +29,9 @@ const settingsSchema = new Schema(
     timezone: { type: String, default: 'UTC' },
     locale: { type: String, default: 'en-US' },
     branding: { type: brandingSchema, default: () => ({}) },
+    // Super-admin override for the public survey footer. Null preserves the
+    // client's existing plan and white-label configuration.
+    publicFormPoweredBy: { type: Boolean, default: null },
     // Maximum number of active tenant members allowed (admins + members +
     // surveyors). `null` means unlimited. Super admins manage this from the
     // tenant detail UI until plans drive it natively.

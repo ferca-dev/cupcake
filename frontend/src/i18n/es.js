@@ -228,6 +228,13 @@ export default {
       statusChanged: 'Estado actualizado correctamente.',
       updateError: 'No pudimos actualizar el cliente.',
       saveChanges: 'Guardar cambios',
+      changesSaved: 'Cambios guardados correctamente.',
+      poweredByLabel: 'Pie de página «Tecnología de Cupcake»',
+      poweredByDefault: 'Usar configuración del cliente',
+      poweredByShow: 'Mostrar',
+      poweredByHide: 'Ocultar',
+      poweredByHint:
+        'Mostrar u ocultar este pie en todas las encuestas públicas del cliente, independientemente de su plan. «Usar configuración del cliente» respeta su opción de marca blanca. Los cambios se aplican al volver a abrir o recargar la encuesta.',
       logoUrlField: 'URL del logotipo',
       primaryColorField: 'Color primario',
       uploadLogo: 'Subir logotipo',

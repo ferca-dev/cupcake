@@ -18,9 +18,17 @@ const passwordSchema = z
 const brandingSchema = z
   .object({
     logoUrl: z.string().url().nullable().optional(),
-    logoMediaAssetId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
+    logoMediaAssetId: z
+      .string()
+      .regex(/^[a-f\d]{24}$/i)
+      .nullable()
+      .optional(),
     faviconUrl: z.string().url().nullable().optional(),
-    faviconMediaAssetId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
+    faviconMediaAssetId: z
+      .string()
+      .regex(/^[a-f\d]{24}$/i)
+      .nullable()
+      .optional(),
     primaryColor: z
       .string()
       .regex(/^#?[0-9a-fA-F]{3,8}$/, 'Primary color must be a hex value')
@@ -53,6 +61,7 @@ const settingsSchema = z
     timezone: z.string().trim().min(1).max(80).optional(),
     locale: z.string().trim().min(2).max(20).optional(),
     branding: brandingSchema,
+    publicFormPoweredBy: z.boolean().nullable().optional(),
     maxTeamMembers: z.coerce.number().int().min(1).max(10_000).nullable().optional(),
   })
   .strict()

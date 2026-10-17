@@ -227,6 +227,13 @@ export default {
       statusChanged: 'Status updated successfully.',
       updateError: 'We could not update the client.',
       saveChanges: 'Save changes',
+      changesSaved: 'Changes saved successfully.',
+      poweredByLabel: '“Powered by Cupcake” footer',
+      poweredByDefault: 'Use client settings',
+      poweredByShow: 'Show',
+      poweredByHide: 'Hide',
+      poweredByHint:
+        'Show or hide this footer on all public surveys for this client, regardless of their plan. “Use client settings” respects their white-label setting. Changes take effect when the survey is reopened or reloaded.',
       logoUrlField: 'Logo URL',
       primaryColorField: 'Primary color',
       uploadLogo: 'Upload logo',

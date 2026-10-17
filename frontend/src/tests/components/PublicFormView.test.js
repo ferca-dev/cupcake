@@ -103,6 +103,24 @@ afterEach(() => {
 });
 
 describe('PublicFormView', () => {
+  it.each([
+    [{ showPoweredBy: false, whiteLabel: false }, true],
+    [{ showPoweredBy: true, whiteLabel: true }, false],
+    [{ whiteLabel: true }, true],
+    [{ whiteLabel: false }, false],
+  ])('applies footer visibility with legacy white-label fallback: %j', async (branding, hidden) => {
+    const payload = publishedFormPayload();
+    payload.data.branding = branding;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => buildJsonResponse(payload)),
+    );
+    const wrapper = await mountForm(buildRouter());
+    expect(document.body.classList.contains('public-hide-powered-by')).toBe(hidden);
+    wrapper.unmount();
+    expect(document.body.classList.contains('public-hide-powered-by')).toBe(false);
+  });
+
   it('loads the form and renders fields', async () => {
     vi.stubGlobal(
       'fetch',

@@ -70,7 +70,9 @@ const toPublicSchemaView = async ({ survey, version, domain = null }) => {
   const effectiveSettings = mergeEffectiveSettings(survey, version);
   const responseLimit = resolveResponseLimit(effectiveSettings);
   const antiAbuse = buildAntiAbuseConfigForPublic({ effectiveSettings });
-  const tenant = await Tenant.findById(survey.tenantId).select('settings.branding');
+  const tenant = await Tenant.findById(survey.tenantId).select(
+    'settings.branding settings.publicFormPoweredBy',
+  );
   const branding = await buildPublicBrandingForTenant({
     tenantId: survey.tenantId.toString(),
     branding: tenant?.settings?.branding,
@@ -108,7 +110,10 @@ const toPublicSchemaView = async ({ survey, version, domain = null }) => {
       versionNumber: version.versionNumber,
       schema: version.schema,
     },
-    branding,
+    branding: {
+      ...branding,
+      showPoweredBy: tenant?.settings?.publicFormPoweredBy ?? !branding.whiteLabel,
+    },
     domain: domain
       ? {
           id: domain.id,

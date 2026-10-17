@@ -12,6 +12,7 @@ import {
   AppCard,
   AppInput,
   AppLoader,
+  AppSelect,
   AppTable,
 } from '../../components/ui/index.js';
 
@@ -40,7 +41,14 @@ const form = reactive({
   locale: '',
   logoUrl: '',
   primaryColor: '',
+  poweredBy: 'default',
 });
+
+const poweredByOptions = computed(() => [
+  { value: 'default', label: t('adminPanel.detail.poweredByDefault') },
+  { value: 'show', label: t('adminPanel.detail.poweredByShow') },
+  { value: 'hide', label: t('adminPanel.detail.poweredByHide') },
+]);
 
 const refresh = async () => {
   try {
@@ -56,6 +64,12 @@ const refresh = async () => {
       form.locale = doc.settings?.locale ?? '';
       form.logoUrl = doc.settings?.branding?.logoUrl ?? '';
       form.primaryColor = doc.settings?.branding?.primaryColor ?? '';
+      form.poweredBy =
+        doc.settings?.publicFormPoweredBy == null
+          ? 'default'
+          : doc.settings.publicFormPoweredBy
+            ? 'show'
+            : 'hide';
     }
   } catch (err) {
     errorMessage.value = err?.message ?? t('adminPanel.detail.updateError');
@@ -112,15 +126,19 @@ const buildUpdatePayload = () => {
   const nextPrimaryColor = form.primaryColor.trim();
   const currentLogoUrl = tenant.value.settings?.branding?.logoUrl ?? '';
   const currentPrimaryColor = tenant.value.settings?.branding?.primaryColor ?? '';
+  const nextPoweredBy = form.poweredBy === 'default' ? null : form.poweredBy === 'show';
+  const currentPoweredBy = tenant.value.settings?.publicFormPoweredBy ?? null;
   if (
     nextTimezone !== currentTimezone ||
     nextLocale !== currentLocale ||
     nextLogoUrl !== currentLogoUrl ||
-    nextPrimaryColor !== currentPrimaryColor
+    nextPrimaryColor !== currentPrimaryColor ||
+    nextPoweredBy !== currentPoweredBy
   ) {
     payload.settings = {};
     if (nextTimezone !== currentTimezone) payload.settings.timezone = nextTimezone;
     if (nextLocale !== currentLocale) payload.settings.locale = nextLocale;
+    if (nextPoweredBy !== currentPoweredBy) payload.settings.publicFormPoweredBy = nextPoweredBy;
     if (nextLogoUrl !== currentLogoUrl || nextPrimaryColor !== currentPrimaryColor) {
       payload.settings.branding = {};
       if (nextLogoUrl !== currentLogoUrl) payload.settings.branding.logoUrl = nextLogoUrl || null;
@@ -139,7 +157,7 @@ const saveChanges = async () => {
   if (Object.keys(payload).length === 0) return;
   try {
     await store.updateTenant(tenantId.value, payload);
-    successMessage.value = t('adminPanel.detail.statusChanged');
+    successMessage.value = t('adminPanel.detail.changesSaved');
   } catch (err) {
     errorMessage.value = err?.message ?? t('adminPanel.detail.updateError');
   }
@@ -277,6 +295,16 @@ onMounted(refresh);
                 </AppButton>
               </div>
             </div>
+          </div>
+          <div class="tenant-detail__powered-by">
+            <AppSelect
+              id="tenant-powered-by"
+              v-model="form.poweredBy"
+              :label="t('adminPanel.detail.poweredByLabel')"
+              :hint="t('adminPanel.detail.poweredByHint')"
+              :options="poweredByOptions"
+              :disabled="isMutating"
+            />
           </div>
           <div class="tenant-detail__actions">
             <AppButton type="submit" :loading="isMutating">
@@ -455,6 +483,13 @@ onMounted(refresh);
 .tenant-detail__upload-actions {
   display: flex;
   gap: var(--space-2);
+}
+
+.tenant-detail__powered-by {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
 }
 
 .tenant-detail__file-input {

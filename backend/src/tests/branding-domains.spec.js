@@ -133,6 +133,105 @@ afterEach(() => {
 });
 
 describe('Tenant branding', () => {
+  it('lets a super admin hide, show and reset one client footer without changing plans or other clients', async () => {
+    const first = await createTenantAndAdmin({
+      name: 'Servicios Sierra',
+      email: 'sierra@example.test',
+    });
+    const second = await createTenantAndAdmin({
+      name: 'Consultora Encinos',
+      email: 'encinos@example.test',
+    });
+    await assignFeatures(first.tenant, { [FEATURE_KEYS.SURVEYS_CUSTOM_BRANDING]: false });
+    await publishSurvey({ ...first, slug: 'sierra' });
+    await publishSurvey({ ...second, slug: 'encinos' });
+    await createSuperAdmin();
+    const superToken = await login('super@domains.test');
+    const url = `/api/v1/admin/tenants/${first.tenant.id}`;
+    for (const [setting, visible] of [
+      [false, false],
+      [true, true],
+      [null, true],
+    ]) {
+      const update = await request(app)
+        .put(url)
+        .set('Authorization', `Bearer ${superToken}`)
+        .send({ settings: { publicFormPoweredBy: setting } });
+      expect(update.status).toBe(200);
+      expect(update.body.data.tenant.settings.publicFormPoweredBy).toBe(setting);
+      const reloaded = await request(app).get(url).set('Authorization', `Bearer ${superToken}`);
+      expect(reloaded.body.data.tenant.settings.publicFormPoweredBy).toBe(setting);
+      const form = await request(app).get('/api/v1/public/forms/sierra');
+      expect(form.status).toBe(200);
+      expect(form.body.data.branding.showPoweredBy).toBe(visible);
+      const other = await request(app).get('/api/v1/public/forms/encinos');
+      expect(other.body.data.branding.showPoweredBy).toBe(true);
+    }
+  });
+
+  it('preserves the admin footer override when clients edit branding and restores white-label behavior on reset', async () => {
+    const { tenant, user } = await createTenantAndAdmin({
+      name: 'Estudios del Norte',
+      email: 'norte@example.test',
+    });
+    await assignFeatures(tenant, {
+      [FEATURE_KEYS.SURVEYS_CUSTOM_BRANDING]: true,
+      [FEATURE_KEYS.SURVEYS_WHITE_LABEL]: true,
+    });
+    await publishSurvey({ tenant, user });
+    await createSuperAdmin();
+    const superToken = await login('super@domains.test');
+    const clientToken = await login(user.email);
+    const url = `/api/v1/admin/tenants/${tenant.id}`;
+    const update = await request(app)
+      .put(url)
+      .set('Authorization', `Bearer ${superToken}`)
+      .send({ settings: { publicFormPoweredBy: true } });
+    expect(update.status).toBe(200);
+    const brandingUpdate = await request(app)
+      .put('/api/v1/branding')
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({ whiteLabel: true, primaryColor: '#14532d' });
+    expect(brandingUpdate.status).toBe(200);
+    const form = await request(app).get('/api/v1/public/forms/feedback');
+    expect(form.body.data.branding).toMatchObject({
+      whiteLabel: true,
+      showPoweredBy: true,
+      primaryColor: '#14532d',
+    });
+    await request(app)
+      .put(url)
+      .set('Authorization', `Bearer ${superToken}`)
+      .send({ settings: { publicFormPoweredBy: null } })
+      .expect(200);
+    const resetForm = await request(app).get('/api/v1/public/forms/feedback');
+    expect(resetForm.body.data.branding).toMatchObject({
+      whiteLabel: true,
+      showPoweredBy: false,
+      primaryColor: '#14532d',
+    });
+  });
+
+  it('rejects client attempts to change the administrator footer setting', async () => {
+    const { tenant, user } = await createTenantAndAdmin({
+      name: 'Servicios Encinos',
+      email: 'servicios@example.test',
+    });
+    await assignFeatures(tenant, { [FEATURE_KEYS.SURVEYS_CUSTOM_BRANDING]: true });
+    const token = await login(user.email);
+    await request(app)
+      .put(`/api/v1/admin/tenants/${tenant.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ settings: { publicFormPoweredBy: false } })
+      .expect(403);
+    await request(app)
+      .put('/api/v1/branding')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ publicFormPoweredBy: false })
+      .expect(422);
+    expect((await Tenant.findById(tenant.id)).settings.publicFormPoweredBy).toBeNull();
+  });
+
   it('plan-gates branding updates and applies enabled branding to public forms', async () => {
     const { tenant, user } = await createTenantAndAdmin();
     await assignFeatures(tenant, {
