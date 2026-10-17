@@ -71,6 +71,19 @@ const validateField = (field, raw, errors) => {
 
   switch (field.type) {
     case 'multiple_text': {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        if (
+          value.exclusive !== true ||
+          Object.keys(value).length !== 1 ||
+          !field.settings?.exclusiveOption
+        ) {
+          errors.push(issue(field.id, 'Select a configured exclusive option or enter mentions.'));
+          return null;
+        }
+        // Persist the published label so later wording changes do not relabel historical answers.
+        value = { exclusive: true, label: field.settings.exclusiveOption.label };
+        break;
+      }
       const labels = field.settings?.mentionLabels ?? [];
       if (
         !Array.isArray(value) ||
@@ -212,6 +225,10 @@ const validateField = (field, raw, errors) => {
       }
       if (isRequired && normalised.length === 0) {
         errors.push(issue(field.id, 'Select at least one option.'));
+        return null;
+      }
+      if (validation.max != null && normalised.length > validation.max) {
+        errors.push(issue(field.id, `Select no more than ${validation.max} options.`));
         return null;
       }
       value = normalised;

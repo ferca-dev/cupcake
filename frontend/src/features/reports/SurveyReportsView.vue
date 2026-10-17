@@ -355,6 +355,18 @@ watch(
               :format-value="(value) => formatNumber(value)"
             />
           </div>
+          <div v-if="question.exclusiveAnswers?.length">
+            <h5>{{ t('questionExtensions.exclusiveAnswers') }}</h5>
+            <ReportBarChart
+              :rows="
+                question.exclusiveAnswers.map((entry) => ({
+                  label: entry.label,
+                  value: entry.count,
+                }))
+              "
+              :format-value="(value) => formatNumber(value)"
+            />
+          </div>
           <div v-for="mention in question.mentions ?? []" :key="mention.position">
             <h5>{{ mention.label }}</h5>
             <ReportBarChart

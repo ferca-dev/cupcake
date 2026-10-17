@@ -5,7 +5,7 @@
 //   - the topbar actions: back, status, validation summary, save, publish
 //   - unsaved-change protection via `beforeRouteLeave` and the browser
 //     beforeunload event
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 
@@ -38,6 +38,7 @@ const {
 
 const loadError = ref(null);
 const generalError = ref(null);
+const canvas = ref(null);
 
 const surveyId = computed(() => route.params.id);
 const surveyStatus = computed(() => survey.value?.status ?? null);
@@ -149,9 +150,11 @@ watch(surveyId, async (next, prev) => {
   }
 });
 
-const onAddField = (type) => {
+const onAddField = async (type) => {
   builder.addField(type);
   generalError.value = null;
+  await nextTick();
+  canvas.value?.scrollToEnd();
 };
 
 const onAddFieldAtIndex = ({ type, index }) => {
@@ -319,6 +322,7 @@ watch(lastError, (value) => {
       <BuilderSidebar :disabled="isLoading || surveyStatus === 'archived'" @add="onAddField" />
 
       <BuilderCanvas
+        ref="canvas"
         :fields="schema.fields"
         :selected-field-id="selectedFieldId"
         :field-issue-ids="fieldIssueIds"

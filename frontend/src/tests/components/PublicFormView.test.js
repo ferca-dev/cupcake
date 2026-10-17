@@ -83,6 +83,7 @@ const mountForm = async (router) => {
   await router.push('/f/feedback');
   await router.isReady();
   const wrapper = mount(PublicFormView, {
+    attachTo: document.body,
     global: { plugins: [router] },
   });
   await flushPromises();
@@ -96,6 +97,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  document.body.innerHTML = '';
 });
 
 describe('PublicFormView', () => {
@@ -125,6 +127,12 @@ describe('PublicFormView', () => {
     const nameField = wrapper.find('[data-field-id="field_name"]');
     expect(nameField.text()).toMatch(/required/i);
     expect(wrapper.text()).toMatch(/fix the highlighted/i);
+    expect(document.activeElement.id).toBe('public-field-field_name');
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
+    await wrapper.find('[data-field-id="field_name"] input').setValue('Marina');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(document.activeElement.id).toBe('public-field-field_email');
   });
 
   it('submits a valid payload and switches to the thank-you state', async () => {
@@ -298,6 +306,30 @@ describe('PublicFormView', () => {
     // Only the initial GET should have fired — no POST happens without a CAPTCHA token.
     const submitCall = fetchMock.mock.calls.find((args) => args[1]?.method === 'POST');
     expect(submitCall).toBeUndefined();
+  });
+
+  it('prevents duplicate submissions and editing while the response is sending', async () => {
+    let finish;
+    const fetchMock = vi.fn(async (_url, init) => {
+      if (init?.method === 'POST')
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      return buildJsonResponse(publishedFormPayload());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const wrapper = await mountForm(buildRouter());
+    await wrapper.find('[data-field-id="field_name"] input').setValue('Marina');
+    await wrapper.find('[data-field-id="field_email"] input').setValue('marina@example.com');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    await wrapper.find('form').trigger('submit');
+    expect(fetchMock.mock.calls.filter((args) => args[1]?.method === 'POST')).toHaveLength(1);
+    expect(wrapper.get('fieldset').attributes('disabled')).toBeDefined();
+    finish(buildJsonResponse({ success: true, data: { response: { id: 'response-2' } } }));
+    await flushPromises();
+    expect(wrapper.find('form').exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it('renders a not-found message when the API returns 404', async () => {

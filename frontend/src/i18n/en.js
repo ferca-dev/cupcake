@@ -1537,10 +1537,18 @@ export default {
     },
   },
   questionExtensions: {
+    exclusiveAnswers: 'Exclusive selection answers',
+    exclusiveEnable: 'Add an exclusive selection option',
+    exclusiveLabel: 'Selection option text',
+    exclusiveHint:
+      'Selecting this option clears all mentions and disables the text fields until it is unchecked.',
+    exclusiveDefault: 'Does not recall any',
+
     mentionQuestion: 'Which names do you recall?',
     mentions: 'Multiple mentions',
     mentionLabels: 'Mention labels (one per line, up to 10)',
-    mentionHint: 'If required, at least one mention must be filled in.',
+    mentionHint:
+      'If required, enter at least one mention or select the configured exclusive option.',
     firstMention: 'First mention',
     secondMention: 'Second mention',
     thirdMention: 'Third mention',
@@ -1552,6 +1560,23 @@ export default {
     otherAnswers: 'Other answers',
   },
   publicForm: {
+    surveyLabel: 'Survey',
+    questions: 'Survey questions',
+    questionNumber: 'Question {number}',
+    required: 'Required',
+    optional: 'Optional',
+    requiredNote: 'Questions marked with an asterisk are required.',
+    progressLabel: 'Survey progress',
+    progressCount: '{completed} of {total} answered',
+    nextPending: 'Next unanswered',
+    allAnswered: 'All answered',
+    reviewCount: 'Review these questions ({count})',
+    chooseOne: 'Select one option.',
+    chooseSeveral: 'You can select more than one option.',
+    chooseUpTo: 'Select up to {max} options.',
+    ratingValue: '{value} out of {max}',
+    submitAnswers: 'Submit responses',
+    submitHint: 'Review your answers before submitting.',
     loading: 'Loading form…',
     loadError: 'We could not load this form.',
     notFound: 'This form is no longer available.',
@@ -1576,6 +1601,7 @@ export default {
     no: 'No',
     selectPlaceholder: 'Select an option',
     fieldErrors: {
+      maxSelections: 'Select no more than {max} options.',
       required: 'This field is required.',
       email: 'Enter a valid email address.',
       number: 'Enter a valid number.',
@@ -1729,7 +1755,8 @@ export default {
     },
     sidebar: {
       title: 'Add a field',
-      subtitle: 'Click a card or drag it onto the canvas.',
+      subtitle: 'Click + to add at the end, or drag a card onto the canvas.',
+      addToEnd: 'Add {field} at the end',
     },
     canvas: {
       emptyTitle: 'Your form is empty',
@@ -1765,6 +1792,8 @@ export default {
       },
       validation: {
         title: 'Validation',
+        maxSelections: 'Maximum selections',
+        maxSelectionsHint: 'Leave empty to allow any number of selections.',
         minLength: 'Minimum length',
         maxLength: 'Maximum length',
         min: 'Minimum value',

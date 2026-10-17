@@ -26,15 +26,17 @@ const year = computed(() => new Date().getFullYear());
 
 <style scoped>
 .public-form-layout {
+  --layout-narrow-max-width: 48rem;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface-muted);
+  background: var(--public-brand-page-background, var(--color-surface-muted));
 }
 
 .public-form-layout__content {
   flex: 1;
-  padding: var(--space-6) var(--layout-page-padding-x-sm);
+  padding: var(--space-8) var(--layout-page-padding-x-sm);
   display: flex;
   justify-content: center;
 }
@@ -48,6 +50,11 @@ const year = computed(() => new Date().getFullYear());
   padding: var(--space-4);
   text-align: center;
   color: var(--color-text-muted);
-  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 600px) {
+  .public-form-layout__content {
+    padding: var(--space-4) var(--space-3);
+  }
 }
 </style>

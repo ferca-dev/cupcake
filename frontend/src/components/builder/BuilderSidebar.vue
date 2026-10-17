@@ -13,6 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['add']);
 
 const { t } = useI18n();
+const fieldLabel = (field) => (field.labelKey ? t(field.labelKey) : field.label);
 
 const categoriesWithFields = FIELD_CATEGORIES.map((category) => ({
   ...category,
@@ -53,14 +54,16 @@ const onDragStart = (event, type) => {
           class="builder-sidebar__card"
           :draggable="!disabled"
           :disabled="disabled"
-          :title="field.description"
+          :title="t('builder.sidebar.addToEnd', { field: fieldLabel(field) })"
+          :aria-label="t('builder.sidebar.addToEnd', { field: fieldLabel(field) })"
           @click="onClick(field.type)"
           @dragstart="(event) => onDragStart(event, field.type)"
         >
-          <span class="builder-sidebar__icon" aria-hidden="true">{{ field.icon }}</span>
-          <span class="builder-sidebar__label">{{
-            field.labelKey ? t(field.labelKey) : field.label
-          }}</span>
+          <span class="builder-sidebar__card-heading" aria-hidden="true">
+            <span class="builder-sidebar__icon">{{ field.icon }}</span>
+            <span class="builder-sidebar__add">+</span>
+          </span>
+          <span class="builder-sidebar__label">{{ fieldLabel(field) }}</span>
         </button>
       </div>
     </div>
@@ -128,7 +131,8 @@ const onDragStart = (event, type) => {
     box-shadow 120ms ease;
 }
 
-.builder-sidebar__card:hover:not(:disabled) {
+.builder-sidebar__card:hover:not(:disabled),
+.builder-sidebar__card:focus-visible {
   background: var(--color-surface);
   border-color: var(--color-primary-300);
   box-shadow: var(--shadow-sm);
@@ -145,6 +149,34 @@ const onDragStart = (event, type) => {
 
 .builder-sidebar__icon {
   font-size: 1.1rem;
+}
+
+.builder-sidebar__card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.builder-sidebar__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--color-primary-300);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.builder-sidebar__card:disabled .builder-sidebar__add {
+  cursor: not-allowed;
 }
 
 .builder-sidebar__label {

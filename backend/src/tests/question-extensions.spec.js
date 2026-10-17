@@ -104,3 +104,37 @@ describe('question extensions schema and answer contracts', () => {
     },
   );
 });
+
+describe('configurable exclusive mention option', () => {
+  const field = {
+    ...mentions,
+    settings: { ...mentions.settings, exclusiveOption: { label: 'Not applicable' } },
+  };
+  it('accepts and preserves the custom option configuration', () => {
+    const parsed = parseFormSchema({ fields: [field] });
+    expect(parsed.fields[0].settings.exclusiveOption).toEqual({ label: 'Not applicable' });
+    expect(() =>
+      parseFormSchema({
+        fields: [{ ...field, settings: { ...field.settings, exclusiveOption: { label: ' ' } } }],
+      }),
+    ).toThrow();
+  });
+  it('satisfies a required question without mentions and snapshots the configured label', () => {
+    expect(validate(field, { exclusive: true })[0].value).toEqual({
+      exclusive: true,
+      label: 'Not applicable',
+    });
+    expect(() => validate(mentions, { exclusive: true })).toThrow();
+  });
+  it.each([
+    { exclusive: false },
+    { exclusive: 'true' },
+    { exclusive: true, mentions: ['Ada'] },
+    { exclusive: true, label: 'Forged label' },
+  ])('rejects an invalid or contradictory exclusive answer: %j', (value) => {
+    expect(() => validate(field, value)).toThrow();
+  });
+  it('does not require the exclusive option when mentions are supplied', () => {
+    expect(validate(field, ['Ada'])[0].value).toEqual(['Ada', '', '']);
+  });
+});

@@ -333,7 +333,12 @@ export const normalizeSchemaForApi = (schema) => {
         visibility: normalizeVisibility(field.visibility),
         settings: {
           ...(field.type === 'multiple_text'
-            ? { mentionLabels: [...(settings.mentionLabels ?? [])] }
+            ? {
+                mentionLabels: [...(settings.mentionLabels ?? [])],
+                ...(settings.exclusiveOption
+                  ? { exclusiveOption: { ...settings.exclusiveOption } }
+                  : {}),
+              }
             : {}),
           ...(settings.optionImages?.length
             ? { optionImages: settings.optionImages.map((image) => ({ ...image })) }
@@ -509,7 +514,30 @@ export const validateFormSchema = (schema) => {
       issues.push(issue([...path, 'label'], 'Label is too long (300 characters max).'));
     }
 
+    if (
+      field.type === 'checkbox_group' &&
+      field.validation?.max != null &&
+      (!Number.isInteger(field.validation.max) || field.validation.max < 1)
+    ) {
+      issues.push(
+        issue([...path, 'validation', 'max'], 'Maximum selections must be a positive integer.'),
+      );
+    }
     if (field.type === 'multiple_text') {
+      const exclusive = field.settings?.exclusiveOption;
+      if (
+        exclusive &&
+        (typeof exclusive.label !== 'string' ||
+          !exclusive.label.trim() ||
+          exclusive.label.trim().length > 200)
+      ) {
+        issues.push(
+          issue(
+            [...path, 'settings', 'exclusiveOption', 'label'],
+            'Provide a label for the exclusive option (200 characters max).',
+          ),
+        );
+      }
       const labels = field.settings?.mentionLabels;
       if (
         !Array.isArray(labels) ||

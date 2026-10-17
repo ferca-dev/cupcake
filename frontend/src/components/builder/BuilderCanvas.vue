@@ -35,6 +35,17 @@ const { t } = useI18n();
 
 const dragFieldId = ref(null);
 const dragOverIndex = ref(null);
+const page = ref(null);
+
+const scrollToEnd = () => {
+  page.value?.lastElementChild?.scrollIntoView({
+    block: 'nearest',
+    inline: 'nearest',
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+  });
+};
+
+defineExpose({ scrollToEnd });
 
 const previewWidth = computed(() => {
   if (props.previewMode === 'mobile') return '24rem';
@@ -133,6 +144,7 @@ const onBlankClick = () => emit('clear-selection');
 <template>
   <section class="builder-canvas" @click.self="onBlankClick">
     <ul
+      ref="page"
       class="builder-canvas__page"
       :style="{ maxWidth: previewWidth }"
       @click.self="onBlankClick"
@@ -148,8 +160,8 @@ const onBlankClick = () => emit('clear-selection');
         v-for="(field, index) in fields"
         :key="field.id"
         class="builder-canvas__slot"
-        @dragover="(event) => onItemDragOver(event, index)"
-        @drop="(event) => onItemDrop(event, index)"
+        @dragover.stop="(event) => onItemDragOver(event, index)"
+        @drop.stop="(event) => onItemDrop(event, index)"
       >
         <BuilderFieldWrapper
           :field="field"
@@ -174,11 +186,11 @@ const onBlankClick = () => emit('clear-selection');
 <style scoped>
 .builder-canvas {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   background: var(--color-surface-muted);
   overflow-y: auto;
   padding: var(--space-5);
-  display: flex;
-  justify-content: center;
 }
 
 .builder-canvas__page {
@@ -193,11 +205,13 @@ const onBlankClick = () => emit('clear-selection');
   min-height: 100%;
   box-shadow: var(--shadow-sm);
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
 }
 
 .builder-canvas__slot {
+  flex-shrink: 0;
   list-style: none;
+  scroll-margin-block: var(--space-3);
 }
 
 .builder-canvas__empty {

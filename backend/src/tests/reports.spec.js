@@ -1051,3 +1051,80 @@ describe('extended question reports and exports', () => {
     expect(xlsx.headers['content-type']).toContain('spreadsheetml');
   });
 });
+
+describe('exclusive mention responses', () => {
+  it('stores the published custom label and reports it separately from empty mentions', async () => {
+    const { tenant, user } = await createTenantWithAdmin({
+      tenantName: 'Exclusive',
+      email: 'exclusive@test.local',
+    });
+    const { survey, version } = await seedSurvey({ tenantId: tenant._id, ownerId: user._id });
+    version.schema = buildSchema([
+      {
+        id: 'names',
+        key: 'names',
+        type: 'multiple_text',
+        label: 'Names recalled',
+        required: true,
+        settings: {
+          mentionLabels: ['First', 'Second', 'Third'],
+          exclusiveOption: { label: 'Does not recall any' },
+        },
+      },
+    ]);
+    await version.save();
+    const submitted = await request(app)
+      .post(`/api/v1/public/forms/${survey.slug}/responses`)
+      .send({ answers: [{ fieldId: 'names', value: { exclusive: true } }] });
+    expect(submitted.status).toBe(201);
+    const stored = await SurveyResponse.findOne({ surveyId: survey._id }).lean();
+    expect(stored.answers[0].value).toEqual({ exclusive: true, label: 'Does not recall any' });
+    const nextVersion = await SurveyVersion.create({
+      tenantId: tenant._id,
+      surveyId: survey._id,
+      versionNumber: 2,
+      schema: buildSchema([
+        {
+          ...version.schema.fields[0],
+          settings: {
+            mentionLabels: ['First', 'Second', 'Third'],
+            exclusiveOption: { label: 'Not applicable' },
+          },
+        },
+      ]),
+      publishedBy: user._id,
+      publishedAt: new Date(),
+    });
+    survey.publishedVersionId = nextVersion._id;
+    await survey.save();
+    const token = await login(user.email);
+    const base = `/api/v1/surveys/${survey._id}/reports`;
+    const report = await request(app)
+      .get(`${base}/questions`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(report.status).toBe(200);
+    const question = report.body.data.report.questions[0];
+    expect(question.responseCount).toBe(1);
+    expect(question.skipCount).toBe(0);
+    expect(question.exclusiveAnswers).toEqual([
+      { value: 'Does not recall any', label: 'Does not recall any', count: 1 },
+    ]);
+    expect(question.mentions.every((mention) => mention.distribution.length === 0)).toBe(true);
+    const exported = await request(app)
+      .get(`${base}/export?format=json`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(exported.status).toBe(200);
+    expect(JSON.parse(exported.text).rows[0]).toMatchObject({
+      'exclusive:names': 'Does not recall any',
+      'mention:names:0': '',
+      'mention:names:1': '',
+      'mention:names:2': '',
+    });
+    const csv = await request(app)
+      .get(`${base}/export?format=csv&type=questions`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(csv.status).toBe(200);
+    expect(csv.text).toContain('exclusive_option');
+    expect(csv.text).toContain('Does not recall any');
+  });
+});

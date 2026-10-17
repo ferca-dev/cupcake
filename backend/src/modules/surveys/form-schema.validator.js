@@ -141,6 +141,11 @@ const fieldSettingsSchema = z
     width: z.enum(['full', 'half', 'third', 'quarter']).default('full'),
     ...imageProperties,
     mentionLabels: z.array(z.string().trim().min(1).max(200)).min(1).max(10).optional(),
+    exclusiveOption: z
+      .object({ label: z.string().trim().min(1).max(200), ...imageProperties })
+      .strict()
+      .nullable()
+      .optional(),
     optionImages: z
       .array(z.object({ key: z.string().min(1).max(80), ...imageProperties }).strict())
       .max(101)
@@ -179,6 +184,24 @@ const fieldSchema = z
   })
   .strict()
   .superRefine((field, ctx) => {
+    if (
+      field.type === 'checkbox_group' &&
+      field.validation.max != null &&
+      (!Number.isInteger(field.validation.max) || field.validation.max < 1)
+    ) {
+      ctx.addIssue({
+        path: ['validation', 'max'],
+        code: z.ZodIssueCode.custom,
+        message: 'Maximum selections must be a positive integer',
+      });
+    }
+    if (field.settings.exclusiveOption && field.type !== 'multiple_text') {
+      ctx.addIssue({
+        path: ['settings', 'exclusiveOption'],
+        code: z.ZodIssueCode.custom,
+        message: 'An exclusive mention option is only supported for multiple text fields',
+      });
+    }
     if (field.type === 'multiple_text' && !field.settings.mentionLabels?.length) {
       ctx.addIssue({
         path: ['settings', 'mentionLabels'],

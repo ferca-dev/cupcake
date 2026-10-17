@@ -245,6 +245,49 @@ const submitMetadata = () => {
               (value) => setField({ settings: { mentionLabels: value.split('\n') } })
             "
           />
+          <label class="builder-inspector__switch">
+            <input
+              type="checkbox"
+              :checked="Boolean(field.settings?.exclusiveOption)"
+              @change="
+                setField({
+                  settings: {
+                    exclusiveOption: $event.target.checked
+                      ? { label: t('questionExtensions.exclusiveDefault') }
+                      : null,
+                  },
+                })
+              "
+            />
+            <span>{{ t('questionExtensions.exclusiveEnable') }}</span>
+          </label>
+          <template v-if="field.settings?.exclusiveOption">
+            <AppInput
+              :model-value="field.settings.exclusiveOption.label"
+              :label="t('questionExtensions.exclusiveLabel')"
+              :hint="t('questionExtensions.exclusiveHint')"
+              :maxlength="200"
+              @update:model-value="
+                (label) =>
+                  setField({
+                    settings: { exclusiveOption: { ...field.settings.exclusiveOption, label } },
+                  })
+              "
+            />
+            <QuestionImageEditor
+              :key="`${field.id}-exclusive`"
+              :image="field.settings.exclusiveOption"
+              :label="
+                t('questionExtensions.optionImage', { label: field.settings.exclusiveOption.label })
+              "
+              @update="
+                (image) =>
+                  setField({
+                    settings: { exclusiveOption: { ...field.settings.exclusiveOption, ...image } },
+                  })
+              "
+            />
+          </template>
         </template>
 
         <template v-if="isOptioned">
@@ -353,6 +396,23 @@ const submitMetadata = () => {
             />
           </section>
         </template>
+
+        <AppInput
+          v-if="field.type === 'checkbox_group'"
+          type="number"
+          min="1"
+          step="1"
+          :model-value="field.validation?.max ?? ''"
+          :label="t('builder.inspector.validation.maxSelections')"
+          :hint="t('builder.inspector.validation.maxSelectionsHint')"
+          :error="issueMessageByPath('validation')"
+          @update:model-value="
+            (value) =>
+              setField({
+                validation: { ...field.validation, max: value === '' ? null : Number(value) },
+              })
+          "
+        />
 
         <template v-if="!isPresentational && field.type === 'number'">
           <section

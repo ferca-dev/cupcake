@@ -72,6 +72,12 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
           <span>{{ label }}</span>
           <input type="text" class="builder-renderer__input" disabled />
         </label>
+        <ChoiceOptions
+          v-if="field.settings?.exclusiveOption"
+          :options="[{ key: 'exclusive', ...field.settings.exclusiveOption }]"
+          multiple
+          disabled
+        />
       </template>
       <template v-else-if="field.type === 'long_text'">
         <textarea

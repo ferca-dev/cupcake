@@ -412,6 +412,7 @@ const enumerateSchemaFields = (schema) => {
       order: typeof field.order === 'number' ? field.order : index,
       options: Array.isArray(field.options) ? field.options : [],
       mentionLabels: field.settings?.mentionLabels ?? [],
+      exclusiveOption: field.settings?.exclusiveOption ?? null,
       sectionId: field.sectionId ?? null,
     }))
     .sort((a, b) => a.order - b.order);
@@ -680,6 +681,15 @@ const computeQuestionStats = (descriptor, accumulator, totalResponses) => {
           })).sort((a, b) => b.count - a.count),
         }
       : {}),
+    ...(accumulator.exclusiveAnswers?.size
+      ? {
+          exclusiveAnswers: Array.from(accumulator.exclusiveAnswers, ([label, count]) => ({
+            value: label,
+            label,
+            count,
+          })),
+        }
+      : {}),
     ...(descriptor.type === 'multiple_text'
       ? {
           mentions: Array.from(
@@ -821,6 +831,12 @@ export const getQuestionsReport = async ({ surveyId, tenantId, filters = {} }) =
       if (answer.otherText) {
         acc.otherTexts ??= new Map();
         acc.otherTexts.set(answer.otherText, (acc.otherTexts.get(answer.otherText) ?? 0) + 1);
+      }
+      if (answer.type === 'multiple_text' && answer.value?.exclusive === true) {
+        acc.exclusiveAnswers ??= new Map();
+        const label = answer.value.label;
+        acc.exclusiveAnswers.set(label, (acc.exclusiveAnswers.get(label) ?? 0) + 1);
+        continue;
       }
       if (answer.type === 'multiple_text' && Array.isArray(answer.value)) {
         acc.mentions ??= [];
@@ -1228,6 +1244,15 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
           optionLabel: dist.label,
           optionCount: dist.count,
         });
+      for (const option of question.exclusiveAnswers ?? [])
+        rows.push({
+          ...baseRow,
+          answerKind: 'exclusive_option',
+          mention: '',
+          optionValue: option.value,
+          optionLabel: option.label,
+          optionCount: option.count,
+        });
       for (const mention of question.mentions ?? []) {
         for (const dist of mention.distribution)
           rows.push({
@@ -1331,6 +1356,7 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
       descriptor.id,
       {
         hasOther: descriptor.options.some((option) => option.isOther),
+        hasExclusive: descriptor.type === 'multiple_text' && Boolean(descriptor.exclusiveOption),
         mentionCount: descriptor.type === 'multiple_text' ? descriptor.mentionLabels.length : 0,
       },
     ]),
@@ -1340,6 +1366,8 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
       const details = exportDetails.get(answer.fieldId);
       if (!details) continue;
       if (answer.otherText) details.hasOther = true;
+      if (answer.type === 'multiple_text' && answer.value?.exclusive === true)
+        details.hasExclusive = true;
       if (answer.type === 'multiple_text' && Array.isArray(answer.value)) {
         details.mentionCount = Math.max(details.mentionCount, answer.value.length);
       }
@@ -1352,6 +1380,11 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
     const details = exportDetails.get(descriptor.id);
     if (details.hasOther)
       columns.push({ key: `other:${descriptor.id}`, label: `${descriptor.label} - Other text` });
+    if (details.hasExclusive)
+      columns.push({
+        key: `exclusive:${descriptor.id}`,
+        label: `${descriptor.label} - Exclusive option`,
+      });
     for (let index = 0; index < details.mentionCount; index += 1) {
       columns.push({
         key: `mention:${descriptor.id}:${index}`,
@@ -1388,6 +1421,9 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
       row[`field:${descriptor.id}`] = answer?.value ?? '';
       const details = exportDetails.get(descriptor.id);
       if (details.hasOther) row[`other:${descriptor.id}`] = answer?.otherText ?? '';
+      if (details.hasExclusive)
+        row[`exclusive:${descriptor.id}`] =
+          answer?.value?.exclusive === true ? answer.value.label : '';
       for (let index = 0; index < details.mentionCount; index += 1) {
         row[`mention:${descriptor.id}:${index}`] = answer?.value?.[index] ?? '';
       }

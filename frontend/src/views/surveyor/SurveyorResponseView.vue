@@ -9,8 +9,7 @@ import {
   serializeAnswers,
   validateAnswers,
 } from '../../features/public-form/answers.js';
-import { computeFieldVisibility } from '../../features/logic/logic-engine.js';
-import PublicFieldRenderer from '../../components/public-form/PublicFieldRenderer.vue';
+import SurveyFormFields from '../../components/public-form/SurveyFormFields.vue';
 import PublicThankYouView from '../public/PublicThankYouView.vue';
 import { AppAlert, AppButton, AppCard, AppLoader } from '../../components/ui/index.js';
 import { ApiError } from '../../services/apiClient.js';
@@ -30,17 +29,7 @@ const submittedResult = ref(null);
 const loadState = reactive({ loading: true, error: null });
 const submitState = reactive({ submitting: false, error: null });
 
-const visibilityMap = computed(() => {
-  if (!schema.value) return new Map();
-  return computeFieldVisibility(schema.value, answerState);
-});
-
-const visibleFields = computed(() => {
-  if (!schema.value) return [];
-  return schema.value.fields.filter((field) => visibilityMap.value.get(field.id) !== false);
-});
-
-const hasFieldErrors = computed(() => Object.keys(fieldErrors).length > 0);
+const fieldList = ref(null);
 
 const resetAnswerState = (next) => {
   for (const key of Object.keys(answerState)) delete answerState[key];
@@ -70,6 +59,7 @@ const loadSurvey = async () => {
 const setFieldValue = (fieldId, value) => {
   answerState[fieldId] = value;
   if (fieldErrors[fieldId]) delete fieldErrors[fieldId];
+  if (submitState.error === t('publicForm.validationSummary')) submitState.error = null;
 };
 
 const applyServerValidationDetails = (details) => {
@@ -86,7 +76,7 @@ const applyServerValidationDetails = (details) => {
 };
 
 const onSubmit = async () => {
-  if (!schema.value) return;
+  if (!schema.value || submitState.submitting) return;
   submitState.error = null;
   resetFieldErrors();
 
@@ -94,6 +84,7 @@ const onSubmit = async () => {
   if (Object.keys(localErrors).length > 0) {
     Object.assign(fieldErrors, localErrors);
     submitState.error = t('publicForm.validationSummary');
+    fieldList.value?.focusFirstError();
     return;
   }
 
@@ -153,6 +144,7 @@ const onSubmit = async () => {
   } catch (err) {
     if (err instanceof ApiError && err.isValidation && applyServerValidationDetails(err.details)) {
       submitState.error = t('publicForm.validationSummary');
+      fieldList.value?.focusFirstError();
     } else {
       submitState.error = err?.message ?? t('surveyor.response.submitError');
     }
@@ -184,25 +176,31 @@ onMounted(loadSurvey);
         {{ submitState.error }}
       </AppAlert>
 
-      <form class="surveyor-response__form" novalidate @submit.prevent="onSubmit">
-        <PublicFieldRenderer
-          v-for="field in visibleFields"
-          :key="field.id"
-          :field="field"
-          :model-value="answerState[field.id]"
-          :error="fieldErrors[field.id]"
-          @update:model-value="(value) => setFieldValue(field.id, value)"
-        >
-          <template #yes>{{ t('publicForm.yes') }}</template>
-          <template #no>{{ t('publicForm.no') }}</template>
-          <template #select-placeholder>{{ t('publicForm.selectPlaceholder') }}</template>
-        </PublicFieldRenderer>
+      <form
+        class="surveyor-response__form"
+        :aria-busy="submitState.submitting"
+        novalidate
+        @submit.prevent="onSubmit"
+      >
+        <SurveyFormFields
+          ref="fieldList"
+          :schema="schema"
+          :answers="answerState"
+          :errors="fieldErrors"
+          :disabled="submitState.submitting"
+          @update:answer="setFieldValue"
+        />
 
         <footer class="surveyor-response__footer">
-          <AppButton type="button" variant="secondary" @click="router.back()">
+          <AppButton
+            type="button"
+            variant="secondary"
+            :disabled="submitState.submitting"
+            @click="router.back()"
+          >
             {{ t('common.cancel') }}
           </AppButton>
-          <AppButton type="submit" :loading="submitState.submitting" :disabled="hasFieldErrors">
+          <AppButton type="submit" :loading="submitState.submitting">
             {{
               submitState.submitting ? t('publicForm.submitting') : t('surveyor.response.submit')
             }}
@@ -215,6 +213,7 @@ onMounted(loadSurvey);
 
 <style scoped>
 .surveyor-response {
+  --survey-progress-top: calc(var(--layout-topbar-height) + var(--space-3));
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

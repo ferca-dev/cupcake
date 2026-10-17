@@ -751,13 +751,11 @@ export default {
         },
         ipFallback: {
           label: 'Permitir respaldo por IP',
-          hint:
-            'Si la geolocalización no está disponible o fue denegada, usar la ubicación de la IP del servidor como respaldo.',
+          hint: 'Si la geolocalización no está disponible o fue denegada, usar la ubicación de la IP del servidor como respaldo.',
         },
         storeRawIp: {
           label: 'Guardar IP sin procesar',
-          hint:
-            'Guarda la dirección IP sin procesar en la respuesta. Si se desactiva, se guarda un hash para límites.',
+          hint: 'Guarda la dirección IP sin procesar en la respuesta. Si se desactiva, se guarda un hash para límites.',
         },
       },
       antiAbuse: {
@@ -1545,10 +1543,18 @@ export default {
     },
   },
   questionExtensions: {
+    exclusiveAnswers: 'Respuestas de la opción excluyente',
+    exclusiveEnable: 'Agregar opción de selección excluyente',
+    exclusiveLabel: 'Texto de la opción de selección',
+    exclusiveHint:
+      'Al seleccionarla se borran las menciones y se deshabilitan los campos hasta desmarcarla.',
+    exclusiveDefault: 'No recuerda ninguno',
+
     mentionQuestion: '¿Qué nombres recuerda?',
     mentions: 'Menciones múltiples',
     mentionLabels: 'Etiquetas de menciones (una por línea, hasta 10)',
-    mentionHint: 'Si es obligatoria, se debe completar al menos una mención.',
+    mentionHint:
+      'Si es obligatoria, completa al menos una mención o selecciona la opción excluyente configurada.',
     firstMention: 'Primera mención',
     secondMention: 'Segunda mención',
     thirdMention: 'Tercera mención',
@@ -1560,6 +1566,23 @@ export default {
     otherAnswers: 'Respuestas de Otro',
   },
   publicForm: {
+    surveyLabel: 'Encuesta',
+    questions: 'Preguntas de la encuesta',
+    questionNumber: 'Pregunta {number}',
+    required: 'Obligatoria',
+    optional: 'Opcional',
+    requiredNote: 'Las preguntas marcadas con asterisco son obligatorias.',
+    progressLabel: 'Avance de la encuesta',
+    progressCount: '{completed} de {total} respondidas',
+    nextPending: 'Siguiente pendiente',
+    allAnswered: 'Todo respondido',
+    reviewCount: 'Revisa estas preguntas ({count})',
+    chooseOne: 'Selecciona una opción.',
+    chooseSeveral: 'Puedes seleccionar varias opciones.',
+    chooseUpTo: 'Selecciona hasta {max} opciones.',
+    ratingValue: '{value} de {max}',
+    submitAnswers: 'Enviar respuestas',
+    submitHint: 'Revisa tus respuestas antes de enviarlas.',
     loading: 'Cargando formulario…',
     loadError: 'No pudimos cargar este formulario.',
     notFound: 'Este formulario ya no está disponible.',
@@ -1584,6 +1607,7 @@ export default {
     no: 'No',
     selectPlaceholder: 'Selecciona una opción',
     fieldErrors: {
+      maxSelections: 'Selecciona como máximo {max} opciones.',
       required: 'Este campo es obligatorio.',
       email: 'Ingresa un correo electrónico válido.',
       number: 'Ingresa un número válido.',
@@ -1737,7 +1761,8 @@ export default {
     },
     sidebar: {
       title: 'Agregar un campo',
-      subtitle: 'Pulsa una tarjeta o arrástrala al lienzo.',
+      subtitle: 'Pulsa + para agregar al final o arrastra una tarjeta al lienzo.',
+      addToEnd: 'Agregar {field} al final',
     },
     canvas: {
       emptyTitle: 'Tu formulario está vacío',
@@ -1773,6 +1798,8 @@ export default {
       },
       validation: {
         title: 'Validación',
+        maxSelections: 'Máximo de opciones seleccionadas',
+        maxSelectionsHint: 'Deja vacío para permitir cualquier cantidad de selecciones.',
         minLength: 'Longitud mínima',
         maxLength: 'Longitud máxima',
         min: 'Valor mínimo',

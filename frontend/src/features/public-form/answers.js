@@ -94,6 +94,16 @@ export const validateAnswers = (schema, state, translator = defaultT) => {
 
     switch (field.type) {
       case 'multiple_text': {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          if (
+            value.exclusive !== true ||
+            Object.keys(value).length !== 1 ||
+            !field.settings?.exclusiveOption
+          ) {
+            errors[field.id] = translator('publicForm.fieldErrors.option');
+          }
+          break;
+        }
         if (
           !Array.isArray(value) ||
           value.length > (field.settings?.mentionLabels?.length ?? 0) ||
@@ -169,11 +179,20 @@ export const validateAnswers = (schema, state, translator = defaultT) => {
       }
       case 'checkbox_group': {
         const allowed = new Set((field.options ?? []).map((opt) => opt.key));
+        if (!Array.isArray(value)) {
+          errors[field.id] = translator('publicForm.fieldErrors.option');
+          break;
+        }
         for (const entry of value) {
           if (!allowed.has(String(entry))) {
             errors[field.id] = translator('publicForm.fieldErrors.option');
             break;
           }
+        }
+        if (validation.max != null && new Set(value).size > validation.max) {
+          errors[field.id] = translator('publicForm.fieldErrors.maxSelections', {
+            max: validation.max,
+          });
         }
         break;
       }
@@ -214,6 +233,10 @@ export const serializeAnswers = (schema, state) => {
     let value = raw;
     switch (field.type) {
       case 'multiple_text':
+        if (field.settings?.exclusiveOption && raw?.exclusive === true) {
+          value = { exclusive: true };
+          break;
+        }
         value = (field.settings?.mentionLabels ?? []).map((_, index) =>
           String(raw?.[index] ?? '').trim(),
         );

@@ -17,11 +17,10 @@ import {
   validateAnswers,
 } from '../../features/public-form/answers.js';
 import { getOrCreateDeviceKey } from '../../features/public-form/device-key.js';
-import { computeFieldVisibility } from '../../features/logic/logic-engine.js';
-import PublicFieldRenderer from '../../components/public-form/PublicFieldRenderer.vue';
+import SurveyFormFields from '../../components/public-form/SurveyFormFields.vue';
 import PublicCaptchaWidget from '../../components/public-form/PublicCaptchaWidget.vue';
 import PublicThankYouView from './PublicThankYouView.vue';
-import { AppAlert, AppButton } from '../../components/ui/index.js';
+import { AppAlert, AppButton, AppLoader } from '../../components/ui/index.js';
 
 const route = useRoute();
 const { t } = useI18n();
@@ -68,19 +67,7 @@ const answerState = reactive({});
 const fieldErrors = reactive({});
 const startedAt = ref(null);
 
-const hasFieldErrors = computed(() => Object.keys(fieldErrors).length > 0);
-
-const visibilityMap = computed(() => {
-  if (!schema.value) return new Map();
-  return computeFieldVisibility(schema.value, answerState);
-});
-
-const isFieldVisible = (fieldId) => visibilityMap.value.get(fieldId) !== false;
-
-const visibleFields = computed(() => {
-  if (!schema.value) return [];
-  return schema.value.fields.filter((field) => isFieldVisible(field.id));
-});
+const fieldList = ref(null);
 
 const brandingStyle = computed(() => {
   const brand = branding.value;
@@ -130,6 +117,7 @@ const loadForm = async () => {
 const setFieldValue = (fieldId, value) => {
   answerState[fieldId] = value;
   if (fieldErrors[fieldId]) delete fieldErrors[fieldId];
+  if (submitState.error === t('publicForm.validationSummary')) submitState.error = null;
 };
 
 const applyServerValidationDetails = (details) => {
@@ -154,7 +142,7 @@ const onCaptchaError = () => {
 };
 
 const onSubmit = async () => {
-  if (!schema.value) return;
+  if (!schema.value || submitState.submitting || !acceptingResponses.value) return;
   submitState.error = null;
   resetFieldErrors();
 
@@ -167,6 +155,7 @@ const onSubmit = async () => {
   if (Object.keys(localErrors).length > 0) {
     Object.assign(fieldErrors, localErrors);
     submitState.error = t('publicForm.validationSummary');
+    fieldList.value?.focusFirstError();
     return;
   }
 
@@ -252,6 +241,7 @@ const onSubmit = async () => {
         submitState.error = err.message || limitMessage.value;
       } else if (err.isValidation && applyServerValidationDetails(err.details)) {
         submitState.error = t('publicForm.validationSummary');
+        fieldList.value?.focusFirstError();
       } else if (err.status === 409) {
         submitState.error = err.message || t('publicForm.closed');
       } else if (err.status === 404) {
@@ -311,7 +301,8 @@ onUnmounted(() => {
 <template>
   <article class="public-form" :style="brandingStyle" :data-public-slug="slug">
     <div v-if="loadState.loading" class="public-form__state" role="status">
-      {{ t('publicForm.loading') }}
+      <AppLoader />
+      <p>{{ t('publicForm.loading') }}</p>
     </div>
 
     <div v-else-if="loadState.error" class="public-form__state">
@@ -330,6 +321,7 @@ onUnmounted(() => {
     <template v-else-if="survey">
       <header class="public-form__header">
         <img v-if="branding?.logoUrl" class="public-form__logo" :src="branding.logoUrl" alt="" />
+        <p class="public-form__eyebrow">{{ t('publicForm.surveyLabel') }}</p>
         <h1 class="public-form__title">{{ survey.title }}</h1>
         <p v-if="survey.description" class="public-form__description">{{ survey.description }}</p>
       </header>
@@ -342,19 +334,20 @@ onUnmounted(() => {
         {{ submitState.error }}
       </AppAlert>
 
-      <form class="public-form__form" novalidate @submit.prevent="onSubmit">
-        <PublicFieldRenderer
-          v-for="field in visibleFields"
-          :key="field.id"
-          :field="field"
-          :model-value="answerState[field.id]"
-          :error="fieldErrors[field.id]"
-          @update:model-value="(value) => setFieldValue(field.id, value)"
-        >
-          <template #yes>{{ t('publicForm.yes') }}</template>
-          <template #no>{{ t('publicForm.no') }}</template>
-          <template #select-placeholder>{{ t('publicForm.selectPlaceholder') }}</template>
-        </PublicFieldRenderer>
+      <form
+        class="public-form__form"
+        :aria-busy="submitState.submitting"
+        novalidate
+        @submit.prevent="onSubmit"
+      >
+        <SurveyFormFields
+          ref="fieldList"
+          :schema="schema"
+          :answers="answerState"
+          :errors="fieldErrors"
+          :disabled="submitState.submitting || !acceptingResponses"
+          @update:answer="setFieldValue"
+        />
 
         <!--
           Honeypot input. `aria-hidden` plus `tabindex="-1"` keeps it off the
@@ -400,13 +393,17 @@ onUnmounted(() => {
         </AppAlert>
 
         <footer class="public-form__footer">
+          <p>{{ t('publicForm.submitHint') }}</p>
           <AppButton
             type="submit"
             variant="primary"
+            size="lg"
             :loading="submitState.submitting"
-            :disabled="!acceptingResponses || hasFieldErrors"
+            :disabled="!acceptingResponses"
           >
-            {{ submitState.submitting ? t('publicForm.submitting') : t('publicForm.submit') }}
+            {{
+              submitState.submitting ? t('publicForm.submitting') : t('publicForm.submitAnswers')
+            }}
           </AppButton>
         </footer>
       </form>
@@ -417,61 +414,100 @@ onUnmounted(() => {
 <style scoped>
 .public-form {
   width: 100%;
-  background: var(--color-surface);
+  min-width: 0;
   color: var(--public-brand-text, var(--color-text));
-  padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
-
 .public-form__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
   text-align: center;
   color: var(--color-text-muted);
 }
-
-.public-form__header h1 {
-  margin: 0 0 var(--space-2) 0;
-  font-size: var(--font-size-xl);
+.public-form__header {
+  padding: var(--space-7) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--public-brand-primary, var(--color-primary-600));
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.public-form__eyebrow {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--public-brand-primary, var(--color-primary-600));
+}
+.public-form__title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 1.875rem);
+  line-height: 1.35;
+  letter-spacing: -0.025em;
   color: var(--public-brand-text, var(--color-text));
 }
-
+.public-form__description {
+  margin: var(--space-4) 0 0;
+  max-width: 65ch;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  white-space: pre-line;
+}
 .public-form__logo {
   max-height: 4rem;
   max-width: 12rem;
   object-fit: contain;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-5);
 }
-
-:global(.public-form-layout) {
-  background: var(--public-brand-page-background, var(--color-surface-muted));
-}
-
 :global(body.public-white-label .public-form-layout__footer) {
   display: none;
 }
-
-.public-form :global(.app-button--primary) {
+.public-form :deep(.app-button--primary) {
   background: var(--public-brand-primary, var(--color-primary-600));
   border-color: var(--public-brand-primary, var(--color-primary-600));
 }
-
-.public-form__description {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
 .public-form__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
-
 .public-form__footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.public-form__footer p {
+  margin: 0;
+  max-width: 32ch;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+.public-form__footer :deep(button) {
+  min-height: 3rem;
+}
+@media (max-width: 600px) {
+  .public-form__header {
+    padding: var(--space-5) var(--space-4);
+  }
+  .public-form__footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-5) var(--space-4);
+  }
+  .public-form__footer p {
+    max-width: none;
+  }
 }
 
 /*

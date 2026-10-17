@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PublicFieldRenderer from '../components/public-form/PublicFieldRenderer.vue';
+import BuilderInspector from '../components/builder/BuilderInspector.vue';
+import { AppInput } from '../components/ui/index.js';
 import QuestionImageEditor from '../components/media/QuestionImageEditor.vue';
 import {
   buildDefaultField,
@@ -202,5 +204,86 @@ describe('extended questions through builder and public renderer', () => {
     resolve({ asset: { id: 'image', publicUrl: 'https://example.test/image.png' } });
     await Promise.resolve();
     expect(wrapper.emitted('update')).toBeUndefined();
+  });
+});
+
+describe('configurable exclusive mention option', () => {
+  it('edits, saves, reloads and removes the custom option through the inspector', async () => {
+    setActivePinia(createPinia());
+    const builder = useBuilderStore();
+    const field = builder.addField('multiple_text');
+    wrapper = mount(BuilderInspector, {
+      props: {
+        field: builder.selectedField,
+        'onUpdate-field': async (patch) => {
+          builder.updateField(field.id, patch);
+          await wrapper.setProps({ field: builder.selectedField });
+        },
+      },
+    });
+    const toggle = wrapper
+      .findAll('label')
+      .find((label) => label.text() === 'Add an exclusive selection option')
+      .get('input');
+    await toggle.setValue(true);
+    const customLabel = wrapper
+      .findAllComponents(AppInput)
+      .find((input) => input.props('label') === 'Selection option text');
+    await customLabel.get('input').setValue('Not applicable');
+    const saved = parseFormSchema(normalizeSchemaForApi(builder.schema));
+    builder.setSurvey({ id: 'survey', currentDraftSchema: saved });
+    expect(builder.fields[0].settings.exclusiveOption.label).toBe('Not applicable');
+    const copy = cloneFieldWithNewIds(builder.fields[0]);
+    copy.settings.exclusiveOption.label = 'Copy label';
+    expect(builder.fields[0].settings.exclusiveOption.label).toBe('Not applicable');
+    builder.selectField(field.id);
+    await wrapper.setProps({ field: builder.selectedField });
+    await toggle.setValue(false);
+    expect(
+      normalizeSchemaForApi(builder.schema).fields[0].settings.exclusiveOption,
+    ).toBeUndefined();
+  });
+  it.each([null, 'https://example.test/option.png'])(
+    'clears all mentions on selection and keeps them empty when unchecked (%s)',
+    async (imageUrl) => {
+      const field = { ...buildDefaultField('multiple_text'), id: 'names', required: true };
+      field.settings.exclusiveOption = { label: 'Custom selection', imageUrl };
+      mountField(field);
+      const inputs = wrapper.findAll('input[type="text"]');
+      await inputs[0].setValue('Ada');
+      await inputs[2].setValue('Grace');
+      const checkbox = wrapper.get('input[value="exclusive"]');
+      expect(checkbox.attributes('aria-label')).toBe('Custom selection');
+      await checkbox.setValue(true);
+      expect(wrapper.props('modelValue')).toEqual({ exclusive: true });
+      expect(inputs.every((input) => input.element.value === '' && input.element.disabled)).toBe(
+        true,
+      );
+      const state = { names: wrapper.props('modelValue') };
+      expect(validateAnswers({ fields: [field] }, state)).toEqual({});
+      expect(serializeAnswers({ fields: [field] }, state)[0].value).toEqual({ exclusive: true });
+      await checkbox.setValue(false);
+      expect(wrapper.props('modelValue')).toEqual(['', '', '']);
+      expect(inputs.every((input) => input.element.value === '' && !input.element.disabled)).toBe(
+        true,
+      );
+      expect(
+        validateAnswers({ fields: [field] }, { names: wrapper.props('modelValue') }),
+      ).toHaveProperty('names');
+      await inputs[1].setValue('New mention');
+      expect(
+        serializeAnswers({ fields: [field] }, { names: wrapper.props('modelValue') })[0].value,
+      ).toEqual(['', 'New mention', '']);
+    },
+  );
+  it('rejects an exclusive answer if the option is disabled or the payload contains mentions', () => {
+    const field = { ...buildDefaultField('multiple_text'), id: 'names' };
+    expect(validateAnswers({ fields: [field] }, { names: { exclusive: true } })).toHaveProperty(
+      'names',
+    );
+    field.settings.exclusiveOption = { label: 'Not applicable' };
+    expect(
+      validateAnswers({ fields: [field] }, { names: { exclusive: true, mentions: ['Ada'] } }),
+    ).toHaveProperty('names');
   });
 });
