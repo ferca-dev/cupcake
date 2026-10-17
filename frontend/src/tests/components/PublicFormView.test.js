@@ -1,9 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { mount, flushPromises } from '@vue/test-utils';
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 
 import PublicFormView from '../../views/public/PublicFormView.vue';
 import { setAuthProvider } from '../../services/apiClient.js';
+
+enableAutoUnmount(afterEach);
 
 const buildJsonResponse = (body, init = {}) =>
   new Response(JSON.stringify(body), {
@@ -194,6 +196,46 @@ describe('PublicFormView', () => {
     expect(wrapper.text()).toMatch(/on break/i);
     const submitButton = wrapper.find('button[type="submit"]');
     expect(submitButton.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('fieldset').attributes('disabled')).toBeDefined();
+  });
+
+  it('focuses a field rejected by the server and allows correcting it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url, init) => {
+        if (init?.method === 'POST')
+          return buildJsonResponse(
+            {
+              success: false,
+              error: {
+                code: 'VALIDATION_ERROR',
+                message: 'Review your response.',
+                details: [
+                  {
+                    path: ['answers', 'field_email'],
+                    message: 'Please use a different email address.',
+                  },
+                ],
+              },
+            },
+            { status: 422 },
+          );
+        return buildJsonResponse(publishedFormPayload());
+      }),
+    );
+    const wrapper = await mountForm(buildRouter());
+    await wrapper.find('[data-field-id="field_name"] input').setValue('Marina');
+    await wrapper.find('[data-field-id="field_email"] input').setValue('marina@example.com');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(document.activeElement.id).toBe('public-field-field_email');
+    expect(wrapper.get('[data-field-id="field_email"]').text()).toContain(
+      'Please use a different email address.',
+    );
+    expect(wrapper.get('fieldset').attributes('disabled')).toBeUndefined();
+    await wrapper.find('[data-field-id="field_email"] input').setValue('marina.rivera@example.com');
+    expect(wrapper.find('.survey-fields__errors').exists()).toBe(false);
+    expect(wrapper.text()).not.toMatch(/fix the highlighted/i);
   });
 
   it('renders an accessible honeypot input that real respondents can ignore', async () => {
