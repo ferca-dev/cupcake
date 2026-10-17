@@ -8,6 +8,7 @@ const answerSchema = new Schema(
     key: { type: String, default: null },
     type: { type: String, required: true },
     value: { type: Schema.Types.Mixed, default: null },
+    otherText: { type: String, maxlength: 1000 },
   },
   { _id: false },
 );

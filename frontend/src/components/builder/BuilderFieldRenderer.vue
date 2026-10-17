@@ -4,6 +4,11 @@
 // public form will look like, not a working form. Editing happens through
 // the inspector.
 import { computed } from 'vue';
+import { useI18n } from '../../i18n/index.js';
+import QuestionImage from '../media/QuestionImage.vue';
+import ChoiceOptions from '../public-form/ChoiceOptions.vue';
+import { fixedImageOptions } from '../../features/public-form/choice-value.js';
+const { t } = useI18n();
 
 const props = defineProps({
   field: { type: Object, required: true },
@@ -16,12 +21,28 @@ const isPresentational = computed(() =>
   ),
 );
 
+const fixedOptions = computed(() =>
+  fixedImageOptions(props.field, t).map((option) => ({
+    ...option,
+    imageUrl: props.field.settings?.optionImages?.find((image) => image.key === option.key)
+      ?.imageUrl,
+  })),
+);
+const hasOptionImages = computed(() =>
+  (props.field.options ?? []).some((option) => option.imageUrl),
+);
+const hasFixedImages = computed(() => fixedOptions.value.some((option) => option.imageUrl));
 const ratingValues = [1, 2, 3, 4, 5];
 const npsValues = Array.from({ length: 11 }, (_, i) => i);
 </script>
 
 <template>
   <div class="builder-renderer">
+    <QuestionImage
+      v-if="field.type !== 'image_block'"
+      :src="field.settings?.imageUrl"
+      :label="field.label"
+    />
     <header v-if="!isPresentational" class="builder-renderer__head">
       <span class="builder-renderer__label">
         {{ previewLabel }}
@@ -42,6 +63,16 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
         />
       </template>
 
+      <template v-else-if="field.type === 'multiple_text'">
+        <label
+          v-for="(label, index) in field.settings?.mentionLabels ?? []"
+          :key="index"
+          class="builder-renderer__mention"
+        >
+          <span>{{ label }}</span>
+          <input type="text" class="builder-renderer__input" disabled />
+        </label>
+      </template>
       <template v-else-if="field.type === 'long_text'">
         <textarea
           class="builder-renderer__textarea"
@@ -68,7 +99,7 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
         <input type="time" class="builder-renderer__input" disabled />
       </template>
 
-      <template v-else-if="field.type === 'select'">
+      <template v-else-if="field.type === 'select' && !hasOptionImages">
         <select class="builder-renderer__input" disabled>
           <option value="" disabled selected>{{ field.placeholder || 'Select an option' }}</option>
           <option v-for="opt in field.options" :key="opt.id" :value="opt.key">
@@ -77,23 +108,18 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
         </select>
       </template>
 
-      <template v-else-if="field.type === 'radio_group'">
-        <div class="builder-renderer__options">
-          <label v-for="opt in field.options" :key="opt.id" class="builder-renderer__option">
-            <input type="radio" :name="field.id" disabled />
-            <span>{{ opt.label }}</span>
-          </label>
-        </div>
-      </template>
-
-      <template v-else-if="field.type === 'checkbox_group'">
-        <div class="builder-renderer__options">
-          <label v-for="opt in field.options" :key="opt.id" class="builder-renderer__option">
-            <input type="checkbox" disabled />
-            <span>{{ opt.label }}</span>
-          </label>
-        </div>
-      </template>
+      <ChoiceOptions
+        v-else-if="['select', 'radio_group', 'checkbox_group'].includes(field.type)"
+        :options="field.options"
+        :multiple="field.type === 'checkbox_group'"
+        disabled
+      />
+      <ChoiceOptions
+        v-else-if="hasFixedImages"
+        :options="fixedOptions"
+        :multiple="field.type === 'checkbox'"
+        disabled
+      />
 
       <template v-else-if="field.type === 'checkbox'">
         <label class="builder-renderer__option">
@@ -166,11 +192,23 @@ const npsValues = Array.from({ length: 11 }, (_, i) => i);
       <template v-else>
         <div class="builder-renderer__unknown">Unsupported field type: {{ field.type }}</div>
       </template>
+      <input
+        v-if="field.options?.some((option) => option.isOther)"
+        class="builder-renderer__input"
+        :placeholder="t('questionExtensions.otherText')"
+        disabled
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
+.builder-renderer__mention {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
 .builder-renderer {
   display: flex;
   flex-direction: column;

@@ -129,6 +129,82 @@ describe('Admin /api/v1/admin/plans', () => {
       .send(buildPlanPayload({ name: 'Other' }));
     expect(dup.status).toBe(409);
   });
+
+  it('prevents client admins from changing plan features', async () => {
+    const { admin } = await createTenant('Acme', 'admin@acme.test');
+    const plan = await Plan.create(buildPlanPayload());
+    const token = await login(admin.email);
+    const response = await request(app)
+      .put(`/api/v1/admin/plans/${plan._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ features: { [FEATURE_KEYS.SURVEYS_PUBLISH]: false } });
+
+    expect(response.status).toBe(403);
+    expect((await Plan.findById(plan._id)).features[FEATURE_KEYS.SURVEYS_PUBLISH]).toBe(true);
+  });
+
+  it('applies feature changes to an assigned tenant without reassigning its plan', async () => {
+    const { tenant, admin } = await createTenant('Acme', 'admin@acme.test');
+    await createSuperAdmin();
+    const superToken = await login('super@plans.test');
+    const clientToken = await login(admin.email);
+    const create = await request(app)
+      .post('/api/v1/admin/plans')
+      .set('Authorization', `Bearer ${superToken}`)
+      .send(buildPlanPayload());
+    expect(create.status).toBe(201);
+    const planId = create.body.data.plan.id;
+    const assignment = await request(app)
+      .post(`/api/v1/admin/tenants/${tenant._id}/plan`)
+      .set('Authorization', `Bearer ${superToken}`)
+      .send({ planId });
+    expect(assignment.status).toBe(200);
+
+    const survey = await request(app)
+      .post('/api/v1/surveys')
+      .set('Authorization', `Bearer ${clientToken}`)
+      .send({
+        title: 'Feature toggle check',
+        schema: {
+          fields: [{ id: 'f1', type: 'short_text', key: 'name', label: 'Name', order: 1 }],
+        },
+      });
+    expect(survey.status).toBe(201);
+    const surveyId = survey.body.data.survey.id;
+
+    for (const enabled of [false, true]) {
+      const features = {
+        ...create.body.data.plan.features,
+        [FEATURE_KEYS.SURVEYS_PUBLISH]: enabled,
+      };
+      const update = await request(app)
+        .put(`/api/v1/admin/plans/${planId}`)
+        .set('Authorization', `Bearer ${superToken}`)
+        .send({ features });
+      expect(update.status).toBe(200);
+      const stored = await request(app)
+        .get(`/api/v1/admin/plans/${planId}`)
+        .set('Authorization', `Bearer ${superToken}`);
+      expect(stored.status).toBe(200);
+      expect(stored.body.data.plan.features).toEqual(features);
+      expect(stored.body.data.plan.quotas).toEqual(create.body.data.plan.quotas);
+      expect(stored.body.data.plan.price).toEqual(create.body.data.plan.price);
+
+      const effective = await request(app)
+        .get('/api/v1/billing/plan')
+        .set('Authorization', `Bearer ${clientToken}`);
+      expect(effective.status).toBe(200);
+      expect(effective.body.data.plan.features[FEATURE_KEYS.SURVEYS_PUBLISH]).toBe(enabled);
+
+      const publish = await request(app)
+        .post(`/api/v1/surveys/${surveyId}/publish`)
+        .set('Authorization', `Bearer ${clientToken}`);
+      expect(publish.status).toBe(enabled ? 200 : 402);
+      if (!enabled) expect(publish.body.error.code).toBe('FEATURE_BLOCKED');
+    }
+
+    expect(await PlanAssignment.countDocuments({ tenantId: tenant._id })).toBe(1);
+  });
 });
 
 describe('Tenant plan assignment + history', () => {
@@ -328,9 +404,7 @@ describe('Feature gates and quota enforcement', () => {
     });
 
     // Existing data still readable.
-    const list = await request(app)
-      .get('/api/v1/surveys')
-      .set('Authorization', `Bearer ${token}`);
+    const list = await request(app).get('/api/v1/surveys').set('Authorization', `Bearer ${token}`);
     expect(list.status).toBe(200);
     expect(list.body.data.items).toHaveLength(2);
 

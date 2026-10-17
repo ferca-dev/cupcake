@@ -53,6 +53,30 @@ const checkStorage = async () => {
     }
   }
 
+  if (env.STORAGE_DRIVER === 'vercel-blob') {
+    try {
+      const { list } = await import('@vercel/blob');
+      await withTimeout(
+        list({
+          limit: 1,
+          ...(env.BLOB_READ_WRITE_TOKEN
+            ? { token: env.BLOB_READ_WRITE_TOKEN }
+            : { storeId: env.BLOB_STORE_ID }),
+        }),
+        3000,
+        'Vercel Blob',
+      );
+      return { status: 'ok', driver: 'vercel-blob', critical: true };
+    } catch {
+      return {
+        status: 'down',
+        driver: 'vercel-blob',
+        critical: true,
+        message: 'Vercel Blob check failed',
+      };
+    }
+  }
+
   if (env.STORAGE_DRIVER === 's3') {
     try {
       const { S3Client, HeadBucketCommand } = await import('@aws-sdk/client-s3');

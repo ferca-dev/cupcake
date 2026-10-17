@@ -8,6 +8,7 @@
 // source of truth for validation; any error returned by the API is surfaced
 // alongside the local issues.
 
+import { choiceValue, selectedOtherOption } from './choice-value.js';
 import { t as defaultT } from '../../i18n/index.js';
 import { computeFieldVisibility } from '../logic/logic-engine.js';
 
@@ -28,7 +29,12 @@ export const isInputField = (field) =>
   field && !PRESENTATION_TYPES.has(field.type) && !HIDDEN_TYPES.has(field.type);
 
 const initialValueFor = (field) => {
+  if ((field.options ?? []).some((option) => option.isOther)) {
+    return { selected: field.type === 'checkbox_group' ? [] : '', otherText: '' };
+  }
   switch (field.type) {
+    case 'multiple_text':
+      return (field.settings?.mentionLabels ?? []).map(() => '');
     case 'checkbox_group':
       return [];
     case 'checkbox':
@@ -55,7 +61,8 @@ export const buildInitialAnswers = (schema) => {
 const isEmpty = (value) => {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string') return value.trim().length === 0;
-  if (Array.isArray(value)) return value.length === 0;
+  if (Array.isArray(value))
+    return value.length === 0 || value.every((entry) => typeof entry === 'string' && !entry.trim());
   return false;
 };
 
@@ -67,7 +74,7 @@ export const validateAnswers = (schema, state, translator = defaultT) => {
   for (const field of fields) {
     if (!isInputField(field)) continue;
     if (visibility.get(field.id) === false) continue;
-    const value = state[field.id];
+    const value = choiceValue(state[field.id]);
     const required = Boolean(field.required);
     const validation = field.validation ?? {};
 
@@ -76,7 +83,36 @@ export const validateAnswers = (schema, state, translator = defaultT) => {
       continue;
     }
 
+    if (selectedOtherOption(field, state[field.id])) {
+      const text = state[field.id]?.otherText;
+      if (typeof text !== 'string' || !text.trim()) {
+        errors[field.id] = translator('questionExtensions.otherRequired');
+      } else if (text.trim().length > 1000) {
+        errors[field.id] = translator('publicForm.fieldErrors.maxLength', { max: 1000 });
+      }
+    }
+
     switch (field.type) {
+      case 'multiple_text': {
+        if (
+          !Array.isArray(value) ||
+          value.length > (field.settings?.mentionLabels?.length ?? 0) ||
+          value.some((entry) => typeof entry !== 'string')
+        ) {
+          errors[field.id] = translator('publicForm.fieldErrors.option');
+        } else if (value.some((entry) => entry.trim().length > (validation.maxLength ?? 500))) {
+          errors[field.id] = translator('publicForm.fieldErrors.maxLength', {
+            max: validation.maxLength ?? 500,
+          });
+        } else if (
+          value.some((entry) => entry.trim() && entry.trim().length < (validation.minLength ?? 0))
+        ) {
+          errors[field.id] = translator('publicForm.fieldErrors.minLength', {
+            min: validation.minLength,
+          });
+        }
+        break;
+      }
       case 'short_text':
       case 'long_text': {
         const len = String(value).trim().length;
@@ -172,11 +208,16 @@ export const serializeAnswers = (schema, state) => {
   for (const field of fields) {
     if (!isInputField(field)) continue;
     if (visibility.get(field.id) === false) continue;
-    const raw = state[field.id];
+    const raw = choiceValue(state[field.id]);
     if (isEmpty(raw) && !field.required) continue;
 
     let value = raw;
     switch (field.type) {
+      case 'multiple_text':
+        value = (field.settings?.mentionLabels ?? []).map((_, index) =>
+          String(raw?.[index] ?? '').trim(),
+        );
+        break;
       case 'short_text':
       case 'long_text':
       case 'email':
@@ -207,7 +248,16 @@ export const serializeAnswers = (schema, state) => {
     }
 
     if (value === null && !field.required) continue;
-    answers.push({ fieldId: field.id, key: field.key ?? undefined, type: field.type, value });
+    const otherText = selectedOtherOption(field, state[field.id])
+      ? String(state[field.id]?.otherText ?? '').trim()
+      : null;
+    answers.push({
+      fieldId: field.id,
+      key: field.key ?? undefined,
+      type: field.type,
+      value,
+      ...(otherText !== null ? { otherText } : {}),
+    });
   }
   return answers;
 };

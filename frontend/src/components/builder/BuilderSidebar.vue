@@ -58,7 +58,9 @@ const onDragStart = (event, type) => {
           @dragstart="(event) => onDragStart(event, field.type)"
         >
           <span class="builder-sidebar__icon" aria-hidden="true">{{ field.icon }}</span>
-          <span class="builder-sidebar__label">{{ field.label }}</span>
+          <span class="builder-sidebar__label">{{
+            field.labelKey ? t(field.labelKey) : field.label
+          }}</span>
         </button>
       </div>
     </div>

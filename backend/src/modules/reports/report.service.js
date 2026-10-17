@@ -25,6 +25,7 @@ const RECIPIENT_STATUSES = Object.freeze([
 const INPUT_FIELD_TYPES = Object.freeze([
   'short_text',
   'long_text',
+  'multiple_text',
   'email',
   'phone',
   'number',
@@ -410,6 +411,7 @@ const enumerateSchemaFields = (schema) => {
       type: field.type,
       order: typeof field.order === 'number' ? field.order : index,
       options: Array.isArray(field.options) ? field.options : [],
+      mentionLabels: field.settings?.mentionLabels ?? [],
       sectionId: field.sectionId ?? null,
     }))
     .sort((a, b) => a.order - b.order);
@@ -669,6 +671,36 @@ const computeQuestionStats = (descriptor, accumulator, totalResponses) => {
     totalResponses,
     responseCount,
     skipCount,
+    ...(accumulator.otherTexts?.size
+      ? {
+          otherAnswers: Array.from(accumulator.otherTexts, ([value, count]) => ({
+            value,
+            label: value,
+            count,
+          })).sort((a, b) => b.count - a.count),
+        }
+      : {}),
+    ...(descriptor.type === 'multiple_text'
+      ? {
+          mentions: Array.from(
+            {
+              length: Math.max(
+                descriptor.mentionLabels?.length ?? 0,
+                accumulator.mentions?.length ?? 0,
+              ),
+            },
+            (_, index) => ({
+              position: index + 1,
+              label: descriptor.mentionLabels?.[index] ?? `Mention ${index + 1}`,
+              distribution: Array.from(accumulator.mentions?.[index] ?? [], ([value, count]) => ({
+                value,
+                label: value,
+                count,
+              })).sort((a, b) => b.count - a.count),
+            }),
+          ),
+        }
+      : {}),
     responseRate: totalResponses > 0 ? roundTo(responseCount / totalResponses, 4) : null,
   };
 
@@ -786,6 +818,18 @@ export const getQuestionsReport = async ({ surveyId, tenantId, filters = {} }) =
       if (valueIsEmpty(answer.value)) continue;
       const acc = accumulators.get(answer.fieldId);
       acc.count += 1;
+      if (answer.otherText) {
+        acc.otherTexts ??= new Map();
+        acc.otherTexts.set(answer.otherText, (acc.otherTexts.get(answer.otherText) ?? 0) + 1);
+      }
+      if (answer.type === 'multiple_text' && Array.isArray(answer.value)) {
+        acc.mentions ??= [];
+        answer.value.forEach((entry, index) => {
+          acc.mentions[index] ??= new Map();
+          if (!valueIsEmpty(entry))
+            acc.mentions[index].set(entry, (acc.mentions[index].get(entry) ?? 0) + 1);
+        });
+      }
       if (Array.isArray(answer.value)) {
         for (const entry of answer.value) {
           if (valueIsEmpty(entry)) continue;
@@ -1167,15 +1211,46 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
         skipCount: question.skipCount,
         responseRate: question.responseRate ?? '',
       };
-      if (Array.isArray(question.distribution) && question.distribution.length > 0) {
-        return question.distribution.map((dist) => ({
+      const rows = (question.distribution ?? []).map((dist) => ({
+        ...baseRow,
+        answerKind: 'option',
+        mention: '',
+        optionValue: dist.value,
+        optionLabel: dist.label ?? dist.value,
+        optionCount: dist.count,
+      }));
+      for (const dist of question.otherAnswers ?? [])
+        rows.push({
           ...baseRow,
+          answerKind: 'other_text',
+          mention: '',
           optionValue: dist.value,
-          optionLabel: dist.label ?? dist.value,
+          optionLabel: dist.label,
           optionCount: dist.count,
-        }));
+        });
+      for (const mention of question.mentions ?? []) {
+        for (const dist of mention.distribution)
+          rows.push({
+            ...baseRow,
+            answerKind: 'mention',
+            mention: mention.label,
+            optionValue: dist.value,
+            optionLabel: dist.label,
+            optionCount: dist.count,
+          });
       }
-      return [{ ...baseRow, optionValue: '', optionLabel: '', optionCount: '' }];
+      return rows.length
+        ? rows
+        : [
+            {
+              ...baseRow,
+              answerKind: '',
+              mention: '',
+              optionValue: '',
+              optionLabel: '',
+              optionCount: '',
+            },
+          ];
     });
     const columns = [
       { key: 'fieldId', label: 'Field ID' },
@@ -1186,6 +1261,8 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
       { key: 'responseCount', label: 'Responses' },
       { key: 'skipCount', label: 'Skipped' },
       { key: 'responseRate', label: 'Response rate' },
+      { key: 'answerKind', label: 'Answer kind' },
+      { key: 'mention', label: 'Mention' },
       { key: 'optionValue', label: 'Option value' },
       { key: 'optionLabel', label: 'Option label' },
       { key: 'optionCount', label: 'Option count' },
@@ -1249,10 +1326,40 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
     { key: 'completionTimeSeconds', label: 'Completion time (s)' },
   ];
 
-  const fieldColumns = descriptors.map((descriptor) => ({
-    key: `field:${descriptor.id}`,
-    label: descriptor.label || descriptor.key || descriptor.id,
-  }));
+  const exportDetails = new Map(
+    descriptors.map((descriptor) => [
+      descriptor.id,
+      {
+        hasOther: descriptor.options.some((option) => option.isOther),
+        mentionCount: descriptor.type === 'multiple_text' ? descriptor.mentionLabels.length : 0,
+      },
+    ]),
+  );
+  for (const response of responses) {
+    for (const answer of response.answers ?? []) {
+      const details = exportDetails.get(answer.fieldId);
+      if (!details) continue;
+      if (answer.otherText) details.hasOther = true;
+      if (answer.type === 'multiple_text' && Array.isArray(answer.value)) {
+        details.mentionCount = Math.max(details.mentionCount, answer.value.length);
+      }
+    }
+  }
+  const fieldColumns = descriptors.flatMap((descriptor) => {
+    const columns = [
+      { key: `field:${descriptor.id}`, label: descriptor.label || descriptor.key || descriptor.id },
+    ];
+    const details = exportDetails.get(descriptor.id);
+    if (details.hasOther)
+      columns.push({ key: `other:${descriptor.id}`, label: `${descriptor.label} - Other text` });
+    for (let index = 0; index < details.mentionCount; index += 1) {
+      columns.push({
+        key: `mention:${descriptor.id}:${index}`,
+        label: `${descriptor.label} - ${descriptor.mentionLabels[index] ?? `Mention ${index + 1}`}`,
+      });
+    }
+    return columns;
+  });
 
   const columns = [...baseColumns, ...fieldColumns];
 
@@ -1274,11 +1381,16 @@ const buildExportInternal = async ({ surveyId, tenantId, filters = {}, options =
     };
     const answerByField = new Map();
     for (const answer of response.answers ?? []) {
-      answerByField.set(answer.fieldId, answer.value);
+      answerByField.set(answer.fieldId, answer);
     }
     for (const descriptor of descriptors) {
-      const value = answerByField.get(descriptor.id);
-      row[`field:${descriptor.id}`] = value ?? '';
+      const answer = answerByField.get(descriptor.id);
+      row[`field:${descriptor.id}`] = answer?.value ?? '';
+      const details = exportDetails.get(descriptor.id);
+      if (details.hasOther) row[`other:${descriptor.id}`] = answer?.otherText ?? '';
+      for (let index = 0; index < details.mentionCount; index += 1) {
+        row[`mention:${descriptor.id}:${index}`] = answer?.value?.[index] ?? '';
+      }
     }
     return row;
   });

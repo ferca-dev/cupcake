@@ -6,6 +6,7 @@
 export const FIELD_TYPES = Object.freeze([
   'short_text',
   'long_text',
+  'multiple_text',
   'email',
   'phone',
   'number',
@@ -62,6 +63,16 @@ export const FIELD_CATALOG = Object.freeze([
     category: 'input',
     defaultLabel: 'Long text',
     defaultPlaceholder: 'Type your answer',
+  },
+  {
+    type: 'multiple_text',
+    label: 'Multiple mentions',
+    labelKey: 'questionExtensions.mentions',
+    description: 'Ordered text answers to a single question.',
+    icon: '1–3',
+    category: 'input',
+    defaultLabel: 'Which names do you recall?',
+    defaultPlaceholder: '',
   },
   {
     type: 'email',

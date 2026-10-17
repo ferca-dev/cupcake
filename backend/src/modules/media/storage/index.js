@@ -1,8 +1,15 @@
+import { VercelBlobStorageProvider } from './vercel-blob-storage.provider.js';
 import { loadEnv } from '../../../config/env.js';
 import { LocalStorageProvider } from './local-storage.provider.js';
 import { S3StorageProvider } from './s3-storage.provider.js';
 
 export const createStorageProvider = (env = loadEnv()) => {
+  if (env.STORAGE_DRIVER === 'vercel-blob') {
+    return new VercelBlobStorageProvider({
+      token: env.BLOB_READ_WRITE_TOKEN,
+      storeId: env.BLOB_STORE_ID,
+    });
+  }
   if (env.STORAGE_DRIVER === 's3') {
     return new S3StorageProvider({
       endpoint: env.S3_ENDPOINT,

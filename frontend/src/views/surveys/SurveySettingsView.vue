@@ -4,6 +4,7 @@
 // the survey settings (response limit, anonymous, collectIp) live alongside
 // them in the same store so an admin can review the public-form behavior in
 // one place.
+import { CAPTCHA_DISABLED } from '../../config/env.js';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -105,7 +106,7 @@ const onSave = async () => {
     const payload = {
       settings: {
         antiAbuse: {
-          captchaRequired: Boolean(form.captchaRequired),
+          captchaRequired: !CAPTCHA_DISABLED && Boolean(form.captchaRequired),
           honeypotEnabled: Boolean(form.honeypotEnabled),
           minFillSeconds: normaliseNumber(form.minFillSeconds) ?? 0,
           perIpPerMinute: normaliseNumber(form.perIpPerMinute),
@@ -164,7 +165,7 @@ watch(surveyId, (next, prev) => {
       </AppAlert>
 
       <form class="survey-settings__form" @submit.prevent="onSave">
-        <label class="survey-settings__row">
+        <label v-if="!CAPTCHA_DISABLED" class="survey-settings__row">
           <input v-model="form.captchaRequired" type="checkbox" />
           <span>
             <strong>{{ t('surveys.settings.antiAbuse.captcha.label') }}</strong>

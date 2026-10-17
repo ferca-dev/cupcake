@@ -21,6 +21,7 @@ const answerSchema = z
     key: z.string().trim().max(80).optional(),
     type: z.string().trim().max(40).optional(),
     value: answerValueSchema.optional(),
+    otherText: z.string().trim().max(1000).optional(),
   })
   .strict();
 

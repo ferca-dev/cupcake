@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { useAuthStore } from '../stores/auth.store.js';
 import { useI18n } from '../i18n/index.js';
-import { APP_NAME } from '../config/env.js';
+import { APP_NAME, isDisabledDeploymentRoute } from '../config/env.js';
 import AppButton from '../components/ui/AppButton.vue';
 
 const SHELL_MODIFIERS = {
@@ -204,7 +204,7 @@ const navItems = computed(() => {
       visible: true,
     },
   ];
-  return items.filter((item) => item.visible);
+  return items.filter((item) => item.visible && !isDisabledDeploymentRoute(item.to.name));
 });
 
 const adminItems = computed(() => {
@@ -239,7 +239,7 @@ const adminItems = computed(() => {
       icon: 'M4 4h6v6H4Zm10 0h6v6h-6Zm-10 10h6v6H4Zm10 0h6v6h-6Z',
       nested: true,
     },
-  ];
+  ].filter((item) => !isDisabledDeploymentRoute(item.to.name));
 });
 
 const sidebarLabel = computed(() =>

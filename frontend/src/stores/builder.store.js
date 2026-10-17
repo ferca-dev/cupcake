@@ -209,6 +209,7 @@ export const useBuilderStore = defineStore('builder', {
       if ('options' in sanitized) {
         updated.options = Array.isArray(sanitized.options)
           ? sanitized.options.map((opt) => ({
+              ...opt,
               id: opt.id ?? generateOptionId(),
               key: typeof opt.key === 'string' ? opt.key : '',
               label: typeof opt.label === 'string' ? opt.label : '',
@@ -251,7 +252,13 @@ export const useBuilderStore = defineStore('builder', {
           'mediaAssetId' in sanitized.settings
             ? sanitized.settings.mediaAssetId || null
             : (updated.settings.mediaAssetId ?? null);
-        updated.settings = { width, imageUrl, mediaAssetId };
+        updated.settings = {
+          ...updated.settings,
+          ...sanitized.settings,
+          width,
+          imageUrl,
+          mediaAssetId,
+        };
       }
 
       const next = this.schema.fields.slice();
@@ -305,9 +312,12 @@ export const useBuilderStore = defineStore('builder', {
       if (index < 0) return;
       const field = this.schema.fields[index];
       const nextOptions = (field.options ?? []).map((opt) => {
-        if (opt.id !== optionId) return opt;
+        if (opt.id !== optionId) return payload?.isOther ? { ...opt, isOther: false } : opt;
         const updated = { ...opt };
         if (payload && typeof payload === 'object') {
+          if ('isOther' in payload) updated.isOther = Boolean(payload.isOther);
+          if ('imageUrl' in payload) updated.imageUrl = payload.imageUrl || null;
+          if ('mediaAssetId' in payload) updated.mediaAssetId = payload.mediaAssetId || null;
           if ('label' in payload) updated.label = String(payload.label ?? '');
           if ('key' in payload) {
             updated.key = String(payload.key ?? '')
@@ -596,6 +606,7 @@ export const useBuilderStore = defineStore('builder', {
         sectionId: field.sectionId ?? null,
         options: Array.isArray(field.options)
           ? field.options.map((opt) => ({
+              ...opt,
               id: opt.id ?? generateOptionId(),
               key: typeof opt.key === 'string' ? opt.key : '',
               label: typeof opt.label === 'string' ? opt.label : '',
@@ -616,6 +627,7 @@ export const useBuilderStore = defineStore('builder', {
             : [],
         },
         settings: {
+          ...JSON.parse(JSON.stringify(field.settings ?? {})),
           width: FIELD_WIDTHS.includes(field.settings?.width) ? field.settings.width : 'full',
           imageUrl: field.settings?.imageUrl ?? null,
           mediaAssetId: field.settings?.mediaAssetId ?? null,

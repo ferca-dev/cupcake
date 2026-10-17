@@ -9,6 +9,7 @@ import { z } from 'zod';
 export const FIELD_TYPES = Object.freeze([
   'short_text',
   'long_text',
+  'multiple_text',
   'email',
   'phone',
   'number',
@@ -80,6 +81,16 @@ const VISIBILITY_ACTION_TYPES = ['show', 'hide'];
 const NAVIGATION_ACTION_TYPES = ['jump_to_field', 'jump_to_section', 'jump_to_page'];
 const END_ACTION_TYPES = ['end_survey'];
 
+const imageProperties = {
+  imageUrl: z.string().max(2000).nullable().optional(),
+  mediaAssetId: z
+    .string()
+    .trim()
+    .regex(/^[a-f0-9]{24}$/i, 'Invalid media asset id')
+    .nullable()
+    .optional(),
+};
+
 const optionSchema = z
   .object({
     key: z
@@ -90,6 +101,8 @@ const optionSchema = z
       .regex(/^[a-z0-9_]+$/, 'Option key must be lowercase letters, numbers, or underscores'),
     label: z.string().trim().min(1, 'Option label is required').max(200),
     value: z.unknown().optional(),
+    isOther: z.boolean().optional(),
+    ...imageProperties,
   })
   .strict();
 
@@ -126,12 +139,11 @@ const visibilitySchema = z
 const fieldSettingsSchema = z
   .object({
     width: z.enum(['full', 'half', 'third', 'quarter']).default('full'),
-    imageUrl: z.string().max(2000).nullable().optional(),
-    mediaAssetId: z
-      .string()
-      .trim()
-      .regex(/^[a-f0-9]{24}$/i, 'Media asset id must be a MongoDB ObjectId')
-      .nullable()
+    ...imageProperties,
+    mentionLabels: z.array(z.string().trim().min(1).max(200)).min(1).max(10).optional(),
+    optionImages: z
+      .array(z.object({ key: z.string().min(1).max(80), ...imageProperties }).strict())
+      .max(101)
       .optional(),
   })
   .strict()
@@ -167,6 +179,20 @@ const fieldSchema = z
   })
   .strict()
   .superRefine((field, ctx) => {
+    if (field.type === 'multiple_text' && !field.settings.mentionLabels?.length) {
+      ctx.addIssue({
+        path: ['settings', 'mentionLabels'],
+        code: z.ZodIssueCode.custom,
+        message: 'Provide between one and ten mention labels',
+      });
+    }
+    if (field.options.filter((option) => option.isOther).length > 1) {
+      ctx.addIssue({
+        path: ['options'],
+        code: z.ZodIssueCode.custom,
+        message: 'Only one option may accept custom text',
+      });
+    }
     if (!PRESENTATION_TYPES.has(field.type)) {
       if (!field.key || field.key.length === 0) {
         ctx.addIssue({

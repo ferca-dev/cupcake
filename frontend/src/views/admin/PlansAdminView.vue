@@ -40,6 +40,9 @@ const empty = () => ({
 });
 
 const form = reactive(empty());
+const canOpenForm = computed(
+  () => Boolean(store.catalogue) && !store.isLoadingDetail && !store.isMutating,
+);
 
 const statusOptions = computed(() => [
   { value: 'draft', label: t('plans.admin.statuses.draft') },
@@ -73,14 +76,22 @@ const formatPrice = (plan) => {
 };
 
 const openCreate = () => {
+  localError.value = '';
   editing.value = null;
   Object.assign(form, empty());
   showModal.value = true;
 };
 
 const openEdit = async (planRow) => {
-  const detail = await store.fetchPlan(planRow.id);
-  editing.value = detail ?? planRow;
+  localError.value = '';
+  let detail;
+  try {
+    detail = (await store.fetchPlan(planRow.id)) ?? planRow;
+  } catch {
+    // The store exposes the load error; keep the editor closed.
+    return;
+  }
+  editing.value = detail;
   Object.assign(form, {
     name: detail?.name ?? '',
     code: detail?.code ?? '',
@@ -157,7 +168,7 @@ const archive = (planRow) => store.updatePlanStatus(planRow.id, 'archived');
 const activate = (planRow) => store.updatePlanStatus(planRow.id, 'active');
 
 onMounted(async () => {
-  await Promise.all([store.fetchCatalogue(), store.fetchPlans()]);
+  await Promise.allSettled([store.fetchCatalogue(), store.fetchPlans()]);
 });
 </script>
 
@@ -168,12 +179,12 @@ onMounted(async () => {
         <h1>{{ t('plans.admin.title') }}</h1>
         <p class="muted">{{ t('plans.admin.subtitle') }}</p>
       </div>
-      <AppButton variant="primary" @click="openCreate">
+      <AppButton variant="primary" :disabled="!canOpenForm" @click="openCreate">
         {{ t('plans.admin.create') }}
       </AppButton>
     </header>
 
-    <AppAlert v-if="store.lastError" variant="danger">
+    <AppAlert v-if="store.lastError" variant="error">
       {{ store.lastError }}
     </AppAlert>
 
@@ -183,24 +194,32 @@ onMounted(async () => {
         {{ t('plans.admin.empty') }}
       </p>
       <AppTable v-else :columns="columns" :rows="store.plans">
-        <template #cell-name="{ row }">
+        <template #cell:name="{ row }">
           <strong>{{ row.name }}</strong>
           <div v-if="row.description" class="muted small">{{ row.description }}</div>
         </template>
-        <template #cell-code="{ row }">
+        <template #cell:code="{ row }">
           <code>{{ row.code }}</code>
         </template>
-        <template #cell-price="{ row }">{{ formatPrice(row) }}</template>
-        <template #cell-status="{ row }">
-          <AppBadge :variant="row.status === 'active' ? 'success' : row.status === 'archived' ? 'neutral' : 'warning'">
+        <template #cell:price="{ row }">{{ formatPrice(row) }}</template>
+        <template #cell:status="{ row }">
+          <AppBadge
+            :variant="
+              row.status === 'active'
+                ? 'success'
+                : row.status === 'archived'
+                  ? 'neutral'
+                  : 'warning'
+            "
+          >
             {{ t(`plans.admin.statuses.${row.status}`) }}
           </AppBadge>
         </template>
-        <template #cell-default="{ row }">
+        <template #cell:default="{ row }">
           <AppBadge v-if="row.isDefault" variant="info">★</AppBadge>
         </template>
-        <template #cell-actions="{ row }">
-          <AppButton variant="ghost" size="sm" @click="openEdit(row)">
+        <template #cell:actions="{ row }">
+          <AppButton variant="ghost" size="sm" :disabled="!canOpenForm" @click="openEdit(row)">
             {{ t('plans.admin.actions.edit') }}
           </AppButton>
           <AppButton
@@ -223,9 +242,14 @@ onMounted(async () => {
       </AppTable>
     </AppCard>
 
-    <AppModal v-if="showModal" :title="editing ? form.name || form.code : t('plans.admin.create')" @close="close">
+    <AppModal
+      v-model="showModal"
+      size="lg"
+      :title="editing ? form.name || form.code : t('plans.admin.create')"
+      @close="close"
+    >
       <div class="plan-form">
-        <AppAlert v-if="localError" variant="danger">{{ localError }}</AppAlert>
+        <AppAlert v-if="localError" variant="error">{{ localError }}</AppAlert>
 
         <div class="grid-2">
           <AppInput v-model="form.name" :label="t('plans.admin.form.name')" required />
@@ -234,12 +258,12 @@ onMounted(async () => {
         <AppTextarea v-model="form.description" :label="t('plans.admin.form.description')" />
 
         <div class="grid-3">
-          <AppSelect v-model="form.status" :label="t('plans.admin.form.status')" :options="statusOptions" />
-          <AppInput
-            v-model.number="form.sortOrder"
-            type="number"
-            label="Sort order"
+          <AppSelect
+            v-model="form.status"
+            :label="t('plans.admin.form.status')"
+            :options="statusOptions"
           />
+          <AppInput v-model.number="form.sortOrder" type="number" label="Sort order" />
           <label class="checkbox-row">
             <input v-model="form.isDefault" type="checkbox" />
             <span>{{ t('plans.admin.form.isDefault') }}</span>
@@ -249,15 +273,8 @@ onMounted(async () => {
         <fieldset class="plan-form__group">
           <legend>{{ t('plans.admin.form.features') }}</legend>
           <div class="grid-2">
-            <label
-              v-for="def in store.featureDefinitions"
-              :key="def.key"
-              class="checkbox-row"
-            >
-              <input
-                v-model="form.features[def.key]"
-                type="checkbox"
-              />
+            <label v-for="def in store.featureDefinitions" :key="def.key" class="checkbox-row">
+              <input v-model="form.features[def.key]" type="checkbox" />
               <span>
                 <strong>{{ def.label }}</strong>
                 <span class="muted small">{{ def.description }}</span>
@@ -366,5 +383,12 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

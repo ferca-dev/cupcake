@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile --filter @cupcake/backend...",
+  "buildCommand": "node --version",
+  "outputDirectory": "public",
+  "regions": ["iad1"],
+  "functions": {
+    "api/index.js": { "maxDuration": 60 }
+  },
+  "rewrites": [{ "source": "/api/v1/:path*", "destination": "/api" }]
+}

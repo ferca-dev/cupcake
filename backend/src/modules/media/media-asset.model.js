@@ -40,7 +40,7 @@ const mediaAssetSchema = new Schema(
     checksumSha256: { type: String, required: true, lowercase: true, trim: true },
     storageDriver: {
       type: String,
-      enum: ['local', 's3'],
+      enum: ['local', 's3', 'vercel-blob'],
       required: true,
       index: true,
     },

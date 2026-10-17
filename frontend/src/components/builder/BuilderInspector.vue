@@ -7,7 +7,8 @@ import { computed, ref, watch } from 'vue';
 
 import { useI18n } from '../../i18n/index.js';
 import { AppAlert, AppButton, AppInput, AppSelect, AppTextarea } from '../ui/index.js';
-import { mediaService } from '../../services/media.service.js';
+import QuestionImageEditor from '../media/QuestionImageEditor.vue';
+import { fixedImageOptions } from '../../features/public-form/choice-value.js';
 import {
   FIELD_WIDTHS,
   OPTIONED_FIELD_TYPES,
@@ -47,6 +48,14 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
+const fixedOptions = computed(() => fixedImageOptions(props.field ?? {}, t));
+const setOptionImage = (key, image) => {
+  const optionImages = (props.field.settings?.optionImages ?? []).filter(
+    (entry) => entry.key !== key,
+  );
+  if (image.imageUrl) optionImages.push({ key, ...image });
+  setField({ settings: { optionImages } });
+};
 
 const widthOptions = FIELD_WIDTHS.map((width) => ({ value: width, label: width }));
 const layoutModeOptions = [
@@ -123,9 +132,6 @@ const metadataDraft = ref({
   description: props.surveyDescription,
   slug: props.surveySlug,
 });
-const imageFileInput = ref(null);
-const isUploadingImage = ref(false);
-const imageUploadError = ref('');
 
 watch(
   () => [props.surveyTitle, props.surveyDescription, props.surveySlug],
@@ -141,37 +147,6 @@ const submitMetadata = () => {
     slug: metadataDraft.value.slug?.trim() || undefined,
   });
 };
-
-const triggerImageUpload = () => {
-  imageFileInput.value?.click();
-};
-
-const onImageFileChange = async (event) => {
-  const file = event.target.files?.[0] ?? null;
-  if (!file || !props.field) return;
-
-  imageUploadError.value = '';
-  isUploadingImage.value = true;
-  try {
-    const data = await mediaService.uploadImage({ file, purpose: 'survey_image' });
-    const asset = data?.asset;
-    const imageUrl = asset?.publicUrl || asset?.url || '';
-    if (imageUrl) {
-      setField({
-        settings: {
-          width: props.field.settings?.width,
-          imageUrl,
-          mediaAssetId: asset.id,
-        },
-      });
-    }
-  } catch (err) {
-    imageUploadError.value = err?.message || t('builder.inspector.fields.imageUploadError');
-  } finally {
-    isUploadingImage.value = false;
-    event.target.value = '';
-  }
-};
 </script>
 
 <template>
@@ -179,7 +154,7 @@ const onImageFileChange = async (event) => {
     <header class="builder-inspector__header">
       <h3>{{ t('builder.inspector.title') }}</h3>
       <p v-if="field && catalogEntry" class="builder-inspector__subtitle">
-        {{ catalogEntry.label }}
+        {{ catalogEntry.labelKey ? t(catalogEntry.labelKey) : catalogEntry.label }}
       </p>
       <p v-else class="builder-inspector__subtitle">{{ t('builder.inspector.noSelection') }}</p>
     </header>
@@ -247,57 +222,29 @@ const onImageFileChange = async (event) => {
           @update:model-value="(value) => setField({ settings: { width: value } })"
         />
 
-        <template v-if="field.type === 'image_block'">
-          <AppInput
-            :model-value="field.settings?.imageUrl ?? ''"
-            :label="t('builder.inspector.fields.imageUrl')"
+        <QuestionImageEditor
+          :key="field.id"
+          :image="field.settings ?? {}"
+          :label="t('questionExtensions.titleImage')"
+          @update="(settings) => setField({ settings })"
+        />
+        <QuestionImageEditor
+          v-for="option in fixedOptions"
+          :key="`${field.id}-${option.key}`"
+          :image="field.settings?.optionImages?.find((image) => image.key === option.key) ?? {}"
+          :label="t('questionExtensions.optionImage', { label: option.label })"
+          @update="(image) => setOptionImage(option.key, image)"
+        />
+        <template v-if="field.type === 'multiple_text'">
+          <AppTextarea
+            :model-value="(field.settings?.mentionLabels ?? []).join('\n')"
+            :label="t('questionExtensions.mentionLabels')"
+            :hint="t('questionExtensions.mentionHint')"
+            :rows="4"
             @update:model-value="
-              (value) =>
-                setField({
-                  settings: {
-                    width: field.settings?.width,
-                    imageUrl: value,
-                    mediaAssetId: null,
-                  },
-                })
+              (value) => setField({ settings: { mentionLabels: value.split('\n') } })
             "
           />
-          <div class="builder-inspector__media-actions">
-            <input
-              ref="imageFileInput"
-              class="builder-inspector__file-input"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              @change="onImageFileChange"
-            />
-            <AppButton
-              variant="secondary"
-              size="sm"
-              :loading="isUploadingImage"
-              @click="triggerImageUpload"
-            >
-              {{ t('builder.inspector.fields.uploadImage') }}
-            </AppButton>
-            <AppButton
-              v-if="field.settings?.imageUrl"
-              variant="ghost"
-              size="sm"
-              @click="
-                setField({
-                  settings: {
-                    width: field.settings?.width,
-                    imageUrl: null,
-                    mediaAssetId: null,
-                  },
-                })
-              "
-            >
-              {{ t('builder.inspector.fields.clearImage') }}
-            </AppButton>
-          </div>
-          <small v-if="imageUploadError" class="builder-inspector__inline-error" role="alert">
-            {{ imageUploadError }}
-          </small>
         </template>
 
         <template v-if="isOptioned">
@@ -337,6 +284,25 @@ const onImageFileChange = async (event) => {
                     (value) =>
                       $emit('update-option', { optionId: option.id, payload: { key: value } })
                   "
+                />
+                <label class="builder-inspector__switch">
+                  <input
+                    type="checkbox"
+                    :checked="option.isOther === true"
+                    @change="
+                      $emit('update-option', {
+                        optionId: option.id,
+                        payload: { isOther: $event.target.checked },
+                      })
+                    "
+                  />
+                  <span>{{ t('questionExtensions.other') }}</span>
+                </label>
+                <QuestionImageEditor
+                  :key="`${field.id}-${option.id}`"
+                  :image="option"
+                  :label="t('questionExtensions.optionImage', { label: option.label })"
+                  @update="(payload) => $emit('update-option', { optionId: option.id, payload })"
                 />
                 <AppButton variant="ghost" size="sm" @click="$emit('remove-option', option.id)">
                   {{ t('builder.inspector.options.remove') }}
@@ -571,16 +537,6 @@ const onImageFileChange = async (event) => {
 .builder-inspector__inline-error {
   color: var(--color-danger-600);
   font-size: var(--font-size-xs);
-}
-
-.builder-inspector__media-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.builder-inspector__file-input {
-  display: none;
 }
 
 .builder-inspector__option-list {

@@ -85,6 +85,7 @@ const renderTemplate = (type, data) => {
  * surfaced to the API consumer.
  */
 export const sendTeamNotification = async ({ type, to, data = {}, env = loadEnv() }) => {
+  if (env.SURVEYS_ONLY) return { status: 'skipped', reason: 'messaging_disabled' };
   if (!to) return { status: 'skipped', reason: 'no_recipient_email' };
   const enriched = { appName: env.APP_NAME, ...data };
   const { subject, text, html } = renderTemplate(type, enriched);

@@ -1,3 +1,4 @@
+import { disabledFeatureError } from '../../common/middlewares/surveys-only.js';
 import * as repo from './job.repository.js';
 import { getJobHandler } from './job.registry.js';
 import { JOB_STATUSES, JOB_TYPE_VALUES } from './job.constants.js';
@@ -50,6 +51,8 @@ export const enqueueJob = async ({
 }) => {
   assertKnownType(type);
   const env = loadEnv();
+  if (env.SURVEYS_ONLY && /^(campaign\.|payment\.|webhook\.)/.test(type))
+    throw disabledFeatureError();
   const job = await repo.insertJob({
     type,
     payload,
@@ -139,7 +142,9 @@ export const retryJob = async (id) => {
   const job = await repo.findJobById(id);
   if (!job) throw new NotFoundError('Job not found');
   if (![JOB_STATUSES.FAILED, JOB_STATUSES.DEAD_LETTER].includes(job.status)) {
-    throw new ValidationError(`Only failed or dead-letter jobs can be retried (status=${job.status})`);
+    throw new ValidationError(
+      `Only failed or dead-letter jobs can be retried (status=${job.status})`,
+    );
   }
   // Bumping `maxAttempts` keeps the retry budget honest: an operator who
   // explicitly requeues a job expects at least one more attempt regardless

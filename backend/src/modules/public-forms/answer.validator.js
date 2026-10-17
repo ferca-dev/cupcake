@@ -70,6 +70,33 @@ const validateField = (field, raw, errors) => {
   let value = raw.value;
 
   switch (field.type) {
+    case 'multiple_text': {
+      const labels = field.settings?.mentionLabels ?? [];
+      if (
+        !Array.isArray(value) ||
+        value.length > labels.length ||
+        value.some((entry) => typeof entry !== 'string')
+      ) {
+        errors.push(issue(field.id, 'Provide an ordered list of text mentions.'));
+        return null;
+      }
+      value = labels.map((_, index) => (value[index] ?? '').trim());
+      if (!value.some(Boolean)) {
+        if (isRequired) errors.push(issue(field.id, 'Enter at least one mention.'));
+        return { fieldId: field.id, key: field.key ?? null, type: field.type, value: null };
+      }
+      if (
+        value.some(
+          (entry) =>
+            entry.length > (validation.maxLength ?? 500) ||
+            (entry && entry.length < (validation.minLength ?? 0)),
+        )
+      ) {
+        errors.push(issue(field.id, 'One or more mentions have an invalid length.'));
+        return null;
+      }
+      break;
+    }
     case 'short_text':
     case 'long_text': {
       if (typeof value !== 'string') value = String(value);
@@ -258,7 +285,29 @@ const validateField = (field, raw, errors) => {
     }
   }
 
-  return { fieldId: field.id, key: field.key ?? null, type: field.type, value };
+  const otherOption = (field.options ?? []).find((option) => option.isOther);
+  const otherSelected =
+    otherOption &&
+    (Array.isArray(value) ? value.includes(otherOption.key) : value === otherOption.key);
+  let otherText;
+  if (otherSelected) {
+    if (
+      typeof raw.otherText !== 'string' ||
+      !raw.otherText.trim() ||
+      raw.otherText.trim().length > 1000
+    ) {
+      errors.push(issue(field.id, 'Specify the other option (1 to 1000 characters).'));
+      return null;
+    }
+    otherText = raw.otherText.trim();
+  }
+  return {
+    fieldId: field.id,
+    key: field.key ?? null,
+    type: field.type,
+    value,
+    ...(otherText ? { otherText } : {}),
+  };
 };
 
 /**

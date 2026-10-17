@@ -971,3 +971,83 @@ describe('Report endpoints auth', () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe('extended question reports and exports', () => {
+  it('reports custom answers and mention positions and exports them as separate columns', async () => {
+    const { tenant, user } = await createTenantWithAdmin({
+      tenantName: 'Extended',
+      email: 'extended@test.local',
+    });
+    const { survey, version } = await seedSurvey({ tenantId: tenant._id, ownerId: user._id });
+    version.schema = buildSchema([
+      {
+        id: 'problem',
+        key: 'problem',
+        type: 'radio_group',
+        label: 'Main problem',
+        options: [{ key: 'other', label: 'Other', isOther: true }],
+      },
+      {
+        id: 'names',
+        key: 'names',
+        type: 'multiple_text',
+        label: 'Names recalled',
+        settings: { mentionLabels: ['First', 'Second', 'Third'] },
+      },
+    ]);
+    await version.save();
+    await createResponse({
+      tenantId: tenant._id,
+      survey,
+      version,
+      answers: [
+        {
+          fieldId: 'problem',
+          key: 'problem',
+          type: 'radio_group',
+          value: 'other',
+          otherText: 'Traffic',
+        },
+        { fieldId: 'names', key: 'names', type: 'multiple_text', value: ['Ada', '', 'Grace'] },
+      ],
+    });
+    const token = await login(user.email);
+    const base = `/api/v1/surveys/${survey._id}/reports`;
+    const report = await request(app)
+      .get(`${base}/questions`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(report.status).toBe(200);
+    const [problem, names] = report.body.data.report.questions;
+    expect(problem.distribution).toEqual([{ value: 'other', label: 'Other', count: 1 }]);
+    expect(problem.otherAnswers).toEqual([{ value: 'Traffic', label: 'Traffic', count: 1 }]);
+    expect(names.responseCount).toBe(1);
+    expect(names.mentions[0].distribution[0].value).toBe('Ada');
+    expect(names.mentions[1].distribution).toEqual([]);
+    expect(names.mentions[2].distribution[0].value).toBe('Grace');
+    const exported = await request(app)
+      .get(`${base}/export?format=json`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(exported.status).toBe(200);
+    const data = JSON.parse(exported.text);
+    expect(data.rows[0]).toMatchObject({
+      'field:problem': 'other',
+      'other:problem': 'Traffic',
+      'mention:names:0': 'Ada',
+      'mention:names:1': '',
+      'mention:names:2': 'Grace',
+    });
+    expect(data.columns.some((column) => column.key === 'other:problem')).toBe(true);
+    const csv = await request(app)
+      .get(`${base}/export?format=csv&type=questions`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(csv.status).toBe(200);
+    expect(csv.text).toContain('Traffic');
+    expect(csv.text).toContain('Grace');
+    expect(csv.text).toContain('Third');
+    const xlsx = await request(app)
+      .get(`${base}/export?format=xlsx`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(xlsx.status).toBe(200);
+    expect(xlsx.headers['content-type']).toContain('spreadsheetml');
+  });
+});

@@ -74,6 +74,11 @@ let cachedSender = null;
 let cachedKey = null;
 
 export const resolveTransactionalEmailSender = ({ env = loadEnv() } = {}) => {
+  if (env.SURVEYS_ONLY) {
+    return {
+      send: async () => ({ success: false, providerMessageId: null, reason: 'messaging_disabled' }),
+    };
+  }
   const key = env.EMAIL_PROVIDER ?? 'mock';
   if (cachedSender && cachedKey === key) return cachedSender;
   cachedSender = key === 'sendgrid' ? createSendGridSender({ env }) : createMockSender();

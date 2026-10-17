@@ -68,3 +68,7 @@ junit.xml
 .stylelintcache
 .cache/
 .vercel
+.env*
+
+# Isolated Vercel deployment snapshots
+.deploy/

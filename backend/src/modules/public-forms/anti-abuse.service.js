@@ -18,7 +18,8 @@ const RATE_LIMIT_MESSAGE = 'Too many submissions, please try again later.';
 
 // Generic CAPTCHA failure message. Same rationale: do not tell a bot whether
 // the token was missing, malformed, or rejected by the provider.
-const CAPTCHA_FAILURE_MESSAGE = 'Could not verify the security challenge. Please reload and try again.';
+const CAPTCHA_FAILURE_MESSAGE =
+  'Could not verify the security challenge. Please reload and try again.';
 
 const HONEYPOT_GENERIC_MESSAGE = 'Submission rejected.';
 
@@ -29,8 +30,7 @@ const ipHash = (ip) => {
   return createHash('sha256').update(`anti-abuse|${ip}`).digest('hex');
 };
 
-const truncate = (value, max) =>
-  typeof value === 'string' ? value.slice(0, max) : value;
+const truncate = (value, max) => (typeof value === 'string' ? value.slice(0, max) : value);
 
 // In-process sliding-window counters keyed by `dimension:identifier`. Each
 // entry is the list of unix-ms timestamps of recorded hits within the window.
@@ -104,16 +104,12 @@ const resolveLimit = ({ surveyOverride, envValue }) => {
 const resolveAntiAbuseSettings = (settings = {}) => {
   const raw = settings?.antiAbuse ?? {};
   return {
-    captchaRequired: Boolean(raw.captchaRequired),
+    captchaRequired: !loadEnv().PUBLIC_FORM_CAPTCHA_DISABLED && Boolean(raw.captchaRequired),
     honeypotEnabled: raw.honeypotEnabled !== false, // default on
     minFillSeconds:
-      typeof raw.minFillSeconds === 'number' && raw.minFillSeconds >= 0
-        ? raw.minFillSeconds
-        : null,
+      typeof raw.minFillSeconds === 'number' && raw.minFillSeconds >= 0 ? raw.minFillSeconds : null,
     perIpPerMinute:
-      typeof raw.perIpPerMinute === 'number' && raw.perIpPerMinute >= 0
-        ? raw.perIpPerMinute
-        : null,
+      typeof raw.perIpPerMinute === 'number' && raw.perIpPerMinute >= 0 ? raw.perIpPerMinute : null,
     perTokenPerMinute:
       typeof raw.perTokenPerMinute === 'number' && raw.perTokenPerMinute >= 0
         ? raw.perTokenPerMinute
@@ -187,7 +183,11 @@ export const runAntiAbuseChecks = async ({
 
   const violate = async ({ reason, message, details, errorCtor = RateLimitError }) => {
     await recordSuspicious({ ...baseContext, reason, action: settings.suspiciousAction, details });
-    if (settings.suspiciousAction === 'flag' && reason !== 'honeypot_filled' && reason !== 'captcha_misconfigured') {
+    if (
+      settings.suspiciousAction === 'flag' &&
+      reason !== 'honeypot_filled' &&
+      reason !== 'captcha_misconfigured'
+    ) {
       // Flag mode: log and let the request through. Honeypot and CAPTCHA
       // misconfiguration are still hard-blocked because letting them through
       // would render the controls useless.

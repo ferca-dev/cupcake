@@ -37,6 +37,8 @@ export const connectDatabase = async () => {
   try {
     await mongoose.connect(env.MONGODB_URI, {
       serverSelectionTimeoutMS: 10_000,
+      dbName: env.MONGODB_DB_NAME || undefined,
+      maxPoolSize: 5,
       autoIndex: !env.isProduction,
     });
     return mongoose.connection;

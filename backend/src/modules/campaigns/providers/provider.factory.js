@@ -1,3 +1,4 @@
+import { disabledFeatureError } from '../../../common/middlewares/surveys-only.js';
 import { loadEnv } from '../../../config/env.js';
 import { createMockEmailProvider } from './mock-email.provider.js';
 import { createMockSmsProvider } from './mock-sms.provider.js';
@@ -38,11 +39,14 @@ const resolve = (registry, key, channelLabel, ctx) => {
  * are missing (e.g. `TWILIO_ACCOUNT_SID`), which surfaces a misconfigured
  * deployment at boot rather than mid-campaign.
  */
-export const resolveProviders = ({ env = loadEnv() } = {}) => ({
-  email: resolve(EMAIL_PROVIDERS, env.EMAIL_PROVIDER, 'email', { env }),
-  sms: resolve(SMS_PROVIDERS, env.SMS_PROVIDER, 'SMS', { env }),
-  whatsapp: resolve(WHATSAPP_PROVIDERS, env.WHATSAPP_PROVIDER, 'WhatsApp', { env }),
-});
+export const resolveProviders = ({ env = loadEnv() } = {}) => {
+  if (env.SURVEYS_ONLY) throw disabledFeatureError();
+  return {
+    email: resolve(EMAIL_PROVIDERS, env.EMAIL_PROVIDER, 'email', { env }),
+    sms: resolve(SMS_PROVIDERS, env.SMS_PROVIDER, 'SMS', { env }),
+    whatsapp: resolve(WHATSAPP_PROVIDERS, env.WHATSAPP_PROVIDER, 'WhatsApp', { env }),
+  };
+};
 
 export const __testing = {
   EMAIL_PROVIDERS,

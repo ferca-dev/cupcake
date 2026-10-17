@@ -19,12 +19,21 @@ const optionalUrl = z
 const envSchema = z
   .object({
     APP_NAME: stringWithDefault('Cupcake'),
+    SURVEYS_ONLY: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    PUBLIC_FORM_CAPTCHA_DISABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     APP_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
     APP_PORT: z.coerce.number().int().min(0).max(65535).default(4000),
     APP_URL: z.string().url().default('http://localhost:4000'),
     FRONTEND_URL: z.string().url().default('http://localhost:5173'),
 
     MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
+    MONGODB_DB_NAME: z.string().trim().default(''),
 
     JWT_ACCESS_SECRET: z.string().min(16, 'JWT_ACCESS_SECRET must be at least 16 characters'),
     JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters'),
@@ -120,8 +129,10 @@ const envSchema = z
     PAYMENT_REMINDER_DAYS_BEFORE: z.coerce.number().int().min(0).max(60).default(3),
     LOW_TOKEN_BALANCE_THRESHOLD: z.coerce.number().int().min(0).default(100),
 
-    STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+    STORAGE_DRIVER: z.enum(['local', 's3', 'vercel-blob']).default('local'),
     STORAGE_PUBLIC_BASE_URL: z.string().trim().url().default('http://localhost:4000/uploads'),
+    BLOB_READ_WRITE_TOKEN: z.string().trim().default(''),
+    BLOB_STORE_ID: z.string().trim().default(''),
     LOCAL_UPLOADS_DIR: stringWithDefault('./uploads'),
     MAX_IMAGE_UPLOAD_MB: z.coerce.number().positive().max(25).default(5),
     S3_ENDPOINT: z.string().trim().default(''),
@@ -283,6 +294,14 @@ const envSchema = z
 
     if (value.APP_ENV === 'production' && value.STORAGE_DRIVER === 'local') {
       addIssue('STORAGE_DRIVER', 'Production storage must use an object storage driver');
+    }
+
+    if (
+      value.STORAGE_DRIVER === 'vercel-blob' &&
+      !value.BLOB_READ_WRITE_TOKEN &&
+      !value.BLOB_STORE_ID
+    ) {
+      addIssue('BLOB_READ_WRITE_TOKEN', 'Vercel Blob requires a token or store ID');
     }
 
     if (value.STORAGE_DRIVER === 's3') {

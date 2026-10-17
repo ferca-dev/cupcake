@@ -5,6 +5,14 @@
 // label, required indicator, help text, and error message; the inner
 // template just provides the type-specific control.
 import { computed, useId } from 'vue';
+import { useI18n } from '../../i18n/index.js';
+import {
+  choiceValue,
+  selectedOtherOption,
+  fixedImageOptions,
+} from '../../features/public-form/choice-value.js';
+import QuestionImage from '../media/QuestionImage.vue';
+import ChoiceOptions from './ChoiceOptions.vue';
 
 const props = defineProps({
   field: { type: Object, required: true },
@@ -15,7 +23,54 @@ const props = defineProps({
   error: { type: String, default: '' },
 });
 
-defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue']);
+const { t } = useI18n();
+const selected = computed(() => choiceValue(props.modelValue));
+const otherOption = computed(() => selectedOtherOption(props.field, props.modelValue));
+const hasOptionImages = computed(() =>
+  (props.field.options ?? []).some((option) => option.imageUrl),
+);
+const fixedOptions = computed(() =>
+  fixedImageOptions(props.field, t).map((option) => ({
+    ...option,
+    imageUrl: props.field.settings?.optionImages?.find((image) => image.key === option.key)
+      ?.imageUrl,
+  })),
+);
+const hasFixedImages = computed(() => fixedOptions.value.some((option) => option.imageUrl));
+const fixedValue = computed(() =>
+  props.field.type === 'checkbox'
+    ? props.modelValue === true
+      ? ['true']
+      : []
+    : props.modelValue == null
+      ? ''
+      : String(props.modelValue),
+);
+const updateFixedChoice = (value) => {
+  const typed =
+    props.field.type === 'checkbox'
+      ? value.includes('true')
+      : props.field.type === 'yes_no'
+        ? value === 'true'
+        : Number(value);
+  emit('update:modelValue', typed);
+};
+const updateChoice = (value) => {
+  if ((props.field.options ?? []).some((option) => option.isOther)) {
+    emit('update:modelValue', {
+      selected: value,
+      otherText: selectedOtherOption(props.field, value) ? (props.modelValue?.otherText ?? '') : '',
+    });
+  } else emit('update:modelValue', value);
+};
+const updateMention = (index, value) => {
+  const mentions = (props.field.settings?.mentionLabels ?? []).map(
+    (_, i) => props.modelValue?.[i] ?? '',
+  );
+  mentions[index] = value;
+  emit('update:modelValue', mentions);
+};
 
 const generatedId = useId();
 const fieldId = computed(() => `public-field-${props.field.id || generatedId}`);
@@ -52,13 +107,6 @@ const onNumberInput = (event, emit) => {
   if (raw === '') emit('update:modelValue', '');
   else emit('update:modelValue', raw);
 };
-const onCheckboxGroupChange = (optionKey, checked, emit) => {
-  const current = Array.isArray(props.modelValue) ? [...props.modelValue] : [];
-  const index = current.indexOf(optionKey);
-  if (checked && index < 0) current.push(optionKey);
-  if (!checked && index >= 0) current.splice(index, 1);
-  emit('update:modelValue', current);
-};
 </script>
 
 <template>
@@ -83,6 +131,11 @@ const onCheckboxGroupChange = (optionKey, checked, emit) => {
     />
     <hr v-else-if="field.type === 'divider'" class="public-field__divider" />
     <div v-else-if="field.type === 'page_break'" class="public-field__page-break" />
+    <QuestionImage
+      v-if="field.type !== 'image_block'"
+      :src="field.settings?.imageUrl"
+      :label="field.label"
+    />
   </section>
 
   <div
@@ -92,7 +145,14 @@ const onCheckboxGroupChange = (optionKey, checked, emit) => {
     :data-field-id="field.id"
     :data-field-type="field.type"
   >
-    <label v-if="field.type !== 'checkbox'" :for="fieldId" class="public-field__label">
+    <QuestionImage :src="field.settings?.imageUrl" :label="field.label" />
+
+    <label
+      v-if="field.type !== 'checkbox' || hasFixedImages"
+      :id="`${fieldId}-label`"
+      :for="fieldId"
+      class="public-field__label"
+    >
       {{ field.label || '' }}
       <span v-if="field.required" class="public-field__required" aria-hidden="true">*</span>
     </label>
@@ -198,48 +258,75 @@ const onCheckboxGroupChange = (optionKey, checked, emit) => {
         @input="(event) => onTextInput(event, $emit)"
       />
 
+      <div
+        v-else-if="field.type === 'multiple_text'"
+        :id="fieldId"
+        class="public-field__options"
+        role="group"
+        :aria-labelledby="`${fieldId}-label`"
+        :aria-describedby="describedBy"
+        :aria-invalid="error ? 'true' : undefined"
+      >
+        <label
+          v-for="(label, index) in field.settings?.mentionLabels ?? []"
+          :key="index"
+          class="public-field__mention"
+        >
+          <span>{{ label }}</span>
+          <input
+            type="text"
+            class="public-field__input"
+            :value="modelValue?.[index] ?? ''"
+            :maxlength="field.validation?.maxLength ?? 500"
+            :placeholder="field.placeholder"
+            :aria-describedby="describedBy"
+            @input="updateMention(index, $event.target.value)"
+          />
+        </label>
+      </div>
+
       <select
-        v-else-if="field.type === 'select'"
+        v-else-if="field.type === 'select' && !hasOptionImages"
         :id="fieldId"
         class="public-field__input"
-        :value="modelValue"
+        :value="selected"
         :required="field.required"
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="describedBy"
-        @change="(event) => onTextInput(event, $emit)"
+        @change="updateChoice($event.target.value)"
       >
         <option value="" disabled>
-          {{ field.placeholder || $slots['select-placeholder'] || 'Select an option' }}
+          {{ field.placeholder || t('publicForm.selectPlaceholder') }}
         </option>
         <option v-for="opt in field.options ?? []" :key="opt.key" :value="opt.key">
           {{ opt.label }}
         </option>
       </select>
 
-      <div v-else-if="field.type === 'radio_group'" class="public-field__options" role="radiogroup">
-        <label v-for="opt in field.options ?? []" :key="opt.key" class="public-field__option">
-          <input
-            type="radio"
-            :name="fieldId"
-            :value="opt.key"
-            :checked="modelValue === opt.key"
-            @change="$emit('update:modelValue', opt.key)"
-          />
-          <span>{{ opt.label }}</span>
-        </label>
-      </div>
-
-      <div v-else-if="field.type === 'checkbox_group'" class="public-field__options" role="group">
-        <label v-for="opt in field.options ?? []" :key="opt.key" class="public-field__option">
-          <input
-            type="checkbox"
-            :value="opt.key"
-            :checked="Array.isArray(modelValue) && modelValue.includes(opt.key)"
-            @change="(event) => onCheckboxGroupChange(opt.key, event.target.checked, $emit)"
-          />
-          <span>{{ opt.label }}</span>
-        </label>
-      </div>
+      <ChoiceOptions
+        v-else-if="['select', 'radio_group', 'checkbox_group'].includes(field.type)"
+        :id="fieldId"
+        :options="field.options"
+        :model-value="selected"
+        :multiple="field.type === 'checkbox_group'"
+        :labelledby="`${fieldId}-label`"
+        :describedby="describedBy"
+        :invalid="Boolean(error)"
+        :required="field.required"
+        @update:model-value="updateChoice"
+      />
+      <ChoiceOptions
+        v-else-if="hasFixedImages"
+        :id="fieldId"
+        :options="fixedOptions"
+        :model-value="fixedValue"
+        :multiple="field.type === 'checkbox'"
+        :labelledby="`${fieldId}-label`"
+        :describedby="describedBy"
+        :invalid="Boolean(error)"
+        :required="field.required"
+        @update:model-value="updateFixedChoice"
+      />
 
       <label
         v-else-if="field.type === 'checkbox'"
@@ -311,6 +398,19 @@ const onCheckboxGroupChange = (optionKey, checked, emit) => {
       </div>
 
       <div v-else class="public-field__unknown">Unsupported field type: {{ field.type }}</div>
+      <label v-if="otherOption" class="public-field__mention">
+        <span>{{ otherOption.label }}: {{ t('questionExtensions.otherText') }}</span>
+        <input
+          type="text"
+          class="public-field__input"
+          :value="modelValue?.otherText ?? ''"
+          maxlength="1000"
+          required
+          :aria-invalid="error ? 'true' : undefined"
+          :aria-describedby="describedBy"
+          @input="$emit('update:modelValue', { selected, otherText: $event.target.value })"
+        />
+      </label>
     </div>
 
     <small v-if="error" :id="errorId" class="public-field__error" role="alert">
@@ -320,6 +420,13 @@ const onCheckboxGroupChange = (optionKey, checked, emit) => {
 </template>
 
 <style scoped>
+.public-field__mention {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
 .public-field {
   display: flex;
   flex-direction: column;

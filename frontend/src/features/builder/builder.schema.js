@@ -14,6 +14,8 @@
 // validator (or rely on the backend response to surface the issue at save
 // time).
 
+import { t } from '../../i18n/index.js';
+
 import {
   FIELD_TYPES,
   FIELD_WIDTHS,
@@ -138,7 +140,10 @@ export const buildDefaultField = (type, { order = 0, existingKeys } = {}) => {
   const catalog = getFieldCatalogEntry(type);
   const isPresentation = PRESENTATION_FIELD_TYPES.has(type);
   const keySet = existingKeys instanceof Set ? existingKeys : new Set(existingKeys ?? []);
-  const baseLabel = catalog?.defaultLabel ?? catalog?.label ?? '';
+  const baseLabel =
+    type === 'multiple_text'
+      ? t('questionExtensions.mentionQuestion')
+      : (catalog?.defaultLabel ?? catalog?.label ?? '');
 
   const field = {
     id: generateFieldId(),
@@ -153,7 +158,18 @@ export const buildDefaultField = (type, { order = 0, existingKeys } = {}) => {
     options: defaultOptions(type),
     validation: defaultValidation(),
     visibility: defaultVisibility(),
-    settings: defaultSettings(),
+    settings: {
+      ...defaultSettings(),
+      ...(type === 'multiple_text'
+        ? {
+            mentionLabels: [
+              t('questionExtensions.firstMention'),
+              t('questionExtensions.secondMention'),
+              t('questionExtensions.thirdMention'),
+            ],
+          }
+        : {}),
+    },
   };
   return field;
 };
@@ -189,7 +205,7 @@ const cloneField = (field, overrides = {}) => ({
       ? field.visibility.conditions.map(normalizeCondition)
       : [],
   },
-  settings: { ...defaultSettings(), ...(field.settings ?? {}) },
+  settings: { ...defaultSettings(), ...JSON.parse(JSON.stringify(field.settings ?? {})) },
   ...overrides,
 });
 
@@ -298,6 +314,10 @@ export const normalizeSchemaForApi = (schema) => {
           ? (Array.isArray(field.options) ? field.options : []).map((opt) => ({
               key: typeof opt.key === 'string' ? opt.key.trim() : '',
               label: typeof opt.label === 'string' ? opt.label : '',
+              ...(opt.isOther ? { isOther: true } : {}),
+              ...(opt.imageUrl
+                ? { imageUrl: opt.imageUrl, mediaAssetId: opt.mediaAssetId ?? null }
+                : {}),
             }))
           : [],
         validation: {
@@ -312,6 +332,12 @@ export const normalizeSchemaForApi = (schema) => {
         },
         visibility: normalizeVisibility(field.visibility),
         settings: {
+          ...(field.type === 'multiple_text'
+            ? { mentionLabels: [...(settings.mentionLabels ?? [])] }
+            : {}),
+          ...(settings.optionImages?.length
+            ? { optionImages: settings.optionImages.map((image) => ({ ...image })) }
+            : {}),
           width: FIELD_WIDTHS.includes(settings.width) ? settings.width : 'full',
           imageUrl:
             typeof settings.imageUrl === 'string' && settings.imageUrl.length > 0
@@ -483,6 +509,25 @@ export const validateFormSchema = (schema) => {
       issues.push(issue([...path, 'label'], 'Label is too long (300 characters max).'));
     }
 
+    if (field.type === 'multiple_text') {
+      const labels = field.settings?.mentionLabels;
+      if (
+        !Array.isArray(labels) ||
+        !labels.length ||
+        labels.length > 10 ||
+        labels.some((label) => typeof label !== 'string' || !label.trim() || label.length > 200)
+      ) {
+        issues.push(
+          issue(
+            [...path, 'settings', 'mentionLabels'],
+            'Provide between one and ten non-empty mention labels (200 characters max).',
+          ),
+        );
+      }
+    }
+    if ((field.options ?? []).filter((option) => option.isOther).length > 1) {
+      issues.push(issue([...path, 'options'], 'Only one option may accept custom text.'));
+    }
     if (isOptioned) {
       const options = Array.isArray(field.options) ? field.options : [];
       if (options.length === 0) {

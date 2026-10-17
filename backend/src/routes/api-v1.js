@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { surveysOnlyMiddleware } from '../common/middlewares/surveys-only.js';
 import { healthRouter } from '../modules/health/health.routes.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
 import { tenantsRouter } from '../modules/tenants/tenant.routes.js';
@@ -32,6 +33,7 @@ import { loadEnv } from '../config/env.js';
 const env = loadEnv();
 
 export const apiV1Router = Router();
+apiV1Router.use(surveysOnlyMiddleware(env));
 
 apiV1Router.get('/', (req, res) =>
   sendSuccess(res, {

@@ -1,0 +1,16 @@
+.env*
+**/.env*
+!**/.env.example
+**/node_modules
+**/uploads
+**/tmp
+**/coverage
+**/src/tests
+docs
+prompts
+scripts
+
+# Root deployment serves only the frontend. The API has its own project.
+/api
+/backend
+/.deploy

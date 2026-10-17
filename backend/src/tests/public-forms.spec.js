@@ -448,3 +448,66 @@ describe('POST /api/v1/public/forms/:slug/responses', () => {
     expect(stripped).toBeUndefined();
   });
 });
+
+describe('extended public question submissions', () => {
+  it('persists custom text and ordered mentions with the published schema', async () => {
+    const { tenant, user } = await createTenantAndAdmin();
+    const fields = [
+      sampleField({
+        id: 'problem',
+        key: 'problem',
+        type: 'radio_group',
+        options: [
+          { key: 'water', label: 'Water' },
+          {
+            key: 'other',
+            label: 'Other',
+            isOther: true,
+            imageUrl: 'https://example.test/other.png',
+          },
+        ],
+      }),
+      sampleField({
+        id: 'names',
+        key: 'names',
+        type: 'multiple_text',
+        settings: {
+          mentionLabels: ['First', 'Second', 'Third'],
+          imageUrl: 'https://example.test/title.png',
+        },
+      }),
+    ];
+    const { survey, version } = await publishSurvey({
+      tenant,
+      user,
+      slug: 'extended-questions',
+      schemaFields: fields,
+    });
+    const form = await request(app).get('/api/v1/public/forms/extended-questions');
+    expect(form.body.data.version.schema.fields[0].options[1].imageUrl).toBe(
+      'https://example.test/other.png',
+    );
+    const missingText = await request(app)
+      .post('/api/v1/public/forms/extended-questions/responses')
+      .send({
+        answers: [
+          { fieldId: 'problem', value: 'other' },
+          { fieldId: 'names', value: ['Ada'] },
+        ],
+      });
+    expect(missingText.status).toBe(422);
+    const submitted = await request(app)
+      .post('/api/v1/public/forms/extended-questions/responses')
+      .send({
+        answers: [
+          { fieldId: 'problem', value: 'other', otherText: ' Traffic ' },
+          { fieldId: 'names', value: [' Ada ', '', ' Grace '] },
+        ],
+      });
+    expect(submitted.status).toBe(201);
+    const stored = await Response.findOne({ surveyId: survey._id }).lean();
+    expect(stored.surveyVersionId.toString()).toBe(version._id.toString());
+    expect(stored.answers[0]).toMatchObject({ value: 'other', otherText: 'Traffic' });
+    expect(stored.answers[1].value).toEqual(['Ada', '', 'Grace']);
+  });
+});

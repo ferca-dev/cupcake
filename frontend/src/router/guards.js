@@ -1,3 +1,4 @@
+import { isDisabledDeploymentRoute } from '../config/env.js';
 import { useAuthStore } from '../stores/auth.store.js';
 
 // Route-level guards. The router installs these as a single `beforeEach`
@@ -50,4 +51,12 @@ export const composeGuards = (guards) => (to, from) => {
   return true;
 };
 
-export const navigationGuard = composeGuards([authGuard, roleGuard, permissionGuard]);
+export const deploymentGuard = (to) =>
+  isDisabledDeploymentRoute(to.name) ? { name: 'forbidden' } : true;
+
+export const navigationGuard = composeGuards([
+  authGuard,
+  roleGuard,
+  permissionGuard,
+  deploymentGuard,
+]);

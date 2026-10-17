@@ -1,3 +1,4 @@
+import { disabledFeatureError } from '../../../common/middlewares/surveys-only.js';
 import { loadEnv } from '../../../config/env.js';
 import { createMercadoPagoProvider } from './mercadopago.provider.js';
 import { createMockPaymentProvider } from './mock-payment.provider.js';
@@ -17,6 +18,7 @@ let cachedKey = null;
  * `MercadoPagoConfig` for every request would re-establish HTTPS connections.
  */
 export const resolvePaymentProvider = ({ env = loadEnv() } = {}) => {
+  if (env.SURVEYS_ONLY) throw disabledFeatureError();
   const key = env.PAYMENT_PROVIDER ?? 'mock';
   if (cachedProvider && cachedKey === key) return cachedProvider;
   const factory = PROVIDERS[key];

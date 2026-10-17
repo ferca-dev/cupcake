@@ -15,6 +15,14 @@ const resolvePublicFormBaseUrl = () => {
   return 'http://localhost:5173';
 };
 
+export const CAPTCHA_DISABLED = env.VITE_CAPTCHA_DISABLED === 'true';
+export const SURVEYS_ONLY = env.VITE_SURVEYS_ONLY === 'true';
+export const isDisabledDeploymentRoute = (name = '') =>
+  SURVEYS_ONLY &&
+  (name.startsWith('campaigns.') ||
+    (name.startsWith('billing.') && name !== 'billing.plan') ||
+    ['admin.tokens', 'admin.payments'].includes(name));
+
 export const APP_NAME = env.VITE_APP_NAME?.trim() || 'Cupcake';
 export const API_BASE_URL = trimTrailingSlash(
   env.VITE_API_BASE_URL?.trim() || 'http://localhost:4000/api/v1',

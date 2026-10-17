@@ -8,6 +8,8 @@
 // tests). The two files are intentionally small and parallel so drift is
 // easy to spot.
 
+import { choiceValue } from '../public-form/choice-value.js';
+
 export const LOGIC_OPERATORS = Object.freeze([
   'equals',
   'not_equals',
@@ -111,7 +113,7 @@ export const evaluateCondition = (condition, answers) => {
   if (!condition || typeof condition !== 'object') return false;
   if (!LOGIC_OPERATORS.includes(condition.operator)) return false;
 
-  const answer = answers ? answers[condition.fieldId] : undefined;
+  const answer = choiceValue(answers ? answers[condition.fieldId] : undefined);
   const expected = condition.value;
 
   switch (condition.operator) {

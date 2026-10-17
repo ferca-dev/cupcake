@@ -346,6 +346,24 @@ watch(
             :rows="distributionForQuestion(question)"
             :format-value="(value) => formatNumber(value)"
           />
+          <div v-if="question.otherAnswers?.length">
+            <h5>{{ t('questionExtensions.otherAnswers') }}</h5>
+            <ReportBarChart
+              :rows="
+                question.otherAnswers.map((entry) => ({ label: entry.label, value: entry.count }))
+              "
+              :format-value="(value) => formatNumber(value)"
+            />
+          </div>
+          <div v-for="mention in question.mentions ?? []" :key="mention.position">
+            <h5>{{ mention.label }}</h5>
+            <ReportBarChart
+              :rows="
+                mention.distribution.map((entry) => ({ label: entry.label, value: entry.count }))
+              "
+              :format-value="(value) => formatNumber(value)"
+            />
+          </div>
           <div v-if="question.nps" class="survey-reports-view__nps">
             <div>
               <strong>{{ t('reports.questions.nps.score') }}</strong

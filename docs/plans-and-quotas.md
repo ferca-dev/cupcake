@@ -28,6 +28,20 @@ layer, the admin and tenant API surfaces, and the migration story.
   fallback exists so pre-existing tenants are not gated until an admin
   intentionally moves them onto a plan.
 
+## Managing Features in the Admin Panel
+
+Sign in as `super_admin`, open **Administration > Plans**
+(`/app/admin/plans`), and select **Edit** for a plan. In **Features**, check
+or clear the desired options and select **Save**. The editor waits for the
+feature catalogue before allowing creation or editing. Client admins cannot
+modify the global plan definitions.
+
+Changes to an active plan apply to its assigned tenants on subsequent API
+requests without reassigning the plan. Assignment snapshots remain unchanged
+for historical reference; archived plans continue using those snapshots.
+Installation restrictions such as `SURVEYS_ONLY` still apply even when a plan
+includes a disabled installation feature.
+
 ## Data Model
 
 ### `plans`
